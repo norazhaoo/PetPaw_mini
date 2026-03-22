@@ -1,9 +1,11 @@
 <!-- pages/medical/medical.wxml -->
+<wxs src="../../utils/icons.wxs" module="ic" />
+
 <view class="app-container">
   <!-- Input Card -->
   <view class="card">
     <view class="flex-row gap-md">
-      <icon name="Stethoscope" size="48" color="#FEE140" />
+      <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Stethoscope')}}" mode="aspectFit" />
       <text class="h2">{{i18n.medical_log}}</text>
     </view>
 
@@ -13,7 +15,7 @@
         <view wx:for="{{symptoms}}" wx:key="id"
           class="tag {{selectedSymptoms.indexOf(item.id) > -1 ? 'tag-active' : ''}}"
           bindtap="toggleSymptom" data-id="{{item.id}}">
-          <icon name="{{item.icon}}" size="40" color="{{item.color}}" />
+          <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src(item.icon)}}" mode="aspectFit" />
           <text style="font-weight:700;font-size:26rpx;color:var(--text-main);">{{item.label}}</text>
         </view>
       </view>
@@ -26,14 +28,14 @@
           <view class="photo-remove" bindtap="removeImage">×</view>
         </view>
         <view wx:else class="photo-placeholder" bindtap="chooseImage">
-          <icon name="Camera" size="48" color="#F5B041" />
+          <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
           <text style="font-size:26rpx;font-weight:700;color:var(--text-main);margin-top:8rpx;">{{i18n.photo}}</text>
         </view>
 
         <!-- Save button -->
         <button class="btn-primary flex-1" style="height:200rpx;" bindtap="handleSave"
           disabled="{{selectedSymptoms.length === 0 && !image}}">
-          <icon name="Check" size="40" color="#4A403A" />
+          <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('Check')}}" mode="aspectFit" />
           {{i18n.add_record}}
         </button>
       </view>
@@ -45,19 +47,19 @@
     <text class="h3">{{i18n.medical_log}}</text>
 
     <view wx:if="{{medicalRecords.length === 0}}" class="text-center" style="padding:80rpx;">
-      <icon name="FileText" size="96" color="#E0DACA" />
+      <image class="icon-img" lazy-load style="width:96rpx;height:96rpx;" src="{{ic.src('FileText')}}" mode="aspectFit" />
       <text class="text-muted" style="display:block;margin-top:32rpx;">{{i18n.no_records_yet}}</text>
     </view>
 
     <view wx:else class="flex-col gap-lg">
       <view wx:for="{{medicalRecords}}" wx:key="id" class="record-card">
         <view class="record-delete" bindtap="deleteRecord" data-id="{{item.id}}">
-          <icon name="XCircle" size="36" color="#E74C3C" />
+          <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
         </view>
         <text class="text-muted" style="font-size:24rpx;margin-bottom:16rpx;">{{item.dateFormatted}}</text>
         <view class="flex-row flex-wrap gap-md" style="margin-bottom:16rpx;">
           <view wx:for="{{item.tagDetails}}" wx:for-item="tag" wx:key="id" class="record-tag">
-            <icon name="{{tag.icon}}" size="28" color="{{tag.color}}" />
+            <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(tag.icon)}}" mode="aspectFit" />
             <text style="font-size:24rpx;font-weight:700;">{{tag.label}}</text>
           </view>
         </view>

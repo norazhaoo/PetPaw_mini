@@ -1,10 +1,12 @@
 <!-- pages/pawfile/pawfile.wxml -->
+<wxs src="../../utils/icons.wxs" module="ic" />
+
 <view class="app-container">
   <!-- 添加/编辑表单 -->
   <view wx:if="{{isAdding}}">
     <view class="form-header">
       <view class="back-btn" bindtap="resetForm">
-        <icon name="ChevronLeft" size="48" color="#4A403A" />
+        <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronLeft')}}" mode="aspectFit" />
       </view>
       <text class="h2">{{editingPetId ? i18n.edit_pet : i18n.add_pet}}</text>
     </view>
@@ -17,7 +19,7 @@
           <view class="avatar-remove-btn" bindtap="removeAvatar">×</view>
         </view>
         <view wx:else class="avatar-placeholder" bindtap="chooseAvatar">
-          <icon name="Camera" size="64" color="#8F8377" />
+          <image class="icon-img" lazy-load style="width:64rpx;height:64rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
           <text class="text-muted" style="font-size:20rpx;margin-top:8rpx;">{{i18n.photo}}</text>
         </view>
       </view>
@@ -93,14 +95,14 @@
             <text class="pet-name">{{item.name}}</text>
             <text wx:if="{{item.breed}}" class="pet-breed">{{item.breed}}</text>
           </view>
-          <icon name="ChevronRight" size="48" color="#8F8377" />
+          <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
         </view>
         <view class="pet-actions">
           <view class="pet-action-btn" bindtap="handleEditClick" data-id="{{item.id}}">
-            <icon name="Pencil" size="32" color="#8F8377" />
+            <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('Pencil')}}" mode="aspectFit" />
           </view>
           <view class="pet-action-btn delete-btn" bindtap="handleDeletePet" data-id="{{item.id}}" data-name="{{item.name}}">
-            <icon name="Trash2" size="32" color="#E74C3C" />
+            <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('Trash2')}}" mode="aspectFit" />
           </view>
         </view>
       </view>
@@ -108,7 +110,7 @@
       <!-- 添加按钮 -->
       <button class="btn-dashed" bindtap="startAdding">
         <view class="add-icon-circle">
-          <icon name="Plus" size="48" color="#4A403A" />
+          <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Plus')}}" mode="aspectFit" />
         </view>
         <text style="font-weight:700;font-size:32rpx;color:var(--text-muted);">{{i18n.add_pet}}</text>
       </button>

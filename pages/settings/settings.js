@@ -21,11 +21,23 @@ Page({
     i18nData: {}
   },
 
+  onLoad() {
+    this.buildI18n();
+  },
+
+  buildI18n() {
+    this.setData({
+      i18nData: {
+        settings: i18n.t('settings'), language: i18n.t('language'),
+        help: i18n.t('help'), about: i18n.t('about'),
+        clear_data: i18n.t('clear_data'), clear_confirm: i18n.t('clear_confirm'),
+        data_cleared: i18n.t('data_cleared')
+      }
+    });
+  },
+
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().updateActive(4);
-    }
-    this.refreshData();
+    setTimeout(() => this.refreshData(), 0);
   },
 
   refreshData() {
@@ -33,13 +45,7 @@ Page({
     const langObj = LANGUAGES.find(l => l.code === lang);
     this.setData({
       currentLang: lang,
-      currentLangLabel: langObj ? langObj.label : 'English',
-      i18nData: {
-        settings: i18n.t('settings'), language: i18n.t('language'),
-        help: i18n.t('help'), about: i18n.t('about'),
-        clear_data: i18n.t('clear_data'), clear_confirm: i18n.t('clear_confirm'),
-        data_cleared: i18n.t('data_cleared')
-      }
+      currentLangLabel: langObj ? langObj.label : 'English'
     });
 
     // 更新 tabBar 文字
@@ -60,6 +66,7 @@ Page({
     const code = e.currentTarget.dataset.code;
     i18n.setLanguage(code);
     this.setData({ showLangMenu: false });
+    this.buildI18n();
     this.refreshData();
   },
 

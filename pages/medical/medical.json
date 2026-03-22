@@ -1,6 +1,5 @@
 {
-  "usingComponents": {
-    "icon": "../../components/icon/icon"
-  },
-  "navigationBarTitleText": "Medical Log"
+  "usingComponents": {},
+  "navigationBarTitleText": "Medical Log",
+  "initialRenderingCache": "static"
 }

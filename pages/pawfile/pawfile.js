@@ -18,17 +18,8 @@ Page({
     i18n: {}
   },
 
-  onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().updateActive(0);
-    }
-    this.refreshData();
-  },
-
-  refreshData() {
-    const state = app.getState();
+  onLoad() {
     this.setData({
-      pets: state.pets,
       i18n: {
         add_pet: t('add_pet'), edit_pet: t('edit_pet'), name: t('name'),
         breed_optional: t('breed_optional'), birthday_optional: t('birthday_optional'),
@@ -38,6 +29,15 @@ Page({
         who_caring: t('who_caring'), delete_confirm: t('delete_confirm')
       }
     });
+  },
+
+  onShow() {
+    setTimeout(() => this.refreshData(), 0);
+  },
+
+  refreshData() {
+    const state = app.getState();
+    this.setData({ pets: state.pets });
   },
 
   selectPet(e) {

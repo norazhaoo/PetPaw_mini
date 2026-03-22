@@ -1,7 +1,0 @@
-<!-- components/icon/icon.wxml - PNG 图标组件 -->
-<image
-  class="icon-img"
-  style="width:{{size}}rpx;height:{{size}}rpx;"
-  src="{{iconSrc}}"
-  mode="aspectFit"
-/>

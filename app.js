@@ -24,12 +24,11 @@ App({
    */
   setState(newState) {
     this.globalData.state = newState;
-    // 通知所有已挂载的页面刷新数据
+    // 只刷新栈顶（当前可见）页面，其他页面在 onShow 时会自动刷新
     const pages = getCurrentPages();
-    pages.forEach(page => {
-      if (page && typeof page.refreshData === 'function') {
-        page.refreshData();
-      }
-    });
+    const currentPage = pages[pages.length - 1];
+    if (currentPage && typeof currentPage.refreshData === 'function') {
+      currentPage.refreshData();
+    }
   }
 });

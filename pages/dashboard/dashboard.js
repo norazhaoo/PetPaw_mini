@@ -54,14 +54,30 @@ Page({
     showWeightModal: false,
     newWeight: 4.0,
     // i18n
-    i18n: {}
+    i18n: {},
+    // 分段渲染标志：重模块（日历、图表、日志）等 ready=true 后才渲染
+    ready: false
+  },
+
+  onLoad() {
+    // i18n 只构建一次（语言改变时 settings 页会 reLaunch）
+    this.setData({
+      i18n: {
+        stock_alert: t('stock_alert'), things_to_track: t('things_to_track'),
+        monthly_stats: t('monthly_stats'), no_activity: t('no_activity'),
+        weight_history: t('weight_history'), no_weight_history: t('no_weight_history'),
+        no_records_day: t('no_records_day'), new_custom_event: t('new_custom_event'),
+        select_icon: t('select_icon'), select_color: t('select_color'),
+        cancel: t('cancel'), save: t('save'), log_weight: t('log_weight'),
+        recorded_weight: t('recorded_weight'), last_scooped: t('last_scooped'), last_walked: t('last_walked'),
+        today_logs: t('today_logs'), logs_for: t('logs_for')
+      }
+    });
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().updateActive(1);
-    }
-    this.refreshData();
+    // 延迟数据加载，让页面模板先渲染出来
+    setTimeout(() => this.refreshData(), 0);
   },
 
   refreshData() {
@@ -86,32 +102,8 @@ Page({
       ...ca, iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
     }));
 
-    // 当前月份
-    const currentMonth = this.data.currentMonth || dateUtil.startOfMonth(new Date());
-    const selectedDate = this.data.selectedDate || dateUtil.startOfDay(new Date());
-
-    this.buildCalendar(state, activePet, currentMonth, selectedDate, isDog);
-
     // Stock Alert
     const showWarning = state.inventoryItems?.some(item => Math.floor(item.current / (item.dailyConsumption || 1)) <= 7) || false;
-
-    // Last action
-    const petLogs = state.logs.filter(l => l.petId === state.activePetId);
-    const targetLogType = isDog ? 'walk_dog' : 'scoop_litter';
-    const actionLogs = petLogs.filter(l => l.type === targetLogType).sort((a, b) => new Date(b.date) - new Date(a.date));
-    let lastActionText = t('never');
-    if (actionLogs.length > 0) {
-      const dist = dateUtil.formatDistanceToNow(dateUtil.parseISO(actionLogs[0].date));
-      lastActionText = dist.replace('about ', '').replace('less than a minute', t('just_now'));
-      if (lastActionText !== t('just_now')) lastActionText += ' ' + t('ago');
-    }
-
-    // Weight chart data
-    const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
-    const chartData = petWeights.map(entry => ({
-      ...entry,
-      displayDate: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd')
-    }));
 
     // Inventory items with computed daysLeft
     const inventoryItems = (state.inventoryItems || []).map(item => {
@@ -119,32 +111,53 @@ Page({
       return { ...item, daysLeft, isLow: daysLeft <= 7, shortLabel: (item.label || '').replace(/ .*/, '') };
     });
 
+    // === 第一阶段：先渲染头部、快速操作等轻量数据 ===
     this.setData({
       activePet,
       isDog,
       quickActions: quickActions.map(type => ({ type, color: COLOR_MAP[type] || '#8F8377', iconName: type })),
       customActions,
       inventoryItems,
-      showWarning,
-      lastActionText: lastActionText.replace(' minutes', 'm').replace(' hours', 'h').replace(' days', 'd'),
-      chartData,
-      hasWeightData: chartData.length > 0,
-      i18n: {
-        stock_alert: t('stock_alert'), things_to_track: t('things_to_track'),
-        monthly_stats: t('monthly_stats'), no_activity: t('no_activity'),
-        weight_history: t('weight_history'), no_weight_history: t('no_weight_history'),
-        no_records_day: t('no_records_day'), new_custom_event: t('new_custom_event'),
-        select_icon: t('select_icon'), select_color: t('select_color'),
-        cancel: t('cancel'), save: t('save'), log_weight: t('log_weight'),
-        recorded_weight: t('recorded_weight'), last_scooped: t('last_scooped'), last_walked: t('last_walked'),
-        today_logs: t('today_logs'), logs_for: t('logs_for')
-      }
+      showWarning
     });
 
-    // Draw weight chart
-    if (chartData.length > 0) {
-      setTimeout(() => this.drawWeightChart(chartData), 300);
-    }
+    // === 第二阶段：异步计算日历、日志、图表等重数据 ===
+    setTimeout(() => {
+      // Last action
+      const petLogs = state.logs.filter(l => l.petId === state.activePetId);
+      const targetLogType = isDog ? 'walk_dog' : 'scoop_litter';
+      const actionLogs = petLogs.filter(l => l.type === targetLogType).sort((a, b) => new Date(b.date) - new Date(a.date));
+      let lastActionText = t('never');
+      if (actionLogs.length > 0) {
+        const dist = dateUtil.formatDistanceToNow(dateUtil.parseISO(actionLogs[0].date));
+        lastActionText = dist.replace('about ', '').replace('less than a minute', t('just_now'));
+        if (lastActionText !== t('just_now')) lastActionText += ' ' + t('ago');
+      }
+
+      // Weight chart data
+      const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
+      const chartData = petWeights.map(entry => ({
+        ...entry,
+        displayDate: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd')
+      }));
+
+      // Calendar
+      const currentMonth = this.data.currentMonth || dateUtil.startOfMonth(new Date());
+      const selectedDate = this.data.selectedDate || dateUtil.startOfDay(new Date());
+      this.buildCalendar(state, activePet, currentMonth, selectedDate, isDog);
+
+      this.setData({
+        ready: true,
+        lastActionText: lastActionText.replace(' minutes', 'm').replace(' hours', 'h').replace(' days', 'd'),
+        chartData,
+        hasWeightData: chartData.length > 0,
+      });
+
+      // Draw weight chart
+      if (chartData.length > 0) {
+        setTimeout(() => this.drawWeightChart(chartData), 100);
+      }
+    }, 50);
   },
 
   buildCalendar(state, activePet, currentMonth, selectedDate, isDog) {

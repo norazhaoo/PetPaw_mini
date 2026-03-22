@@ -1,6 +1,5 @@
 {
-  "usingComponents": {
-    "icon": "../../components/icon/icon"
-  },
-  "navigationBarTitleText": "Stock"
+  "usingComponents": {},
+  "navigationBarTitleText": "Stock",
+  "initialRenderingCache": "static"
 }

@@ -14,7 +14,6 @@
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "custom": true,
     "color": "#8F8377",
     "selectedColor": "#4A403A",
     "backgroundColor": "#FFFFFF",
@@ -22,26 +21,37 @@
     "list": [
       {
         "pagePath": "pages/pawfile/pawfile",
-        "text": "Pawfile"
+        "text": "Pawfile",
+        "iconPath": "static/icons/tab-pawfile.png",
+        "selectedIconPath": "static/icons/tab-pawfile-active.png"
       },
       {
         "pagePath": "pages/dashboard/dashboard",
-        "text": "Diary"
+        "text": "Diary",
+        "iconPath": "static/icons/tab-diary.png",
+        "selectedIconPath": "static/icons/tab-diary-active.png"
       },
       {
         "pagePath": "pages/stock/stock",
-        "text": "Stock"
+        "text": "Stock",
+        "iconPath": "static/icons/tab-stock.png",
+        "selectedIconPath": "static/icons/tab-stock-active.png"
       },
       {
         "pagePath": "pages/medical/medical",
-        "text": "Medical"
+        "text": "Medical",
+        "iconPath": "static/icons/tab-medical.png",
+        "selectedIconPath": "static/icons/tab-medical-active.png"
       },
       {
         "pagePath": "pages/settings/settings",
-        "text": "Settings"
+        "text": "Settings",
+        "iconPath": "static/icons/tab-settings.png",
+        "selectedIconPath": "static/icons/tab-settings-active.png"
       }
     ]
   },
   "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
   "style": "v2"
 }

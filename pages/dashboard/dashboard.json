@@ -1,6 +1,5 @@
 {
-  "usingComponents": {
-    "icon": "../../components/icon/icon"
-  },
-  "navigationBarTitleText": "PetPaw"
+  "usingComponents": {},
+  "navigationBarTitleText": "PetPaw",
+  "initialRenderingCache": "static"
 }

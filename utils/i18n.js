@@ -207,26 +207,31 @@ const translations = {
   }
 };
 
+// 模块加载时读取一次语言设置，后续不再调用 wx.getStorageSync
+let _cachedLang = '';
+try { _cachedLang = wx.getStorageSync('petpaw_language') || 'en'; } catch(e) { _cachedLang = 'en'; }
+let _cachedSet = translations[_cachedLang] || translations['en'];
+
 /**
- * 获取翻译文本
+ * 获取翻译文本（使用内存缓存，零 I/O）
  */
 function t(key) {
-  const lang = wx.getStorageSync('petpaw_language') || 'en';
-  const set = translations[lang] || translations['en'];
-  return set[key] || translations['en'][key] || key;
+  return _cachedSet[key] || translations['en'][key] || key;
 }
 
 /**
  * 获取当前语言
  */
 function getLanguage() {
-  return wx.getStorageSync('petpaw_language') || 'en';
+  return _cachedLang;
 }
 
 /**
- * 设置语言
+ * 设置语言（同时更新缓存）
  */
 function setLanguage(lang) {
+  _cachedLang = lang;
+  _cachedSet = translations[lang] || translations['en'];
   wx.setStorageSync('petpaw_language', lang);
 }
 

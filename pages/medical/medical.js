@@ -23,11 +23,18 @@ Page({
     i18n: {}
   },
 
+  onLoad() {
+    this.setData({
+      i18n: {
+        medical_log: t('medical_log'), symptoms: t('symptoms'),
+        photo: t('photo'), add_record: t('add_record'),
+        no_records_yet: t('no_records_yet')
+      }
+    });
+  },
+
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().updateActive(3);
-    }
-    this.refreshData();
+    setTimeout(() => this.refreshData(), 0);
   },
 
   refreshData() {
@@ -46,15 +53,7 @@ Page({
       return { id, label: t(id), icon: si.icon || 'Star', color: si.color || '#8F8377' };
     });
 
-    this.setData({
-      symptoms,
-      medicalRecords: petRecords,
-      i18n: {
-        medical_log: t('medical_log'), symptoms: t('symptoms'),
-        photo: t('photo'), add_record: t('add_record'),
-        no_records_yet: t('no_records_yet')
-      }
-    });
+    this.setData({ symptoms, medicalRecords: petRecords });
   },
 
   toggleSymptom(e) {

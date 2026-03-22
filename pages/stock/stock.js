@@ -20,11 +20,21 @@ Page({
     i18n: {}
   },
 
+  onLoad() {
+    this.setData({
+      i18n: {
+        daily_consumption: t('daily_consumption'), custom: t('custom'),
+        add_custom_stock: t('add_custom_stock'), new_stock_item: t('new_stock_item'),
+        name: t('name'), select_icon: t('select_icon'), cancel: t('cancel'), create: t('create'),
+        delete_confirm: t('delete_confirm'), d: t('d'),
+        unit_g: t('unit_g'), unit_kg: t('unit_kg'), unit_ml: t('unit_ml'), unit_L: t('unit_L'),
+        unit_cup: t('unit_cup'), unit_bag: t('unit_bag'), unit_box: t('unit_box'), unit_can: t('unit_can')
+      }
+    });
+  },
+
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().updateActive(2);
-    }
-    this.refreshData();
+    setTimeout(() => this.refreshData(), 0);
   },
 
   refreshData() {
@@ -48,17 +58,7 @@ Page({
       };
     });
 
-    this.setData({
-      inventoryItems: items,
-      i18n: {
-        daily_consumption: t('daily_consumption'), custom: t('custom'),
-        add_custom_stock: t('add_custom_stock'), new_stock_item: t('new_stock_item'),
-        name: t('name'), select_icon: t('select_icon'), cancel: t('cancel'), create: t('create'),
-        delete_confirm: t('delete_confirm'), d: t('d'),
-        unit_g: t('unit_g'), unit_kg: t('unit_kg'), unit_ml: t('unit_ml'), unit_L: t('unit_L'),
-        unit_cup: t('unit_cup'), unit_bag: t('unit_bag'), unit_box: t('unit_box'), unit_can: t('unit_can')
-      }
-    });
+    this.setData({ inventoryItems: items });
   },
 
   adjustInventory(e) {
