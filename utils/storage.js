@@ -1,4 +1,4 @@
-// utils/storage.js - 数据存储管理 (替代 React Context + localStorage)
+// utils/storage.js - 数据存储管理（异步写盘 + 防抖优化版）
 
 const { generateId } = require('./util');
 const { differenceInDays } = require('./date');
@@ -20,8 +20,46 @@ const defaultState = {
   customActions: []
 };
 
+// ======== 异步写盘 + 防抖 ========
+let _saveTimer = null;
+
+function _debouncedSave(state) {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function() {
+    _saveTimer = null;
+    wx.setStorage({
+      key: STORAGE_KEY,
+      data: state,
+      fail: function(e) { console.error('Async save failed:', e); }
+    });
+  }, 300);
+}
+
 /**
- * 加载数据（含迁移逻辑）
+ * 保存数据（异步 + 300ms 防抖）
+ * 连续多次操作只触发一次磁盘写入
+ */
+function saveState(state) {
+  _debouncedSave(state);
+}
+
+/**
+ * 强制立即持久化（应用切后台时调用）
+ */
+function flushState(state) {
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
+  try {
+    wx.setStorageSync(STORAGE_KEY, state);
+  } catch (e) {
+    console.error('Flush save failed:', e);
+  }
+}
+
+/**
+ * 加载数据（同步读取，冷启动必须）
  */
 function loadState() {
   try {
@@ -52,17 +90,6 @@ function loadState() {
     console.error('Failed to load state:', e);
   }
   return JSON.parse(JSON.stringify(defaultState));
-}
-
-/**
- * 保存数据
- */
-function saveState(state) {
-  try {
-    wx.setStorageSync(STORAGE_KEY, state);
-  } catch (e) {
-    console.error('Failed to save state:', e);
-  }
 }
 
 /**
@@ -241,6 +268,10 @@ function deleteMedicalRecord(state, id) {
 }
 
 function clearAllData() {
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
   try {
     wx.removeStorageSync(STORAGE_KEY);
     wx.removeStorageSync('petpaw_language');
@@ -253,6 +284,7 @@ function clearAllData() {
 module.exports = {
   loadState,
   saveState,
+  flushState,
   performDailyDeduction,
   setActivePetId,
   addPet,

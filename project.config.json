@@ -12,7 +12,7 @@
     "es6": true,
     "enhance": true,
     "postcss": true,
-    "preloadBackgroundData": false,
+    "preloadBackgroundData": true,
     "minified": true,
     "newFeature": false,
     "coverView": true,
@@ -47,8 +47,8 @@
     "uglifyFileName": false,
     "localPlugins": false,
     "condition": false,
-    "swc": false,
-    "disableSWC": true
+    "swc": true,
+    "disableSWC": false
   },
   "compileType": "miniprogram",
   "libVersion": "3.3.4",

@@ -123,44 +123,56 @@ Page({
 
     // === 第二阶段：异步计算日历、日志、图表等重数据 ===
     setTimeout(() => {
-      // Last action
-      const petLogs = state.logs.filter(l => l.petId === state.activePetId);
-      const targetLogType = isDog ? 'walk_dog' : 'scoop_litter';
-      const actionLogs = petLogs.filter(l => l.type === targetLogType).sort((a, b) => new Date(b.date) - new Date(a.date));
-      let lastActionText = t('never');
-      if (actionLogs.length > 0) {
-        const dist = dateUtil.formatDistanceToNow(dateUtil.parseISO(actionLogs[0].date));
-        lastActionText = dist.replace('about ', '').replace('less than a minute', t('just_now'));
-        if (lastActionText !== t('just_now')) lastActionText += ' ' + t('ago');
-      }
-
-      // Weight chart data
-      const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
-      const chartData = petWeights.map(entry => ({
-        ...entry,
-        displayDate: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd')
-      }));
-
-      // Calendar
-      const currentMonth = this.data.currentMonth || dateUtil.startOfMonth(new Date());
-      const selectedDate = this.data.selectedDate || dateUtil.startOfDay(new Date());
-      this.buildCalendar(state, activePet, currentMonth, selectedDate, isDog);
-
-      this.setData({
-        ready: true,
-        lastActionText: lastActionText.replace(' minutes', 'm').replace(' hours', 'h').replace(' days', 'd'),
-        chartData,
-        hasWeightData: chartData.length > 0,
-      });
-
-      // Draw weight chart
-      if (chartData.length > 0) {
-        setTimeout(() => this.drawWeightChart(chartData), 100);
-      }
+      this._computeHeavyData(state, activePet, isDog);
     }, 50);
   },
 
-  buildCalendar(state, activePet, currentMonth, selectedDate, isDog) {
+  /**
+   * 重数据计算（日历 + 图表 + 日志），合并为单次 setData
+   */
+  _computeHeavyData(state, activePet, isDog) {
+    // ----- Last action -----
+    const petLogs = state.logs.filter(l => l.petId === state.activePetId);
+    const targetLogType = isDog ? 'walk_dog' : 'scoop_litter';
+    const actionLogs = petLogs.filter(l => l.type === targetLogType).sort((a, b) => new Date(b.date) - new Date(a.date));
+    let lastActionText = t('never');
+    if (actionLogs.length > 0) {
+      const dist = dateUtil.formatDistanceToNow(dateUtil.parseISO(actionLogs[0].date));
+      lastActionText = dist.replace('about ', '').replace('less than a minute', t('just_now'));
+      if (lastActionText !== t('just_now')) lastActionText += ' ' + t('ago');
+    }
+
+    // ----- Weight chart data -----
+    const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
+    const chartData = petWeights.map(entry => ({
+      ...entry,
+      displayDate: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd')
+    }));
+
+    // ----- Calendar -----
+    const currentMonth = this.data.currentMonth || dateUtil.startOfMonth(new Date());
+    const selectedDate = this.data.selectedDate || dateUtil.startOfDay(new Date());
+    const calendarData = this._buildCalendar(state, currentMonth, selectedDate, isDog);
+
+    // === 合并为单次 setData ===
+    this.setData(Object.assign({
+      ready: true,
+      lastActionText: lastActionText.replace(' minutes', 'm').replace(' hours', 'h').replace(' days', 'd'),
+      chartData,
+      hasWeightData: chartData.length > 0,
+    }, calendarData));
+
+    // Draw weight chart
+    if (chartData.length > 0) {
+      setTimeout(() => this.drawWeightChart(chartData), 100);
+    }
+  },
+
+  /**
+   * 使用 Map 索引优化的日历构建 — O(n) 而非 O(n²)
+   * 返回 setData 所需的数据对象（不直接调用 setData）
+   */
+  _buildCalendar(state, currentMonth, selectedDate, isDog) {
     const firstDay = dateUtil.startOfMonth(currentMonth);
     const lastDay = dateUtil.endOfMonth(currentMonth);
     const days = dateUtil.eachDayOfInterval(firstDay, lastDay);
@@ -172,28 +184,37 @@ Page({
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
 
-    // 给每天计算小图标
-    const daysInMonth = days.map(date => {
-      const icons = [];
-      petLogs.forEach(l => {
-        if (dateUtil.isSameDay(dateUtil.parseISO(l.date), date)) {
-          if (l.type.startsWith('custom_') && l.color) {
-            icons.push({ name: CUSTOM_ICON_NAMES[l.iconIdx] || 'Star', color: l.color });
-          } else {
-            icons.push({ name: l.type, color: COLOR_MAP[l.type] || '#8F8377' });
-          }
-        }
-      });
-      petMeds.forEach(m => {
-        if (dateUtil.isSameDay(dateUtil.parseISO(m.date), date)) icons.push({ name: 'medical', color: '#E74C3C' });
-      });
-      petWeights.forEach(w => {
-        if (dateUtil.isSameDay(dateUtil.parseISO(w.date), date)) icons.push({ name: 'scale', color: '#3498DB' });
-      });
+    // ====== 构建日期索引 Map: dateStr → icons[] — O(logs + meds + weights) ======
+    const iconMap = {};
+    const _key = (dateStr) => dateStr.slice(0, 10); // 'YYYY-MM-DD'
 
+    petLogs.forEach(l => {
+      const k = _key(l.date);
+      if (!iconMap[k]) iconMap[k] = [];
+      if (l.type.startsWith('custom_') && l.color) {
+        iconMap[k].push({ name: CUSTOM_ICON_NAMES[l.iconIdx] || 'Star', color: l.color });
+      } else {
+        iconMap[k].push({ name: l.type, color: COLOR_MAP[l.type] || '#8F8377' });
+      }
+    });
+    petMeds.forEach(m => {
+      const k = _key(m.date);
+      if (!iconMap[k]) iconMap[k] = [];
+      iconMap[k].push({ name: 'medical', color: '#E74C3C' });
+    });
+    petWeights.forEach(w => {
+      const k = _key(w.date);
+      if (!iconMap[k]) iconMap[k] = [];
+      iconMap[k].push({ name: 'scale', color: '#3498DB' });
+    });
+
+    // ====== 构建每天数据 — O(days) ======
+    const daysInMonth = days.map(date => {
+      const dateStr = dateUtil.formatDate(date, 'YYYY-MM-DD');
+      const icons = iconMap[dateStr] || [];
       return {
-        date: date,
-        dateStr: dateUtil.formatDate(date, 'YYYY-MM-DD'),
+        date,
+        dateStr,
         dayNum: dateUtil.formatDate(date, 'd'),
         isToday: dateUtil.isToday(date),
         isSelected: dateUtil.isSameDay(date, selectedDate),
@@ -201,7 +222,7 @@ Page({
       };
     });
 
-    // Monthly stats
+    // ====== Monthly stats — 利用已有 petLogs，按类型聚合 ======
     const currentMonthLogs = petLogs.filter(l => dateUtil.isSameMonth(dateUtil.parseISO(l.date), currentMonth));
     const statsMap = {};
     currentMonthLogs.forEach(log => {
@@ -226,7 +247,26 @@ Page({
       monthlyStats.push({ iconName: 'scale', color: '#3498DB', count: monthWeights.length });
     }
 
-    // Selected day logs
+    // ====== Selected day logs ======
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate);
+
+    return {
+      currentMonth,
+      currentMonthLabel: dateUtil.formatDate(currentMonth, 'MMMM yyyy'),
+      selectedDate,
+      selectedDateStr: dateUtil.formatDate(selectedDate, 'YYYY-MM-DD'),
+      blanks,
+      daysInMonth,
+      monthlyStats,
+      combinedLogs: selectedDayData.combinedLogs,
+      listTitle: selectedDayData.listTitle
+    };
+  },
+
+  /**
+   * 仅构建选中日期的日志数据（细粒度更新用）
+   */
+  _buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate) {
     const selectedDayLogs = petLogs.filter(l => dateUtil.isSameDay(dateUtil.parseISO(l.date), selectedDate));
     const selectedDayWeights = petWeights.filter(w => dateUtil.isSameDay(dateUtil.parseISO(w.date), selectedDate));
 
@@ -248,47 +288,56 @@ Page({
 
     const listTitle = dateUtil.isToday(selectedDate) ? t('today_logs') : `${t('logs_for')} ${dateUtil.formatDate(selectedDate, 'MMM do')}`;
 
-    this.setData({
-      currentMonth,
-      currentMonthLabel: dateUtil.formatDate(currentMonth, 'MMMM yyyy'),
-      selectedDate,
-      selectedDateStr: dateUtil.formatDate(selectedDate, 'YYYY-MM-DD'),
-      blanks,
-      daysInMonth,
-      monthlyStats,
-      combinedLogs,
-      listTitle
-    });
+    return { combinedLogs, listTitle };
   },
 
   // === Calendar Navigation ===
   prevMonth() {
     const state = app.getState();
-    const activePet = state.pets.find(p => p.id === state.activePetId);
     const newMonth = dateUtil.subMonths(this.data.currentMonth, 1);
-    this.buildCalendar(state, activePet, newMonth, this.data.selectedDate, this.data.isDog);
+    const calendarData = this._buildCalendar(state, newMonth, this.data.selectedDate, this.data.isDog);
+    this.setData(calendarData);
   },
 
   nextMonth() {
     const state = app.getState();
-    const activePet = state.pets.find(p => p.id === state.activePetId);
     const newMonth = dateUtil.addMonths(this.data.currentMonth, 1);
-    this.buildCalendar(state, activePet, newMonth, this.data.selectedDate, this.data.isDog);
+    const calendarData = this._buildCalendar(state, newMonth, this.data.selectedDate, this.data.isDog);
+    this.setData(calendarData);
   },
 
   goToday() {
     const state = app.getState();
-    const activePet = state.pets.find(p => p.id === state.activePetId);
     const today = dateUtil.startOfDay(new Date());
-    this.buildCalendar(state, activePet, dateUtil.startOfMonth(new Date()), today, this.data.isDog);
+    const calendarData = this._buildCalendar(state, dateUtil.startOfMonth(new Date()), today, this.data.isDog);
+    this.setData(calendarData);
   },
 
+  /**
+   * 选择日期 — 细粒度更新：只更新选中态 + 日志列表，不重算日历
+   */
   selectDate(e) {
     const dateStr = e.currentTarget.dataset.date;
     const date = new Date(dateStr);
     const state = app.getState();
-    const activePet = state.pets.find(p => p.id === state.activePetId);
-    this.buildCalendar(state, activePet, this.data.currentMonth, date, this.data.isDog);
+    const petLogs = state.logs.filter(l => l.petId === state.activePetId);
+    const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
+    const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, date);
+
+    // 更新每天的 isSelected 状态
+    const daysInMonth = this.data.daysInMonth.map(d => ({
+      ...d,
+      isSelected: d.dateStr === dateStr
+    }));
+
+    this.setData({
+      selectedDate: date,
+      selectedDateStr: dateStr,
+      daysInMonth,
+      combinedLogs: selectedDayData.combinedLogs,
+      listTitle: selectedDayData.listTitle
+    });
   },
 
   // === Quick Actions ===

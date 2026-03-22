@@ -1,0 +1,8 @@
+<!-- components/icon/icon.wxml -->
+<image
+  class="icon-img"
+  lazy-load
+  style="width:{{dim}}rpx;height:{{dim}}rpx;"
+  src="{{src}}"
+  mode="aspectFit"
+/>

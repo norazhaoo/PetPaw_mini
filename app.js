@@ -6,10 +6,19 @@ App({
   },
 
   onLaunch() {
-    // 加载数据并执行库存自动扣减
-    let state = storage.loadState();
-    state = storage.performDailyDeduction(state);
+    // 同步加载数据（冷启动必须）
+    const state = storage.loadState();
     this.globalData.state = state;
+
+    // 库存自动扣减延迟到下一个时间片，不阻塞首屏渲染
+    setTimeout(() => {
+      this.globalData.state = storage.performDailyDeduction(this.globalData.state);
+    }, 0);
+  },
+
+  onHide() {
+    // 应用切后台时强制持久化，确保防抖中的数据写入
+    storage.flushState(this.globalData.state);
   },
 
   /**
