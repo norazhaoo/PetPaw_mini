@@ -19,6 +19,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().updateActive(0);
+    }
     this.refreshData();
   },
 

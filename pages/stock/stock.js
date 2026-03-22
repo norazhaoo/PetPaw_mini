@@ -20,7 +20,12 @@ Page({
     i18n: {}
   },
 
-  onShow() { this.refreshData(); },
+  onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().updateActive(2);
+    }
+    this.refreshData();
+  },
 
   refreshData() {
     const state = app.getState();
