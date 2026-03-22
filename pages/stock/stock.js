@@ -17,9 +17,12 @@ Page({
     iconOptions: ICONS,
     colorOptions: COLORS,
     unitOptions: UNITS,
+    unitOptionsList: [],
+    showUnitModal: false,
+    editingUnitItemId: null,
+    editingUnit: '',
     i18n: {}
   },
-
   onLoad() {
     this.setData({
       i18n: {
@@ -28,8 +31,10 @@ Page({
         name: t('name'), select_icon: t('select_icon'), cancel: t('cancel'), create: t('create'),
         delete_confirm: t('delete_confirm'), d: t('d'),
         unit_g: t('unit_g'), unit_kg: t('unit_kg'), unit_ml: t('unit_ml'), unit_L: t('unit_L'),
-        unit_cup: t('unit_cup'), unit_bag: t('unit_bag'), unit_box: t('unit_box'), unit_can: t('unit_can')
-      }
+        unit_cup: t('unit_cup'), unit_bag: t('unit_bag'), unit_box: t('unit_box'), unit_can: t('unit_can'),
+        select_unit: t('unit_g') ? 'Select Unit' : 'Select Unit' // fallback label
+      },
+      unitOptionsList: UNITS.map(u => ({ value: u, label: t('unit_' + u) || u }))
     });
   },
 
@@ -39,7 +44,9 @@ Page({
 
   refreshData() {
     const state = app.getState();
-    const items = (state.inventoryItems || []).map(item => {
+    const items = (state.inventoryItems || [])
+      .filter(item => item.petId === state.activePetId)
+      .map(item => {
       const unit = item.unit || 'g';
       const isLargeVolume = unit === 'g' || unit === 'ml';
       const presets = isLargeVolume ? [50, 100, 150] : [1, 2, 3];
@@ -53,7 +60,8 @@ Page({
         stepAmount,
         isCustomConsumption,
         unitLabel: t('unit_' + unit) || unit,
-        isDefault: item.id === 'food' || item.id === 'litter',
+        label: item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label,
+        isDefault: item.typeId === 'food' || item.typeId === 'litter',
         unitPickerIndex: UNITS.indexOf(unit) >= 0 ? UNITS.indexOf(unit) : 0
       };
     });
@@ -85,6 +93,31 @@ Page({
     let state = app.getState();
     state = storage.updateInventory(state, id, { unit });
     app.setState(state);
+    this.refreshData();
+  },
+
+  openUnitModal(e) {
+    const { id, unit } = e.currentTarget.dataset;
+    this.setData({
+      showUnitModal: true,
+      editingUnitItemId: id,
+      editingUnit: unit
+    });
+  },
+
+  closeUnitModal() {
+    this.setData({ showUnitModal: false, editingUnitItemId: null });
+  },
+
+  onCustomUnitChange(e) {
+    const unit = e.currentTarget.dataset.unit;
+    const id = this.data.editingUnitItemId;
+    if (!id) return;
+    this.setData({ editingUnit: unit }); // quick ui update
+    let state = app.getState();
+    state = storage.updateInventory(state, id, { unit });
+    app.setState(state);
+    this.setData({ showUnitModal: false, editingUnitItemId: null });
     this.refreshData();
   },
 
@@ -129,6 +162,7 @@ Page({
     });
   },
 
+  noop() {},
   openAddModal() { this.setData({ isAdding: true, newLabel: '', newIcon: 'Star', newColor: COLORS[0] }); },
   closeAddModal() { this.setData({ isAdding: false }); },
   onNewLabelInput(e) { this.setData({ newLabel: e.detail.value }); },
@@ -140,7 +174,11 @@ Page({
   handleAddSubmit() {
     if (!this.data.newLabel.trim()) return;
     let state = app.getState();
-    state = storage.addInventoryItem(state, this.data.newLabel, this.data.newIcon, this.data.newColor, 10);
+    if (!state.activePetId) {
+      wx.showToast({ title: '请先选择宠物', icon: 'none' });
+      return;
+    }
+    state = storage.addInventoryItem(state, this.data.newLabel.trim(), this.data.newIcon, this.data.newColor, 10);
     app.setState(state);
     this.setData({ isAdding: false, newLabel: '' });
     this.refreshData();

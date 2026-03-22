@@ -10,66 +10,82 @@
     </view>
     <view class="flex-col">
       <text style="font-size:52rpx;font-weight:900;color:var(--text-main);letter-spacing:-1rpx;line-height:1.2;">{{activePet.name}}</text>
-      <text style="font-size:26rpx;font-weight:700;color:var(--text-muted);">{{activePet.breed || (activePet.species === 'dog' ? 'Dog' : activePet.species === 'cat' ? 'Cat' : 'Pet Profile')}}</text>
+      <text style="font-size:26rpx;font-weight:700;color:var(--text-muted);">{{activePet.breed || (activePet.species === 'dog' ? i18n.dog : activePet.species === 'cat' ? i18n.cat : i18n.pawfile)}}</text>
     </view>
   </view>
 
   <!-- Stock Alert -->
-  <view style="padding:0 20rpx;">
+  <view class="section-block">
     <text class="section-title">{{i18n.stock_alert}}</text>
+    <scroll-view scroll-x="true" class="pill-scroll">
+      <view class="pill-row">
+        <view class="pill-item" wx:for="{{inventoryItems}}" wx:key="id">
+          <view class="pill-icon-wrap" style="background:{{item.isLow ? '#FDEBD0' : '#F0EDE6'}};">
+            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.icon)}}" mode="aspectFit" />
+          </view>
+          <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}d</text>
+          <text class="pill-label">{{item.shortLabel}}</text>
+        </view>
+        <view class="pill-item">
+          <view class="pill-icon-wrap">
+            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(isDog ? 'walk_dog' : 'scoop_litter')}}" mode="aspectFit" />
+          </view>
+          <text class="pill-value">{{lastActionText}}</text>
+          <text class="pill-label">{{isDog ? i18n.last_walked : i18n.last_scooped}}</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
-  <scroll-view scroll-x="true" class="stock-scroll">
-    <view class="stock-item" wx:for="{{inventoryItems}}" wx:key="id">
-      <image class="icon-img" lazy-load style="width:72rpx;height:72rpx;" src="{{ic.src(item.icon)}}" mode="aspectFit" />
-      <view class="flex-col">
-        <text style="font-weight:900;font-size:36rpx;color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}d</text>
-        <text style="font-size:22rpx;color:var(--text-muted);font-weight:700;white-space:nowrap;">{{item.shortLabel}}</text>
-      </view>
-    </view>
-    <view class="stock-item" style="padding-right:24rpx;">
-      <image class="icon-img" lazy-load style="width:72rpx;height:72rpx;" src="{{ic.src(isDog ? 'walk_dog' : 'scoop_litter')}}" mode="aspectFit" />
-      <view class="flex-col">
-        <text style="font-weight:900;font-size:28rpx;color:var(--text-main);">{{lastActionText}}</text>
-        <text style="font-size:22rpx;color:var(--text-muted);font-weight:700;white-space:nowrap;">{{isDog ? i18n.last_walked : i18n.last_scooped}}</text>
-      </view>
-    </view>
-  </scroll-view>
 
   <!-- Things to Track -->
-  <view style="padding:0 20rpx;">
-    <text class="section-title" style="margin-bottom:24rpx;">{{i18n.things_to_track}}</text>
-    <scroll-view scroll-x="true" class="actions-scroll">
-      <!-- Quick Actions -->
-      <view class="action-btn" wx:for="{{quickActions}}" wx:key="type"
-        bindtap="handleAction" data-type="{{item.type}}" data-label="{{item.type}}">
-        <image class="icon-img" lazy-load style="width:72rpx;height:72rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
-      </view>
-
-      <!-- Scale button -->
-      <view class="action-btn" bindtap="openWeightModal">
-        <image class="icon-img" lazy-load style="width:72rpx;height:72rpx;" src="{{ic.src('scale')}}" mode="aspectFit" />
-      </view>
-
-      <!-- Custom actions -->
-      <view class="action-btn-wrap" wx:for="{{customActions}}" wx:key="id">
-        <view class="action-btn"
-          bindtap="handleCustomAction"
-          data-id="{{item.id}}" data-label="{{item.label}}" data-color="{{item.color}}" data-iconidx="{{item.iconIdx}}">
-          <image class="icon-img" lazy-load style="width:72rpx;height:72rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+  <view class="section-block">
+    <text class="section-title">{{i18n.things_to_track}}</text>
+    <scroll-view scroll-x="true" class="pill-scroll">
+      <view class="pill-row">
+        <!-- Quick Actions -->
+        <view class="pill-item" wx:for="{{quickActions}}" wx:key="type"
+          bindtap="handleAction" data-type="{{item.type}}" data-label="{{item.type}}">
+          <view class="pill-icon-wrap" style="background:#F0EDE6;">
+            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+          </view>
+          <text class="pill-label">{{i18n[item.type] || item.type}}</text>
         </view>
-        <view class="action-delete-btn" catchtap="deleteCustomAction" data-id="{{item.id}}">
-          <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
-        </view>
-      </view>
 
-      <!-- Add custom -->
-      <view class="add-action-btn" bindtap="openCustomModal">
-        <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Plus')}}" mode="aspectFit" />
+        <!-- Scale button -->
+        <view class="pill-item" bindtap="openWeightModal">
+          <view class="pill-icon-wrap" style="background:#F0EDE6;">
+            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src('scale')}}" mode="aspectFit" />
+          </view>
+          <text class="pill-label">{{i18n.log_weight}}</text>
+        </view>
+
+        <!-- Custom actions -->
+        <view class="pill-item-wrap" wx:for="{{customActions}}" wx:key="id">
+          <view class="pill-item"
+            bindtap="handleCustomAction"
+            data-id="{{item.id}}" data-label="{{item.label}}" data-color="{{item.color}}" data-iconidx="{{item.iconIdx}}">
+            <view class="pill-icon-wrap" style="background:{{item.color}}22;">
+              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+            </view>
+            <text class="pill-label">{{item.label}}</text>
+          </view>
+          <view class="pill-delete-btn" catchtap="deleteCustomAction" data-id="{{item.id}}">
+            <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+          </view>
+        </view>
+
+        <!-- Add custom -->
+        <view class="pill-item" bindtap="openCustomModal">
+          <view class="pill-icon-wrap" style="background:#F0EDE6;">
+            <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Plus')}}" mode="aspectFit" />
+          </view>
+          <text class="pill-label" style="color:var(--text-muted);">{{i18n.custom}}</text>
+        </view>
       </view>
     </scroll-view>
 
     <!-- Feedback -->
-    <text wx:if="{{feedback}}" class="feedback-text">{{feedback}}</text>
+    <text wx:if="{{feedback}}" class="feedback-text" style="margin-top:16rpx;">{{feedback}}</text>
   </view>
 
   <!-- Calendar Card (延迟渲染) -->
@@ -80,7 +96,7 @@
       </view>
       <view class="flex-row gap-md">
         <text class="h3" style="margin:0;">{{currentMonthLabel}}</text>
-        <view class="today-btn" bindtap="goToday">Today</view>
+        <view class="today-btn" bindtap="goToday">{{i18n.today || 'Today'}}</view>
       </view>
       <view bindtap="nextMonth" style="padding:16rpx;">
         <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
@@ -155,7 +171,7 @@
 
   <!-- Custom Event Modal -->
   <view wx:if="{{showCustomModal}}" class="modal-overlay" catchtap="closeCustomModal">
-    <view class="modal-content card" catchtap="">
+    <view class="modal-content card" catchtap="noop">
       <text class="h3">{{i18n.new_custom_event}}</text>
       <input class="input-field" placeholder="e.g. Bath Time" value="{{customName}}" bindinput="onCustomNameInput" />
 
@@ -188,7 +204,7 @@
 
   <!-- Weight Modal -->
   <view wx:if="{{showWeightModal}}" class="modal-overlay" catchtap="closeWeightModal">
-    <view class="modal-content card" catchtap="">
+    <view class="modal-content card" catchtap="noop">
       <text class="h3">{{i18n.log_weight}}</text>
       <view class="flex-row gap-lg" style="margin:40rpx 0;">
         <slider min="5" max="150" value="{{newWeight * 10}}" bindchange="onWeightSliderChange" activeColor="var(--warning)" style="flex:1;" />

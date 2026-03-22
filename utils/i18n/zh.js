@@ -21,7 +21,7 @@ module.exports = {
   scoop_litter: '铲屎', walk_dog: '遛狗', medical: '就医', custom: '自定义',
   delete: '删除', stock: '余量', species: '宠物种类',
   cat: '猫咪 🐱', dog: '狗狗 🐶', other: '其他 🐾',
-  help: '帮助与支持', about: '关于 PetPaw',
+  help: '帮助与支持', about: '关于 PetPaw', today: '今天',
   clear_data: '清除所有数据', data_cleared: '数据已清空！',
   clear_confirm: '此操作将永久删除所有宠物和记录。确定吗？',
   stock_alert: '库存警报', things_to_track: '日常追踪',
@@ -31,5 +31,6 @@ module.exports = {
   log_weight: '记录体重', recorded_weight: '记录体重',
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_bag: '袋', unit_box: '盒', unit_can: '罐', unit_cup: 'cup',
-  who_caring: '今天照顾谁？'
+  who_caring: '今天照顾谁？',
+  stock_food: '主粮', stock_litter: '猫砂', stock_litter_2: '混合猫砂', stock_treats: '零食/猫条'
 };

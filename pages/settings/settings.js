@@ -64,10 +64,14 @@ Page({
 
   selectLanguage(e) {
     const code = e.currentTarget.dataset.code;
+    const oldCode = i18n.getLanguage();
+    if (code === oldCode) {
+      this.setData({ showLangMenu: false });
+      return;
+    }
     i18n.setLanguage(code);
     this.setData({ showLangMenu: false });
-    this.buildI18n();
-    this.refreshData();
+    wx.reLaunch({ url: '/pages/settings/settings' });
   },
 
   showHelp() {

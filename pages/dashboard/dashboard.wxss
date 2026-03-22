@@ -1,63 +1,83 @@
 /* pages/dashboard/dashboard.wxss */
 
-/* Stock scroll */
-.stock-scroll {
+/* Unified section layout */
+.section-block {
+  padding: 0 20rpx;
   display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+/* Pill scroll shared by Stock Alert and Things to Track */
+.pill-scroll {
   white-space: nowrap;
-  padding: 20rpx 8rpx;
 }
 
-.stock-item {
+.pill-row {
   display: inline-flex;
-  align-items: center;
-  gap: 16rpx;
-  flex-shrink: 0;
-  margin-right: 40rpx;
+  gap: 24rpx;
+  padding-bottom: 8rpx;
 }
 
-/* Actions */
-.actions-scroll {
-  display: flex;
-  white-space: nowrap;
-  padding-bottom: 20rpx;
-}
-
-.action-btn {
+/* Each pill: icon circle + value + label stacked vertically */
+.pill-item {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-width: 80rpx;
-  padding: 8rpx;
-  margin-right: 32rpx;
+  gap: 10rpx;
   flex-shrink: 0;
+  min-width: 112rpx;
 }
 
-.action-btn-wrap {
+.pill-item-wrap {
   display: inline-flex;
   position: relative;
   flex-shrink: 0;
-  margin-right: 32rpx;
 }
 
-.action-delete-btn {
+.pill-icon-wrap {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0EDE6;
+}
+
+.pill-value {
+  font-size: 28rpx;
+  font-weight: 900;
+  color: var(--text-main);
+  line-height: 1;
+  height: 34rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140rpx;
+  display: flex;
+  align-items: center;
+}
+
+.pill-label {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pill-delete-btn {
   position: absolute;
   top: -8rpx;
   right: -8rpx;
   background: var(--bg-color);
   border-radius: 50%;
-  z-index: 2;
-}
-
-.add-action-btn {
-  display: inline-flex;
+  width: 36rpx;
+  height: 36rpx;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: #F0EDE6;
-  border-radius: 50%;
-  min-width: 80rpx;
-  height: 80rpx;
-  flex-shrink: 0;
-  margin: auto 0;
+  z-index: 2;
 }
 
 /* Calendar */

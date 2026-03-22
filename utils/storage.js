@@ -8,10 +8,7 @@ const STORAGE_KEY = 'petpaw_data';
 const defaultState = {
   activePetId: null,
   pets: [],
-  inventoryItems: [
-    { id: 'food', label: 'Food', current: 0, dailyConsumption: 50, icon: 'Package', color: '#F5B041', unit: 'g' },
-    { id: 'litter', label: 'Litter', current: 0, dailyConsumption: 200, icon: 'Archive', color: '#AAB7B8', unit: 'g' }
-  ],
+  inventoryItems: [], // 实际物资由 _syncDefaultInventory 根据宠物种类决定
   lastDeductionDate: new Date().toISOString(),
   logs: [],
   reminders: [],
@@ -59,6 +56,33 @@ function flushState(state) {
 }
 
 /**
+ * 根据所有宠物，确保每只宠物都有正确的默认物资（幂等）
+ * - 编规：猫 = food+litter, 狗 = food
+ * - 每个默认 item 都带 petId
+ * - 自定义 item（用户手动添加）保留不动
+ */
+function _syncDefaultInventory(items, pets) {
+  // 保留所有自定义项（带 petId 且 id 不是默认类型）
+  const DEFAULT_TYPE = ['food', 'litter'];
+  const custom = items.filter(i => !DEFAULT_TYPE.includes(i.typeId));
+
+  const defaults = [];
+  for (const pet of pets) {
+    // food
+    const existFood = items.find(i => i.petId === pet.id && i.typeId === 'food');
+    defaults.push(existFood || { id: generateId(), petId: pet.id, typeId: 'food', label: 'Food', current: 0, dailyConsumption: 50, icon: 'FoodBowl', color: '#F5B041', unit: 'g' });
+
+    // litter 仅猫
+    if (pet.species === 'cat' || !pet.species) {
+      const existLitter = items.find(i => i.petId === pet.id && i.typeId === 'litter');
+      defaults.push(existLitter || { id: generateId(), petId: pet.id, typeId: 'litter', label: 'Litter', current: 0, dailyConsumption: 200, icon: 'LitterBox', color: '#AAB7B8', unit: 'g' });
+    }
+  }
+
+  return [...defaults, ...custom];
+}
+
+/**
  * 加载数据（同步读取，冷启动必须）
  */
 function loadState() {
@@ -77,12 +101,30 @@ function loadState() {
       if (parsed.inventory && !parsed.inventoryItems) {
         parsed.inventoryItems = [
           { id: 'food', label: 'Food', current: parsed.inventory.food?.current || 0, dailyConsumption: parsed.inventory.food?.dailyConsumption || 50, icon: 'Package', color: '#F5B041', unit: 'g' },
-          { id: 'litter', label: 'Litter', current: parsed.inventory.litter?.current || 0, dailyConsumption: parsed.inventory.litter?.dailyConsumption || 200, icon: 'Archive', color: '#AAB7B8', unit: 'g' }
+          { id: 'litter', label: 'Litter', current: parsed.inventory.litter?.current || 0, dailyConsumption: parsed.inventory.litter?.dailyConsumption || 200, icon: 'Archive', color: '#AAB7B8', unit: 'g' },
+          { id: 'treats', label: 'Treats', current: 0, dailyConsumption: 1, icon: 'Heart', color: '#F1948A', unit: 'bag' }
         ];
         delete parsed.inventory;
       } else if (!parsed.inventoryItems) {
         parsed.inventoryItems = JSON.parse(JSON.stringify(defaultState.inventoryItems));
       }
+
+      const activePetId = parsed.activePetId || (parsed.pets && parsed.pets[0]?.id) || null;
+      parsed.inventoryItems = (parsed.inventoryItems || []).map(item => {
+        if (!item.petId && activePetId) {
+          // 推断 typeId 并修正图标
+          const typeId = item.id === 'food' ? 'food' : item.id === 'litter' ? 'litter' : null;
+          const icon = typeId === 'food' ? 'FoodBowl' : typeId === 'litter' ? 'LitterBox' : item.icon;
+          return { ...item, petId: activePetId, typeId: typeId || item.typeId || null, icon };
+        }
+        // 修正已有 default item 的图标（以防旧存档带错误图标）
+        if (item.typeId === 'food' && (item.icon === 'Package' || item.icon === 'Fish')) return { ...item, icon: 'FoodBowl' };
+        if (item.typeId === 'litter' && (item.icon === 'Archive' || item.icon === 'scoop_litter')) return { ...item, icon: 'LitterBox' };
+        return item;
+      });
+
+      // 同步默认物资
+      parsed.inventoryItems = _syncDefaultInventory(parsed.inventoryItems, parsed.pets || []);
 
       return parsed;
     }
@@ -123,18 +165,9 @@ function addPet(state, petData) {
   const id = generateId();
   const newPet = { ...petData, id };
 
-  let nextInventory = [...state.inventoryItems];
-  if (petData.species === 'dog') {
-    nextInventory = nextInventory.filter(i => i.id !== 'litter');
-  } else if (petData.species === 'cat') {
-    if (!nextInventory.some(i => i.id === 'litter')) {
-      nextInventory.unshift({ id: 'litter', label: 'Litter', current: 0, dailyConsumption: 200, icon: 'Archive', color: '#AAB7B8', unit: 'g' });
-    }
-  }
-
   state.pets = [...state.pets, newPet];
   state.activePetId = id;
-  state.inventoryItems = nextInventory;
+  state.inventoryItems = _syncDefaultInventory(state.inventoryItems, state.pets);
 
   if (petData.initialWeight) {
     const entry = { id: generateId(), petId: id, date: new Date().toISOString(), weight: parseFloat(petData.initialWeight) };
@@ -153,6 +186,8 @@ function editPet(state, id, petData) {
 
 function deletePet(state, id) {
   state.pets = state.pets.filter(p => p.id !== id);
+  // 删除该宠物的所有物资
+  state.inventoryItems = state.inventoryItems.filter(i => i.petId !== id);
   if (state.activePetId === id) {
     state.activePetId = state.pets.length > 0 ? state.pets[0].id : null;
   }
@@ -162,7 +197,7 @@ function deletePet(state, id) {
 
 function updateInventory(state, id, values) {
   state.inventoryItems = state.inventoryItems.map(item =>
-    item.id === id ? { ...item, ...values } : item
+    item.id === id && item.petId === state.activePetId ? { ...item, ...values } : item
   );
   saveState(state);
   return state;
@@ -170,15 +205,17 @@ function updateInventory(state, id, values) {
 
 function adjustInventory(state, id, amount) {
   state.inventoryItems = state.inventoryItems.map(item =>
-    item.id === id ? { ...item, current: Math.max(0, item.current + amount) } : item
+    item.id === id && item.petId === state.activePetId ? { ...item, current: Math.max(0, item.current + amount) } : item
   );
   saveState(state);
   return state;
 }
 
 function addInventoryItem(state, label, icon, color, dailyConsumption) {
+  if (!state.activePetId) return state;
   const newItem = {
-    id: generateId(), label, icon, color,
+    id: generateId(), petId: state.activePetId, typeId: null,
+    label, icon, color,
     current: 0, dailyConsumption: parseInt(dailyConsumption) || 0, unit: 'g'
   };
   state.inventoryItems = [...state.inventoryItems, newItem];

@@ -11,6 +11,8 @@ var ICON_MAP = {
   'scale':         '/static/icons/scale.png',
   // 库存
   'Package':       '/static/icons/package.png',
+  'FoodBowl':      '/static/icons/food-bowl.png',
+  'LitterBox':     '/static/icons/litter-box.png',
   'food_refill':   '/static/icons/stock-package.png',
   'Archive':       '/static/icons/archive.png',
   'litter_refill': '/static/icons/stock-archive.png',

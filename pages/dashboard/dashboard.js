@@ -6,11 +6,8 @@ const dateUtil = require('../../utils/date');
 
 // 自定义图标列表，对应 CUSTOM_ICONS 数组
 const CUSTOM_ICON_NAMES = ['Star', 'Heart', 'Droplet', 'Sun', 'Zap', 'Smile', 'Music', 'Coffee', 'Camera', 'Gift', 'Umbrella', 'Book', 'Feather', 'Flame', 'Moon', 'Cloud'];
-const LABEL_MAP = {
-  vaccine: 'Vaccination', deworming: 'Deworming', brush_teeth: 'Brushed Teeth',
-  scoop_litter: 'Scooped Box', walk_dog: 'Walked Dog',
-  food_refill: 'Refill Food', litter_refill: 'Refill Litter'
-};
+// Remove LABEL_MAP as we use t() for i18n
+
 const COLOR_MAP = {
   vaccine: '#FF7B54', deworming: '#93C653', brush_teeth: '#5DADE2',
   scoop_litter: '#8F8377', walk_dog: '#8F8377'
@@ -70,7 +67,8 @@ Page({
         select_icon: t('select_icon'), select_color: t('select_color'),
         cancel: t('cancel'), save: t('save'), log_weight: t('log_weight'),
         recorded_weight: t('recorded_weight'), last_scooped: t('last_scooped'), last_walked: t('last_walked'),
-        today_logs: t('today_logs'), logs_for: t('logs_for')
+        today_logs: t('today_logs'), logs_for: t('logs_for'),
+        dog: t('dog'), cat: t('cat'), pawfile: t('pawfile'), today: t('today')
       }
     });
   },
@@ -102,11 +100,12 @@ Page({
       ...ca, iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
     }));
 
-    // Stock Alert
-    const showWarning = state.inventoryItems?.some(item => Math.floor(item.current / (item.dailyConsumption || 1)) <= 7) || false;
+    // Stock Alert - only for active pet
+    const petInventory = (state.inventoryItems || []).filter(item => item.petId === state.activePetId);
+    const showWarning = petInventory.some(item => Math.floor(item.current / (item.dailyConsumption || 1)) <= 7) || false;
 
     // Inventory items with computed daysLeft
-    const inventoryItems = (state.inventoryItems || []).map(item => {
+    const inventoryItems = petInventory.map(item => {
       const daysLeft = Math.floor((item.current || 0) / (item.dailyConsumption || 1));
       return { ...item, daysLeft, isLow: daysLeft <= 7, shortLabel: (item.label || '').replace(/ .*/, '') };
     });
@@ -186,7 +185,7 @@ Page({
 
     // ====== 构建日期索引 Map: dateStr → icons[] — O(logs + meds + weights) ======
     const iconMap = {};
-    const _key = (dateStr) => dateStr.slice(0, 10); // 'YYYY-MM-DD'
+    const _key = (dateStr) => dateUtil.formatDate(dateUtil.parseISO(dateStr), 'YYYY-MM-DD');
 
     petLogs.forEach(l => {
       const k = _key(l.date);
@@ -228,7 +227,7 @@ Page({
     currentMonthLogs.forEach(log => {
       const key = log.type;
       if (!statsMap[key]) {
-        let label = LABEL_MAP[key] || '';
+        let label = t(key) || '';
         if (key.startsWith('custom_')) {
           const ca = customActions.find(c => c.id === key.split('_')[1]);
           label = ca ? ca.label : 'Custom';
@@ -272,7 +271,7 @@ Page({
 
     const combinedLogs = [
       ...selectedDayLogs.map(l => {
-        let label = LABEL_MAP[l.type] || '';
+        let label = t(l.type) || '';
         let iconName = l.type;
         if (l.type.startsWith('custom_')) {
           const ca = customActions.find(c => c.id === l.type.split('_')[1]);
@@ -343,7 +342,7 @@ Page({
   // === Quick Actions ===
   handleAction(e) {
     const type = e.currentTarget.dataset.type;
-    const label = e.currentTarget.dataset.label || LABEL_MAP[type] || type;
+    const label = e.currentTarget.dataset.label || t(type) || type;
     const color = e.currentTarget.dataset.color || null;
     const iconIdx = e.currentTarget.dataset.iconidx !== undefined ? parseInt(e.currentTarget.dataset.iconidx) : null;
 
@@ -415,6 +414,7 @@ Page({
 
   // === Weight Modal ===
   openWeightModal() { this.setData({ showWeightModal: true, newWeight: 4.0 }); },
+  noop() {},
   closeWeightModal() { this.setData({ showWeightModal: false }); },
   onWeightSliderChange(e) { this.setData({ newWeight: (e.detail.value / 10).toFixed(1) }); },
   saveWeight() {

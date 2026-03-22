@@ -21,7 +21,7 @@ module.exports = {
   scoop_litter: 'Scoop', walk_dog: 'Walk', medical: 'Vet', custom: 'Custom',
   delete: 'Delete', stock: 'Stock', species: 'Species',
   cat: 'Cat 🐱', dog: 'Dog 🐶', other: 'Other 🐾',
-  help: 'Help & Support', about: 'About PetPaw',
+  help: 'Help & Support', about: 'About PetPaw', today: 'Today',
   clear_data: 'Clear All Data', data_cleared: 'Data cleared!',
   clear_confirm: 'This will permanently delete ALL pets and records. Are you sure?',
   stock_alert: 'Stock Alert', things_to_track: 'Things to track',
@@ -31,5 +31,6 @@ module.exports = {
   log_weight: 'Log Weight', recorded_weight: 'Recorded Weight',
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_cup: 'cup', unit_bag: 'bag', unit_box: 'box', unit_can: 'can',
-  who_caring: 'Who are we caring for today?'
+  who_caring: 'Who are we caring for today?',
+  stock_food: 'Food', stock_litter: 'Litter', stock_litter_2: 'Mixed Litter', stock_treats: 'Treats'
 };

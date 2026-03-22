@@ -119,6 +119,19 @@
   gap: 32rpx;
 }
 
+.pet-card-add {
+  background: transparent;
+  border: 4rpx dashed var(--primary);
+  box-shadow: none;
+}
+
+.pet-avatar-add {
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pet-avatar-wrap {
   width: 128rpx;
   height: 128rpx;

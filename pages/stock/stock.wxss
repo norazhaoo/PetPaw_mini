@@ -5,6 +5,29 @@
   position: relative;
 }
 
+.stock-card-add {
+  background: transparent;
+  border: 4rpx dashed var(--primary);
+  box-shadow: none;
+}
+
+.add-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 32rpx;
+}
+
+.add-card-icon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .stock-delete-btn {
   position: absolute;
   top: 24rpx;
@@ -47,6 +70,9 @@
   font-weight: 800;
   color: var(--text-main);
   width: 180rpx;
+  height: 80rpx;
+  min-height: 80rpx;
+  line-height: 80rpx;
   text-align: center;
   background: transparent;
   border: none;
