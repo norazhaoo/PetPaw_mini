@@ -1,0 +1,9 @@
+<!-- custom-tab-bar/index.wxml -->
+<view class="tab-bar">
+  <view wx:for="{{list}}" wx:key="pagePath"
+    class="tab-item {{item.isActive ? 'tab-active' : ''}}"
+    bindtap="switchTab" data-index="{{index}}">
+    <image class="tab-icon" src="{{item.iconSrc}}" mode="aspectFit" />
+    <text class="tab-label">{{item.label}}</text>
+  </view>
+</view>

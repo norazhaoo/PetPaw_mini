@@ -1,0 +1,88 @@
+<!-- pages/stock/stock.wxml -->
+<view class="app-container">
+  <!-- Inventory Cards -->
+  <view wx:for="{{inventoryItems}}" wx:key="id" class="card stock-card">
+    <!-- Delete button for non-default items -->
+    <view wx:if="{{!item.isDefault}}" class="stock-delete-btn" bindtap="deleteItem" data-id="{{item.id}}" data-label="{{item.label}}">
+      <icon name="XCircle" size="36" color="#E74C3C" />
+    </view>
+
+    <text class="h2 text-center">{{item.label}}</text>
+
+    <!-- Current Amount -->
+    <view class="amount-row">
+      <view class="amount-btn" bindtap="adjustInventory" data-id="{{item.id}}" data-amount="{{-item.stepAmount}}">
+        <text style="font-size:40rpx;font-weight:700;">−</text>
+      </view>
+      <view class="amount-display">
+        <input type="digit" class="amount-input" value="{{item.current}}" bindinput="onCurrentInput" data-id="{{item.id}}" />
+        <picker mode="selector" range="{{unitOptions}}" value="{{item.unitPickerIndex}}" bindchange="onUnitChange" data-id="{{item.id}}">
+          <text class="unit-text">{{item.unitLabel}}</text>
+        </picker>
+      </view>
+      <view class="amount-btn amount-btn-plus" bindtap="adjustInventory" data-id="{{item.id}}" data-amount="{{item.stepAmount}}">
+        <text style="font-size:40rpx;font-weight:700;">+</text>
+      </view>
+    </view>
+
+    <!-- Daily Consumption -->
+    <view style="padding:0 16rpx;">
+      <text class="text-muted font-bold" style="font-size:26rpx;">{{i18n.daily_consumption}}</text>
+      <view class="preset-row">
+        <view wx:for="{{item.presets}}" wx:for-item="val" wx:key="*this"
+          class="preset-btn {{!item.isCustomConsumption && item.dailyConsumption === val ? 'preset-active' : ''}}"
+          bindtap="selectPreset" data-id="{{item.id}}" data-val="{{val}}">
+          {{val}}{{item.unitLabel}}
+        </view>
+        <view class="preset-btn {{item.isCustomConsumption ? 'preset-active' : ''}}"
+          bindtap="toggleCustomConsumption" data-id="{{item.id}}">
+          {{i18n.custom}}
+        </view>
+      </view>
+
+      <view wx:if="{{item.isCustomConsumption}}" class="custom-consumption-row">
+        <input type="digit" class="input-field" style="flex:1;" value="{{item.dailyConsumption}}" bindinput="onDailyConsumptionInput" data-id="{{item.id}}" />
+        <text class="font-bold text-muted" style="font-size:28rpx;">{{item.unitLabel}} / {{i18n.d}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Add Button -->
+  <button class="btn-dashed" style="margin-bottom:80rpx;" bindtap="openAddModal">
+    <view class="add-icon-circle">
+      <icon name="Plus" size="48" color="#4A403A" />
+    </view>
+    <text style="font-weight:700;font-size:32rpx;color:var(--text-muted);">{{i18n.add_custom_stock}}</text>
+  </button>
+
+  <!-- Add Modal -->
+  <view wx:if="{{isAdding}}" class="modal-overlay" catchtap="closeAddModal">
+    <view class="modal-content card" catchtap="">
+      <text class="h2">{{i18n.new_stock_item}}</text>
+
+      <view style="margin-top:32rpx;">
+        <text class="font-bold" style="margin-bottom:16rpx;display:block;">{{i18n.name}}</text>
+        <input class="input-field" value="{{newLabel}}" bindinput="onNewLabelInput" placeholder="..." />
+      </view>
+
+      <view style="margin-top:32rpx;">
+        <text class="font-bold" style="margin-bottom:16rpx;display:block;">{{i18n.select_icon}}</text>
+        <scroll-view scroll-x="true" style="padding-bottom:16rpx;">
+          <view class="flex-row gap-md">
+            <view wx:for="{{iconOptions}}" wx:key="*this"
+              class="icon-pick-btn {{newIcon === item ? 'icon-pick-active' : ''}}"
+              style="{{newIcon === item ? 'background:' + newColor + ';color:#fff;' : ''}}"
+              bindtap="selectIcon" data-icon="{{item}}">
+              <icon name="{{item}}" size="48" color="{{newIcon === item ? '#fff' : '#4A403A'}}" />
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="flex-row gap-md" style="margin-top:48rpx;">
+        <button class="btn-secondary flex-1" bindtap="closeAddModal">{{i18n.cancel}}</button>
+        <button class="btn-primary flex-1" bindtap="handleAddSubmit" disabled="{{!newLabel}}">{{i18n.create}}</button>
+      </view>
+    </view>
+  </view>
+</view>

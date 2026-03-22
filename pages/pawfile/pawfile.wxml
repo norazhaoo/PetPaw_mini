@@ -1,0 +1,117 @@
+<!-- pages/pawfile/pawfile.wxml -->
+<view class="app-container">
+  <!-- 添加/编辑表单 -->
+  <view wx:if="{{isAdding}}">
+    <view class="form-header">
+      <view class="back-btn" bindtap="resetForm">
+        <icon name="ChevronLeft" size="48" color="#4A403A" />
+      </view>
+      <text class="h2">{{editingPetId ? i18n.edit_pet : i18n.add_pet}}</text>
+    </view>
+
+    <view class="card">
+      <!-- 头像上传 -->
+      <view class="avatar-upload-wrap">
+        <view wx:if="{{avatar}}" class="avatar-preview-wrap">
+          <image class="avatar-preview" src="{{avatar}}" mode="aspectFill" />
+          <view class="avatar-remove-btn" bindtap="removeAvatar">×</view>
+        </view>
+        <view wx:else class="avatar-placeholder" bindtap="chooseAvatar">
+          <icon name="Camera" size="64" color="#8F8377" />
+          <text class="text-muted" style="font-size:20rpx;margin-top:8rpx;">{{i18n.photo}}</text>
+        </view>
+      </view>
+
+      <!-- Species -->
+      <view class="form-group">
+        <text class="form-label">{{i18n.species}} *</text>
+        <view class="species-row">
+          <view wx:for="{{speciesList}}" wx:key="*this"
+            class="species-btn {{species === item ? 'species-active' : ''}}"
+            bindtap="setSpecies" data-species="{{item}}">
+            {{i18n[item]}}
+          </view>
+        </view>
+      </view>
+
+      <!-- Name -->
+      <view class="form-group">
+        <text class="form-label">{{i18n.name}} *</text>
+        <input class="input-field" value="{{name}}" bindinput="onNameInput" />
+      </view>
+
+      <!-- Breed -->
+      <view class="form-group">
+        <text class="form-label">{{i18n.breed_optional}}</text>
+        <input class="input-field" value="{{breed}}" bindinput="onBreedInput" />
+      </view>
+
+      <!-- Birthday -->
+      <view class="form-group">
+        <text class="form-label">{{i18n.birthday_optional}}</text>
+        <picker mode="date" value="{{birthday}}" bindchange="onBirthdayChange">
+          <view class="input-field">{{birthday || '----/--/--'}}</view>
+        </picker>
+      </view>
+
+      <!-- Weight (only for new pets) -->
+      <view class="form-group" wx:if="{{!editingPetId}}">
+        <text class="form-label">{{i18n.weight_kg}} *</text>
+        <input class="input-field" type="digit" value="{{initialWeight}}" bindinput="onWeightInput" />
+      </view>
+
+      <!-- Photo URL -->
+      <view class="form-group">
+        <text class="form-label">{{i18n.photo_url}}</text>
+        <input class="input-field" value="{{avatar || ''}}" bindinput="onAvatarUrlInput" placeholder="https://..." />
+      </view>
+
+      <!-- Buttons -->
+      <view class="btn-row">
+        <button class="btn-secondary flex-1" bindtap="resetForm">{{i18n.cancel}}</button>
+        <button class="btn-primary flex-1" bindtap="handleSave" disabled="{{!name}}">{{i18n.save}}</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 宠物列表 -->
+  <view wx:else>
+    <view class="text-center" style="margin-bottom:64rpx;">
+      <text class="h1" style="font-size:72rpx;">🐾 PetPaw</text>
+      <text class="text-muted" style="display:block;margin-top:16rpx;">{{i18n.who_caring}}</text>
+    </view>
+
+    <view class="flex-col gap-lg">
+      <!-- 每个宠物 -->
+      <view wx:for="{{pets}}" wx:key="id" class="pet-list-item">
+        <view class="pet-card" bindtap="selectPet" data-id="{{item.id}}">
+          <view class="pet-avatar-wrap">
+            <image wx:if="{{item.avatar}}" class="pet-avatar" src="{{item.avatar}}" mode="aspectFill" />
+            <text wx:else class="pet-avatar-letter">{{item.name[0]}}</text>
+          </view>
+          <view class="flex-1">
+            <text class="pet-name">{{item.name}}</text>
+            <text wx:if="{{item.breed}}" class="pet-breed">{{item.breed}}</text>
+          </view>
+          <icon name="ChevronRight" size="48" color="#8F8377" />
+        </view>
+        <view class="pet-actions">
+          <view class="pet-action-btn" bindtap="handleEditClick" data-id="{{item.id}}">
+            <icon name="Pencil" size="32" color="#8F8377" />
+          </view>
+          <view class="pet-action-btn delete-btn" bindtap="handleDeletePet" data-id="{{item.id}}" data-name="{{item.name}}">
+            <icon name="Trash2" size="32" color="#E74C3C" />
+          </view>
+        </view>
+      </view>
+
+      <!-- 添加按钮 -->
+      <button class="btn-dashed" bindtap="startAdding">
+        <view class="add-icon-circle">
+          <icon name="Plus" size="48" color="#4A403A" />
+        </view>
+        <text style="font-weight:700;font-size:32rpx;color:var(--text-muted);">{{i18n.add_pet}}</text>
+      </button>
+    </view>
+  </view>
+</view>

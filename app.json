@@ -1,0 +1,47 @@
+{
+  "pages": [
+    "pages/pawfile/pawfile",
+    "pages/dashboard/dashboard",
+    "pages/stock/stock",
+    "pages/medical/medical",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#FFF3E0",
+    "navigationBarTitleText": "PetPaw",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#FFF3E0",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8F8377",
+    "selectedColor": "#4A403A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/pawfile/pawfile",
+        "text": "Pawfile"
+      },
+      {
+        "pagePath": "pages/dashboard/dashboard",
+        "text": "Diary"
+      },
+      {
+        "pagePath": "pages/stock/stock",
+        "text": "Stock"
+      },
+      {
+        "pagePath": "pages/medical/medical",
+        "text": "Medical"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "Settings"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}

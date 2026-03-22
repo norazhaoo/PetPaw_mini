@@ -1,0 +1,169 @@
+/* pages/dashboard/dashboard.wxss */
+
+/* Stock scroll */
+.stock-scroll {
+  display: flex;
+  white-space: nowrap;
+  padding: 20rpx 8rpx;
+}
+
+.stock-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+  margin-right: 40rpx;
+}
+
+/* Actions */
+.actions-scroll {
+  display: flex;
+  white-space: nowrap;
+  padding-bottom: 20rpx;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80rpx;
+  padding: 8rpx;
+  margin-right: 32rpx;
+  flex-shrink: 0;
+}
+
+.action-btn-wrap {
+  display: inline-flex;
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 32rpx;
+}
+
+.action-delete-btn {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  background: var(--bg-color);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.add-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0EDE6;
+  border-radius: 50%;
+  min-width: 80rpx;
+  height: 80rpx;
+  flex-shrink: 0;
+  margin: auto 0;
+}
+
+/* Calendar */
+.today-btn {
+  padding: 4rpx 16rpx;
+  border-radius: 24rpx;
+  background: var(--primary);
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 22rpx;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8rpx;
+  text-align: center;
+}
+
+.cal-header {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.cal-weekday {
+  text-align: center;
+}
+
+.cal-cell {
+  min-height: 96rpx;
+  padding: 8rpx;
+  border-radius: 24rpx;
+  border: 4rpx solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cal-selected {
+  border-color: var(--primary);
+}
+
+.cal-today {
+  background: #FFFDF2;
+}
+
+.cal-day-num {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.cal-today-num {
+  color: var(--warning);
+  font-weight: 900;
+}
+
+.cal-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4rpx;
+  justify-content: center;
+  margin-top: 8rpx;
+}
+
+/* Stats */
+.stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #F0EDE6;
+  padding: 12rpx 20rpx;
+  border-radius: 32rpx;
+}
+
+/* Log items */
+.log-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 24rpx;
+  background: var(--bg-color);
+  border-radius: 16rpx;
+}
+
+/* Modal extras */
+.icon-select-btn {
+  border: 4rpx solid transparent;
+  padding: 16rpx;
+  border-radius: 16rpx;
+  background: #F0EDE6;
+  flex-shrink: 0;
+}
+
+.icon-select-active {
+  border-color: var(--text-main);
+}
+
+.color-dot {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  border: 4rpx solid transparent;
+}
+
+.color-dot-active {
+  border-color: var(--text-main);
+}

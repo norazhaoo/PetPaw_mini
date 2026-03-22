@@ -1,0 +1,201 @@
+<!-- pages/dashboard/dashboard.wxml -->
+<view class="app-container" wx:if="{{activePet}}">
+  <!-- Header -->
+  <view class="header-card">
+    <image wx:if="{{activePet.avatar}}" class="header-avatar" src="{{activePet.avatar}}" mode="aspectFill" />
+    <view wx:else class="header-avatar-placeholder">
+      <text>{{activePet.species === 'dog' ? '🐶' : activePet.species === 'other' ? '🐾' : '🐱'}}</text>
+    </view>
+    <view class="flex-col">
+      <text style="font-size:52rpx;font-weight:900;color:var(--text-main);letter-spacing:-1rpx;line-height:1.2;">{{activePet.name}}</text>
+      <text style="font-size:26rpx;font-weight:700;color:var(--text-muted);">{{activePet.breed || (activePet.species === 'dog' ? 'Dog' : activePet.species === 'cat' ? 'Cat' : 'Pet Profile')}}</text>
+    </view>
+  </view>
+
+  <!-- Stock Alert -->
+  <view style="padding:0 20rpx;">
+    <text class="section-title">{{i18n.stock_alert}}</text>
+  </view>
+  <scroll-view scroll-x="true" class="stock-scroll">
+    <view class="stock-item" wx:for="{{inventoryItems}}" wx:key="id">
+      <icon name="{{item.icon}}" size="72" color="{{item.color}}" />
+      <view class="flex-col">
+        <text style="font-weight:900;font-size:36rpx;color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}d</text>
+        <text style="font-size:22rpx;color:var(--text-muted);font-weight:700;white-space:nowrap;">{{item.shortLabel}}</text>
+      </view>
+    </view>
+    <view class="stock-item" style="padding-right:24rpx;">
+      <icon name="{{isDog ? 'walk_dog' : 'scoop_litter'}}" size="72" color="#8F8377" />
+      <view class="flex-col">
+        <text style="font-weight:900;font-size:28rpx;color:var(--text-main);">{{lastActionText}}</text>
+        <text style="font-size:22rpx;color:var(--text-muted);font-weight:700;white-space:nowrap;">{{isDog ? i18n.last_walked : i18n.last_scooped}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- Things to Track -->
+  <view style="padding:0 20rpx;">
+    <text class="section-title" style="margin-bottom:24rpx;">{{i18n.things_to_track}}</text>
+    <scroll-view scroll-x="true" class="actions-scroll">
+      <!-- Quick Actions -->
+      <view class="action-btn" wx:for="{{quickActions}}" wx:key="type"
+        bindtap="handleAction" data-type="{{item.type}}" data-label="{{item.type}}">
+        <icon name="{{item.iconName}}" size="72" color="{{item.color}}" />
+      </view>
+
+      <!-- Scale button -->
+      <view class="action-btn" bindtap="openWeightModal">
+        <icon name="scale" size="72" color="#3498DB" />
+      </view>
+
+      <!-- Custom actions -->
+      <view class="action-btn-wrap" wx:for="{{customActions}}" wx:key="id">
+        <view class="action-btn"
+          bindtap="handleCustomAction"
+          data-id="{{item.id}}" data-label="{{item.label}}" data-color="{{item.color}}" data-iconidx="{{item.iconIdx}}">
+          <icon name="{{item.iconName}}" size="72" color="{{item.color}}" />
+        </view>
+        <view class="action-delete-btn" catchtap="deleteCustomAction" data-id="{{item.id}}">
+          <icon name="XCircle" size="32" color="#8F8377" />
+        </view>
+      </view>
+
+      <!-- Add custom -->
+      <view class="add-action-btn" bindtap="openCustomModal">
+        <icon name="Plus" size="48" color="#8F8377" />
+      </view>
+    </scroll-view>
+
+    <!-- Feedback -->
+    <text wx:if="{{feedback}}" class="feedback-text">{{feedback}}</text>
+  </view>
+
+  <!-- Calendar Card -->
+  <view class="card">
+    <view class="flex-between" style="margin-bottom:32rpx;">
+      <view bindtap="prevMonth" style="padding:16rpx;">
+        <icon name="ChevronLeft" size="48" color="#4A403A" />
+      </view>
+      <view class="flex-row gap-md">
+        <text class="h3" style="margin:0;">{{currentMonthLabel}}</text>
+        <view class="today-btn" bindtap="goToday">Today</view>
+      </view>
+      <view bindtap="nextMonth" style="padding:16rpx;">
+        <icon name="ChevronRight" size="48" color="#4A403A" />
+      </view>
+    </view>
+
+    <!-- Weekday headers -->
+    <view class="cal-grid cal-header">
+      <text wx:for="{{weekdays}}" wx:key="*this" class="cal-weekday">{{item}}</text>
+    </view>
+
+    <!-- Days -->
+    <view class="cal-grid" style="margin-top:16rpx;">
+      <view wx:for="{{blanks}}" wx:key="*this" class="cal-cell"></view>
+      <view wx:for="{{daysInMonth}}" wx:key="dateStr" class="cal-cell {{item.isSelected ? 'cal-selected' : ''}} {{item.isToday ? 'cal-today' : ''}}"
+        bindtap="selectDate" data-date="{{item.dateStr}}">
+        <text class="cal-day-num {{item.isToday ? 'cal-today-num' : ''}}">{{item.dayNum}}</text>
+        <view class="cal-icons">
+          <icon wx:for="{{item.icons}}" wx:for-item="ic" wx:key="name" name="{{ic.name}}" size="28" color="{{ic.color}}" />
+        </view>
+      </view>
+    </view>
+
+    <!-- Monthly Stats -->
+    <view style="margin-top:40rpx;padding-top:32rpx;border-top:2rpx solid #F0EDE6;">
+      <text style="font-size:26rpx;color:var(--text-muted);margin-bottom:24rpx;display:block;">{{i18n.monthly_stats}}</text>
+      <view class="flex-row flex-wrap gap-md" wx:if="{{monthlyStats.length > 0}}">
+        <view wx:for="{{monthlyStats}}" wx:key="type" class="stat-badge">
+          <icon name="{{item.iconName}}" size="28" color="{{item.color}}" />
+          <text style="font-size:26rpx;font-weight:700;">x{{item.count}}</text>
+        </view>
+      </view>
+      <text wx:else class="text-muted" style="font-size:24rpx;">{{i18n.no_activity}}</text>
+    </view>
+  </view>
+
+  <!-- Weight History Chart -->
+  <view class="card">
+    <view class="flex-row gap-md" style="margin-bottom:16rpx;">
+      <text class="h2" style="font-size:32rpx;margin:0;">{{i18n.weight_history}}</text>
+      <icon name="scale" size="40" color="#4A403A" />
+    </view>
+    <view style="height:360rpx;">
+      <canvas wx:if="{{hasWeightData}}" type="2d" id="weightCanvas" style="width:100%;height:100%;" />
+      <view wx:else class="flex-center" style="width:100%;height:100%;">
+        <text class="text-muted" style="font-size:24rpx;">{{i18n.no_weight_history}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Selected Day Logs -->
+  <view class="card">
+    <text class="h2" style="font-size:32rpx;margin-bottom:16rpx;">{{listTitle}}</text>
+    <view wx:if="{{combinedLogs.length === 0}}">
+      <text class="text-muted" style="font-size:26rpx;">{{i18n.no_records_day}}</text>
+    </view>
+    <view class="flex-col gap-md" wx:else>
+      <view wx:for="{{combinedLogs}}" wx:key="id" class="log-item">
+        <view class="flex-row gap-md flex-1">
+          <icon name="{{item.iconName}}" size="72" color="{{item.iconColor}}" />
+          <view class="flex-col">
+            <text style="font-weight:700;font-size:26rpx;">{{item.label}}</text>
+            <text class="text-muted" style="font-size:20rpx;">{{item.time}}</text>
+          </view>
+        </view>
+        <view bindtap="deleteLog" data-id="{{item.id}}" data-typegroup="{{item.typeGroup}}">
+          <icon name="XCircle" size="36" color="#FF7B54" />
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Custom Event Modal -->
+  <view wx:if="{{showCustomModal}}" class="modal-overlay" catchtap="closeCustomModal">
+    <view class="modal-content card" catchtap="">
+      <text class="h3">{{i18n.new_custom_event}}</text>
+      <input class="input-field" placeholder="e.g. Bath Time" value="{{customName}}" bindinput="onCustomNameInput" />
+
+      <text class="font-bold" style="margin-top:24rpx;font-size:28rpx;">{{i18n.select_icon}}</text>
+      <scroll-view scroll-x="true" style="margin-top:16rpx;">
+        <view class="flex-row gap-md">
+          <view wx:for="{{customIconNames}}" wx:key="*this" wx:for-index="idx"
+            class="icon-select-btn {{customIconIdx === idx ? 'icon-select-active' : ''}}"
+            bindtap="selectCustomIcon" data-idx="{{idx}}">
+            <icon name="{{item}}" size="48" color="{{customColor}}" />
+          </view>
+        </view>
+      </scroll-view>
+
+      <text class="font-bold" style="margin-top:32rpx;font-size:28rpx;">{{i18n.select_color}}</text>
+      <view class="flex-row gap-md flex-wrap" style="margin-top:16rpx;">
+        <view wx:for="{{colorOptions}}" wx:key="*this"
+          class="color-dot {{customColor === item ? 'color-dot-active' : ''}}"
+          style="background:{{item}};"
+          bindtap="selectCustomColor" data-color="{{item}}">
+        </view>
+      </view>
+
+      <view class="flex-row gap-md" style="margin-top:48rpx;">
+        <button class="btn-secondary flex-1" bindtap="closeCustomModal">{{i18n.cancel}}</button>
+        <button class="btn-primary flex-1" bindtap="saveCustomAction">{{i18n.save}}</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Weight Modal -->
+  <view wx:if="{{showWeightModal}}" class="modal-overlay" catchtap="closeWeightModal">
+    <view class="modal-content card" catchtap="">
+      <text class="h3">{{i18n.log_weight}}</text>
+      <view class="flex-row gap-lg" style="margin:40rpx 0;">
+        <slider min="5" max="150" value="{{newWeight * 10}}" bindchange="onWeightSliderChange" activeColor="var(--warning)" style="flex:1;" />
+        <text class="font-bold" style="width:120rpx;">{{newWeight}} kg</text>
+      </view>
+      <view class="flex-row gap-md" style="margin-top:48rpx;">
+        <button class="btn-secondary flex-1" bindtap="closeWeightModal">{{i18n.cancel}}</button>
+        <button class="btn-primary flex-1" bindtap="saveWeight">{{i18n.save}}</button>
+      </view>
+    </view>
+  </view>
+</view>
