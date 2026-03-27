@@ -17,6 +17,7 @@
   display: inline-flex;
   gap: 24rpx;
   padding-bottom: 8rpx;
+  padding-top: 10rpx;
 }
 
 /* Each pill: icon circle + value + label stacked vertically */
@@ -70,7 +71,7 @@
   position: absolute;
   top: -8rpx;
   right: -8rpx;
-  background: var(--bg-color);
+  background: #E74C3C;
   border-radius: 50%;
   width: 36rpx;
   height: 36rpx;
@@ -78,6 +79,19 @@
   align-items: center;
   justify-content: center;
   z-index: 2;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.15);
+}
+
+/* iOS Wiggle / Shake animation for edit mode */
+@keyframes wiggle {
+  0% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+  100% { transform: rotate(-1.5deg); }
+}
+
+.edit-mode .pill-icon-wrap {
+  animation: wiggle 0.25s infinite ease-in-out;
+  border: 2rpx solid var(--primary);
 }
 
 /* Calendar */

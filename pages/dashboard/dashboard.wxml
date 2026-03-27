@@ -26,12 +26,14 @@
           <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}d</text>
           <text class="pill-label">{{item.shortLabel}}</text>
         </view>
-        <view class="pill-item">
-          <view class="pill-icon-wrap">
-            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(isDog ? 'walk_dog' : 'scoop_litter')}}" mode="aspectFit" />
+        <view class="pill-item-wrap" wx:if="{{isDog || isCat}}">
+          <view class="pill-item">
+            <view class="pill-icon-wrap">
+              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(isDog ? 'walk_dog' : 'scoop_litter')}}" mode="aspectFit" />
+            </view>
+            <text class="pill-value">{{lastActionText}}</text>
+            <text class="pill-label">{{isDog ? i18n.last_walked : i18n.last_scooped}}</text>
           </view>
-          <text class="pill-value">{{lastActionText}}</text>
-          <text class="pill-label">{{isDog ? i18n.last_walked : i18n.last_scooped}}</text>
         </view>
       </view>
     </scroll-view>
@@ -39,38 +41,50 @@
 
   <!-- Things to Track -->
   <view class="section-block">
-    <text class="section-title">{{i18n.things_to_track}}</text>
+    <view class="flex-row justify-between align-center" style="margin-bottom: 8rpx;">
+      <text class="section-title">{{i18n.things_to_track}}</text>
+      <text wx:if="{{isEditingActions}}" class="text-primary font-bold" style="font-size:24rpx;padding:8rpx 16rpx;" bindtap="stopEditActions">{{i18n.done || 'Done'}}</text>
+    </view>
     <scroll-view scroll-x="true" class="pill-scroll">
-      <view class="pill-row">
+      <view class="pill-row {{isEditingActions ? 'edit-mode' : ''}}">
         <!-- Quick Actions -->
-        <view class="pill-item" wx:for="{{quickActions}}" wx:key="type"
-          bindtap="handleAction" data-type="{{item.type}}" data-label="{{item.type}}">
-          <view class="pill-icon-wrap" style="background:#F0EDE6;">
-            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+        <view class="pill-item-wrap" wx:for="{{quickActions}}" wx:key="type">
+          <view class="pill-item" bindtap="handleAction" bindlongpress="startEditActions" data-type="{{item.type}}" data-label="{{item.type}}">
+            <view class="pill-icon-wrap" style="background:#F0EDE6;">
+              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+            </view>
+            <text class="pill-label">{{i18n[item.type] || item.type}}</text>
           </view>
-          <text class="pill-label">{{i18n[item.type] || item.type}}</text>
+          <view wx:if="{{isEditingActions}}" class="pill-delete-btn" catchtap="hideQuickAction" data-type="{{item.type}}">
+            <text style="color:#fff; font-size:24rpx; font-weight:900; line-height:1; transform:translateY(-2rpx);">×</text>
+          </view>
         </view>
 
         <!-- Scale button -->
-        <view class="pill-item" bindtap="openWeightModal">
-          <view class="pill-icon-wrap" style="background:#F0EDE6;">
-            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src('scale')}}" mode="aspectFit" />
+        <view class="pill-item-wrap">
+          <view class="pill-item" bindtap="openWeightModal" bindlongpress="startEditActions">
+            <view class="pill-icon-wrap" style="background:#F0EDE6;">
+              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src('scale')}}" mode="aspectFit" />
+            </view>
+            <text class="pill-label">{{i18n.log_weight}}</text>
           </view>
-          <text class="pill-label">{{i18n.log_weight}}</text>
+          <view wx:if="{{isEditingActions}}" class="pill-delete-btn" catchtap="hideQuickAction" data-type="log_weight">
+            <text style="color:#fff; font-size:24rpx; font-weight:900; line-height:1; transform:translateY(-2rpx);">×</text>
+          </view>
         </view>
 
         <!-- Custom actions -->
         <view class="pill-item-wrap" wx:for="{{customActions}}" wx:key="id">
           <view class="pill-item"
-            bindtap="handleCustomAction"
+            bindtap="handleCustomAction" bindlongpress="startEditActions"
             data-id="{{item.id}}" data-label="{{item.label}}" data-color="{{item.color}}" data-iconidx="{{item.iconIdx}}">
             <view class="pill-icon-wrap" style="background:{{item.color}}22;">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>
             <text class="pill-label">{{item.label}}</text>
           </view>
-          <view class="pill-delete-btn" catchtap="deleteCustomAction" data-id="{{item.id}}">
-            <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+          <view wx:if="{{isEditingActions}}" class="pill-delete-btn" catchtap="deleteCustomAction" data-id="{{item.id}}">
+            <text style="color:#fff; font-size:24rpx; font-weight:900; line-height:1; transform:translateY(-2rpx);">×</text>
           </view>
         </view>
 

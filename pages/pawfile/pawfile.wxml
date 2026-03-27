@@ -14,8 +14,10 @@
     <view class="card">
       <!-- 头像上传 -->
       <view class="avatar-upload-wrap">
-        <view wx:if="{{avatar}}" class="avatar-preview-wrap">
-          <image class="avatar-preview" src="{{avatar}}" mode="aspectFill" />
+        <view wx:if="{{avatar}}" style="position: relative;">
+          <view class="avatar-preview-wrap">
+            <image class="avatar-preview" src="{{avatar}}" mode="aspectFill" />
+          </view>
           <view class="avatar-remove-btn" bindtap="removeAvatar">×</view>
         </view>
         <view wx:else class="avatar-placeholder" bindtap="chooseAvatar">

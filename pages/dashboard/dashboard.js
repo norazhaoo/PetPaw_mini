@@ -92,9 +92,16 @@ Page({
     }
 
     const isDog = activePet.species === 'dog';
+    const isCat = activePet.species === 'cat';
     const quickActions = isDog
       ? ['vaccine', 'deworming', 'brush_teeth', 'walk_dog']
-      : ['vaccine', 'deworming', 'brush_teeth', 'scoop_litter'];
+      : isCat 
+        ? ['vaccine', 'deworming', 'brush_teeth', 'scoop_litter']
+        : ['vaccine', 'deworming', 'brush_teeth'];
+
+    // 过滤掉被用户隐藏的动作
+    const hidden = activePet.hiddenActions || [];
+    const filteredQuickActions = quickActions.filter(type => !hidden.includes(type));
 
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId).map(ca => ({
       ...ca, iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
@@ -114,7 +121,9 @@ Page({
     this.setData({
       activePet,
       isDog,
-      quickActions: quickActions.map(type => ({ type, color: COLOR_MAP[type] || '#8F8377', iconName: type })),
+      isCat,
+      isEditingActions: this.data.isEditingActions || false,
+      quickActions: filteredQuickActions.map(type => ({ type, color: COLOR_MAP[type] || '#8F8377', iconName: type })),
       customActions,
       inventoryItems,
       showWarning
@@ -395,6 +404,32 @@ Page({
     }
     app.setState(state);
     this.refreshData();
+  },
+
+  // === Edit Actions Mode ===
+  startEditActions() {
+    this.setData({ isEditingActions: true });
+    // 可以加一个震动触感反馈
+    if (wx.vibrateShort) wx.vibrateShort();
+  },
+
+  stopEditActions() {
+    this.setData({ isEditingActions: false });
+  },
+
+  hideQuickAction(e) {
+    const { type } = e.currentTarget.dataset;
+    let state = app.getState();
+    const pet = state.pets.find(p => p.id === state.activePetId);
+    if (pet) {
+      if (!pet.hiddenActions) pet.hiddenActions = [];
+      if (!pet.hiddenActions.includes(type)) {
+        pet.hiddenActions.push(type);
+        state = storage.editPet(state, pet.id, { hiddenActions: pet.hiddenActions });
+        app.setState(state);
+        this.refreshData();
+      }
+    }
   },
 
   // === Custom Modal ===
