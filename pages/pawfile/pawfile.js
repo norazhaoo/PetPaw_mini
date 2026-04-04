@@ -20,6 +20,11 @@ Page({
     filteredBreeds: [],
     showBreedModal: false,
     breedSearchQuery: '',
+    showBirthdayModal: false,
+    dateValues: [0, 0, 0], // Index of [year, month, day]
+    years: [],
+    months: [],
+    days: [],
     i18n: {}
   },
 
@@ -49,6 +54,21 @@ Page({
     } catch (e) {
       console.error('Failed to load dog breeds', e);
     }
+
+    // Initialize Date Arrays for Birthday Modal
+    const date = new Date();
+    const curYear = date.getFullYear();
+    const years = [];
+    const months = [];
+    const days = [];
+    for (let i = curYear - 30; i <= curYear; i++) years.push(i);
+    for (let i = 1; i <= 12; i++) months.push(i);
+    for (let i = 1; i <= 31; i++) days.push(i);
+    
+    this.setData({ 
+      years, months, days,
+      dateValues: [years.length - 1, date.getMonth(), date.getDate() - 1]
+    });
 
     this.refreshData();
   },
@@ -150,6 +170,56 @@ Page({
       showBreedModal: false
     });
   },
+
+  openBirthdayModal() {
+    this.setData({ showBirthdayModal: true });
+  },
+
+  closeBirthdayModal() {
+    this.setData({ showBirthdayModal: false });
+  },
+
+  onDateChange(e) {
+    this.setData({ dateValues: e.detail.value });
+  },
+
+  confirmBirthday() {
+    const { years, months, days, dateValues } = this.data;
+    const y = years[dateValues[0]];
+    const m = months[dateValues[1]];
+    const d = days[dateValues[2]];
+    const dateString = `${y}-${m < 10 ? '0' + m : m}-${d < 10 ? '0' + d : d}`;
+    this.setData({ 
+      birthday: dateString,
+      showBirthdayModal: false
+    });
+  },
+
+
+  openBirthdayModal() {
+    this.setData({ showBirthdayModal: true });
+  },
+
+  closeBirthdayModal() {
+    this.setData({ showBirthdayModal: false });
+  },
+
+  onDateChange(e) {
+    this.setData({ dateValues: e.detail.value });
+  },
+
+  confirmBirthday() {
+    const { years, months, days, dateValues } = this.data;
+    const y = years[dateValues[0]];
+    const m = months[dateValues[1]];
+    const d = days[dateValues[2]];
+    const dateString = `${y}-${m < 10 ? '0' + m : m}-${d < 10 ? '0' + d : d}`;
+    this.setData({ 
+      birthday: dateString,
+      showBirthdayModal: false
+    });
+  },
+
 
   useCustomBreed() {
     this.setData({ 
