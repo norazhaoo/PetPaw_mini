@@ -108,7 +108,6 @@
 .pet-swipe-item {
   width: 100%;
   height: 192rpx;
-  margin-bottom: 32rpx;
 }
 
 .swipe-area {

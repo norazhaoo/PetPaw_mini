@@ -85,7 +85,7 @@
       <text class="text-muted" style="display:block;margin-top:16rpx;">{{i18n.who_caring}}</text>
     </view>
 
-    <view class="flex-col gap-lg">
+    <view class="flex-col gap-md">
       <!-- 每个宠物 (带侧滑) -->
       <view wx:for="{{pets}}" wx:key="id" class="pet-swipe-item">
         <movable-area class="swipe-area">
