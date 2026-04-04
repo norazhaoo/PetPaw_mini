@@ -18,19 +18,47 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
   padding: 32rpx 40rpx;
   border-bottom: 2rpx solid #F0EDE6;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* For labels and icons on the left */
+.menu-item-left {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  flex: 1;
+}
+
+/* For values and arrows on the right */
+.menu-item-right {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  color: var(--text-muted);
 }
 
 .menu-label {
   font-weight: 700;
   font-size: 30rpx;
+  color: var(--text-main);
+}
+
+.menu-icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+.menu-arrow {
+  width: 36rpx;
+  height: 36rpx;
 }
 
 .lang-grid {
   background: #FAF9F5;
-  padding: 32rpx;
+  padding: 40rpx;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16rpx;
