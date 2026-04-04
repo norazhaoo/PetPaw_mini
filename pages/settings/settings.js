@@ -6,6 +6,7 @@ const i18n = require('../../utils/i18n');
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'zh', label: '中文 (简体)' },
+  { code: 'zh_tw', label: '中文 (繁體)' },
   { code: 'ja', label: '日本語' },
   { code: 'ko', label: '한국어' },
   { code: 'es', label: 'Español' },

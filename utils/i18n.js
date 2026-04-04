@@ -5,6 +5,7 @@
 const LANG_SETS = {
   en: require('./i18n/en'),
   zh: require('./i18n/zh'),
+  zh_tw: require('./i18n/zh_tw'),
   ja: require('./i18n/ja'),
   ko: require('./i18n/ko'),
   es: require('./i18n/es'),
@@ -13,15 +14,15 @@ const LANG_SETS = {
 
 // 冷启动时读取一次语言设置
 let _cachedLang = '';
-try { _cachedLang = wx.getStorageSync('petpaw_language') || 'en'; } catch(e) { _cachedLang = 'en'; }
-let _cachedSet = LANG_SETS[_cachedLang] || LANG_SETS['en'];
-const _enSet = LANG_SETS['en'];
+try { _cachedLang = wx.getStorageSync('petpaw_language') || 'zh'; } catch(e) { _cachedLang = 'zh'; }
+let _cachedSet = LANG_SETS[_cachedLang] || LANG_SETS['zh'];
+const _fallbackSet = LANG_SETS['zh'];
 
 /**
  * 获取翻译文本（使用内存缓存，零 I/O）
  */
 function t(key) {
-  return _cachedSet[key] || _enSet[key] || key;
+  return _cachedSet[key] || _fallbackSet[key] || key;
 }
 
 /**
@@ -36,7 +37,7 @@ function getLanguage() {
  */
 function setLanguage(lang) {
   _cachedLang = lang;
-  _cachedSet = LANG_SETS[lang] || _enSet;
+  _cachedSet = LANG_SETS[lang] || _fallbackSet;
   wx.setStorageSync('petpaw_language', lang);
 }
 
