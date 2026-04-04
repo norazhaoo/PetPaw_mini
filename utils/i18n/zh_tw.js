@@ -1,7 +1,7 @@
 // utils/i18n/zh_tw.js - 繁體中文翻譯
 module.exports = {
   pawfile: '寵物檔案', diary: '日常', medical_log: '醫療記錄', settings: '設置',
-  add_pet: '添加寵物 🐾', edit_pet: '編輯資料 🐾', name: '暱稱',
+  add_pet: '添加寵物', edit_pet: '編輯資料', name: '暱稱',
   breed_optional: '品種 (選填)', birthday_optional: '生日 (選填)',
   weight_kg: '當前體重 (kg)', photo: '照片', photo_url: '照片鏈接 (選填)',
   save: '保存', cancel: '取消',
@@ -20,7 +20,7 @@ module.exports = {
   vaccine: '疫苗', deworming: '驅蟲', brush_teeth: '刷牙',
   scoop_litter: '鏟屎', walk_dog: '遛狗', medical: '就醫', custom: '自定義',
   delete: '刪除', stock: '餘量', species: '寵物種類',
-  cat: '貓咪 🐱', dog: '狗狗 🐶', other: '其他 🐾',
+  cat: '貓咪', dog: '狗狗', other: '其他',
   help: '幫助與支持', about: '關於 PetPaw', today: '今天',
   months: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   weekdays: ['日', '一', '二', '三', '四', '五', '六'],

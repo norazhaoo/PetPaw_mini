@@ -1,7 +1,7 @@
 // utils/i18n/zh.js - 简体中文翻译
 module.exports = {
   pawfile: '宠物档案', diary: '日常', medical_log: '医疗记录', settings: '设置',
-  add_pet: '添加宠物 🐾', edit_pet: '编辑资料 🐾', name: '昵称',
+  add_pet: '添加宠物', edit_pet: '编辑资料', name: '昵称',
   breed_optional: '品种 (选填)', birthday_optional: '生日 (选填)',
   weight_kg: '当前体重 (kg)', photo: '照片', photo_url: '照片链接 (选填)',
   save: '保存', cancel: '取消',
@@ -20,7 +20,7 @@ module.exports = {
   vaccine: '疫苗', deworming: '驱虫', brush_teeth: '刷牙',
   scoop_litter: '铲屎', walk_dog: '遛狗', medical: '就医', custom: '自定义',
   delete: '删除', stock: '余量', species: '宠物种类',
-  cat: '猫咪 🐱', dog: '狗狗 🐶', other: '其他 🐾',
+  cat: '猫咪', dog: '狗狗', other: '其他',
   help: '帮助与支持', about: '关于 PetPaw', today: '今天',
   months: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   weekdays: ['日', '一', '二', '三', '四', '五', '六'],

@@ -1,7 +1,7 @@
 // utils/i18n/en.js - English translations
 module.exports = {
   pawfile: 'Pawfile', diary: 'Diary', medical_log: 'Medical Log', settings: 'Settings',
-  add_pet: 'Add Pet Profile 🐾', edit_pet: 'Edit Profile 🐾', name: 'Name',
+  add_pet: 'Add Pet', edit_pet: 'Edit Profile', name: 'Name',
   breed_optional: 'Breed (Optional)', birthday_optional: 'Birthday (Optional)',
   weight_kg: 'Current Weight (kg)', photo: 'Photo', photo_url: 'Photo URL (Optional)',
   save: 'Save', cancel: 'Cancel',
@@ -20,7 +20,7 @@ module.exports = {
   vaccine: 'Vaccine', deworming: 'Deworm', brush_teeth: 'Toothbrush',
   scoop_litter: 'Scoop', walk_dog: 'Walk', medical: 'Vet', custom: 'Custom',
   delete: 'Delete', stock: 'Stock', species: 'Species',
-  cat: 'Cat 🐱', dog: 'Dog 🐶', other: 'Other 🐾',
+  cat: 'Cat', dog: 'Dog', other: 'Other',
   help: 'Help & Support', about: 'About PetPaw', today: 'Today',
   months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
   weekdays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],

@@ -4,11 +4,14 @@
 <view class="app-container">
   <!-- 添加/编辑表单 -->
   <view wx:if="{{isAdding}}">
-    <view class="form-header">
+    <view class="form-header" style="display:flex; align-items:center; gap: 16rpx;">
       <view class="back-btn" bindtap="resetForm">
         <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronLeft')}}" mode="aspectFit" />
       </view>
-      <text class="h2">{{editingPetId ? i18n.edit_pet : i18n.add_pet}}</text>
+      <view style="display:flex; align-items:center; gap: 12rpx;">
+        <text class="h2">{{editingPetId ? i18n.edit_pet : i18n.add_pet}}</text>
+        <image src="/static/icons/emoji-other.png" style="width:40rpx; height:40rpx;" mode="aspectFit" />
+      </view>
     </view>
 
     <view class="card">
@@ -33,7 +36,10 @@
           <view wx:for="{{speciesList}}" wx:key="*this"
             class="species-btn {{species === item ? 'species-active' : ''}}"
             bindtap="setSpecies" data-species="{{item}}">
-            {{i18n[item]}}
+            <image wx:if="{{item === 'cat'}}" src="/static/icons/emoji-cat.png" style="width:32rpx; height:32rpx;" mode="aspectFit" />
+            <image wx:if="{{item === 'dog'}}" src="/static/icons/emoji-dog.png" style="width:32rpx; height:32rpx;" mode="aspectFit" />
+            <image wx:if="{{item === 'other'}}" src="/static/icons/emoji-other.png" style="width:32rpx; height:32rpx;" mode="aspectFit" />
+            <text>{{i18n[item]}}</text>
           </view>
         </view>
       </view>
@@ -124,8 +130,9 @@
           <view class="pet-avatar-wrap pet-avatar-add">
             <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src('Plus')}}" mode="aspectFit" />
           </view>
-          <view class="flex-1">
+          <view class="flex-1" style="display:flex; align-items:center; gap:12rpx;">
             <text class="pet-name" style="color:var(--text-muted);">{{i18n.add_pet}}</text>
+            <image src="/static/icons/emoji-other.png" style="width:32rpx; height:32rpx;" mode="aspectFit" />
           </view>
           <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
         </view>
