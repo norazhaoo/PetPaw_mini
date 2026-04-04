@@ -71,7 +71,7 @@ Page({
         dog: t('dog'), cat: t('cat'), pawfile: t('pawfile'), today: t('today'),
         vaccine: t('vaccine'), deworming: t('deworming'), brush_teeth: t('brush_teeth'),
         scoop_litter: t('scoop_litter'), walk_dog: t('walk_dog'),
-        custom: t('custom'), done: t('done')
+        custom: t('custom'), done: t('done'), d: t('d')
       }
     });
   },
@@ -112,13 +112,39 @@ Page({
 
     // Stock Alert - only for active pet
     const petInventory = (state.inventoryItems || []).filter(item => item.petId === state.activePetId);
-    const showWarning = petInventory.some(item => Math.floor(item.current / (item.dailyConsumption || 1)) <= 7) || false;
+    
+    const TIME_CONV = { 'day': 1, 'week': 7, 'month': 30, 'quarter': 91, 'year': 365 };
+    const UNIT_CONV = {
+      'g': { 'kg': 0.001, 'g': 1 },
+      'kg': { 'g': 1000, 'kg': 1 },
+      'ml': { 'L': 0.001, 'ml': 1 },
+      'L': { 'ml': 1000, 'L': 1 }
+    };
 
-    // Inventory items with computed daysLeft
+    // Inventory items with computed daysLeft and translated labels
     const inventoryItems = petInventory.map(item => {
-      const daysLeft = Math.floor((item.current || 0) / (item.dailyConsumption || 1));
-      return { ...item, daysLeft, isLow: daysLeft <= 7, shortLabel: (item.label || '').replace(/ .*/, '') };
+      const amount = item.consumptionAmount || item.dailyConsumption || 0;
+      const intervalVal = item.consumptionInterval || 1;
+      const timeUnit = item.consumptionTimeUnit || 'day';
+      const daysInCycle = intervalVal * (TIME_CONV[timeUnit] || 1);
+      
+      const cUnit = item.consumptionUnit || item.unit || 'g';
+      const tUnit = item.unit || 'g';
+
+      let dailyInTotalUnit = amount / daysInCycle;
+      if (cUnit !== tUnit && UNIT_CONV[cUnit] && UNIT_CONV[cUnit][tUnit]) {
+        dailyInTotalUnit = (amount * UNIT_CONV[cUnit][tUnit]) / daysInCycle;
+      }
+
+      const daysLeft = Math.floor((item.current || 0) / (dailyInTotalUnit || 0.0001));
+      
+      const fullLabel = item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label;
+      const shortLabel = fullLabel.replace(/ .*/, '');
+
+      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel };
     });
+
+    const showWarning = inventoryItems.some(item => item.isLow) || false;
 
     // === 第一阶段：先渲染头部、快速操作等轻量数据 ===
     this.setData({
@@ -168,7 +194,10 @@ Page({
     // === 合并为单次 setData ===
     this.setData(Object.assign({
       ready: true,
-      lastActionText: lastActionText.replace(' minutes', 'm').replace(' hours', 'h').replace(' days', 'd'),
+      lastActionText: lastActionText
+        .replace(' minutes', t('m')).replace(' minute', t('m'))
+        .replace(' hours', t('h')).replace(' hour', t('h'))
+        .replace(' days', t('d')).replace(' day', t('d')),
       chartData,
       hasWeightData: chartData.length > 0,
     }, calendarData));

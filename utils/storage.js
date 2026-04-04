@@ -70,12 +70,12 @@ function _syncDefaultInventory(items, pets) {
   for (const pet of pets) {
     // food
     const existFood = items.find(i => i.petId === pet.id && i.typeId === 'food');
-    defaults.push(existFood || { id: generateId(), petId: pet.id, typeId: 'food', label: 'Food', current: 0, dailyConsumption: 50, icon: 'FoodBowl', color: '#F5B041', unit: 'g' });
+    defaults.push(existFood || { id: generateId(), petId: pet.id, typeId: 'food', label: 'Food', current: 0, consumptionAmount: 50, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', icon: 'FoodBowl', color: '#F5B041', unit: 'g' });
 
     // litter 仅猫
     if (pet.species === 'cat' || !pet.species) {
       const existLitter = items.find(i => i.petId === pet.id && i.typeId === 'litter');
-      defaults.push(existLitter || { id: generateId(), petId: pet.id, typeId: 'litter', label: 'Litter', current: 0, dailyConsumption: 200, icon: 'LitterBox', color: '#AAB7B8', unit: 'g' });
+      defaults.push(existLitter || { id: generateId(), petId: pet.id, typeId: 'litter', label: 'Litter', current: 0, consumptionAmount: 200, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', icon: 'LitterBox', color: '#AAB7B8', unit: 'g' });
     }
   }
 
@@ -143,10 +143,43 @@ function performDailyDeduction(state) {
   const daysPassed = differenceInDays(today, lastDeduction);
 
   if (daysPassed > 0) {
-    state.inventoryItems = state.inventoryItems.map(item => ({
-      ...item,
-      current: Math.max(0, item.current - ((item.dailyConsumption || 0) * daysPassed))
-    }));
+    const CONVERSION = {
+      'g': { 'kg': 0.001, 'g': 1 },
+      'kg': { 'g': 1000, 'kg': 1 },
+      'ml': { 'L': 0.001, 'ml': 1 },
+      'L': { 'ml': 1000, 'L': 1 }
+    };
+    const TIME_CONVERSION = {
+      'day': 1,
+      'week': 7,
+      'month': 30,
+      'quarter': 91,
+      'year': 365
+    };
+
+    state.inventoryItems = state.inventoryItems.map(item => {
+      const amount = item.consumptionAmount || item.dailyConsumption || 0;
+      const intervalVal = item.consumptionInterval || 1;
+      const timeUnit = item.consumptionTimeUnit || 'day';
+      const intervalInDays = intervalVal * (TIME_CONVERSION[timeUnit] || 1);
+
+      const cUnit = item.consumptionUnit || item.unit || 'g';
+      const tUnit = item.unit || 'g';
+
+      let dailyAmountInTotalUnit = amount / intervalInDays;
+      
+      // Unit conversion
+      if (cUnit !== tUnit) {
+        if (CONVERSION[cUnit] && CONVERSION[cUnit][tUnit]) {
+          dailyAmountInTotalUnit = (amount * CONVERSION[cUnit][tUnit]) / intervalInDays;
+        }
+      }
+
+      return {
+        ...item,
+        current: Math.max(0, item.current - (dailyAmountInTotalUnit * daysPassed))
+      };
+    });
     state.lastDeductionDate = today.toISOString();
     saveState(state);
   }
@@ -211,12 +244,12 @@ function adjustInventory(state, id, amount) {
   return state;
 }
 
-function addInventoryItem(state, label, icon, color, dailyConsumption) {
+function addInventoryItem(state, label, icon, color, amount) {
   if (!state.activePetId) return state;
   const newItem = {
     id: generateId(), petId: state.activePetId, typeId: null,
     label, icon, color,
-    current: 0, dailyConsumption: parseInt(dailyConsumption) || 0, unit: 'g'
+    current: 0, consumptionAmount: parseInt(amount) || 0, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', unit: 'g'
   };
   state.inventoryItems = [...state.inventoryItems, newItem];
   saveState(state);

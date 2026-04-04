@@ -33,5 +33,7 @@ module.exports = {
   unit_cup: 'cup', unit_bag: 'bag', unit_box: 'box', unit_can: 'can',
   who_caring: 'Who are we caring for today?',
   stock_food: 'Food', stock_litter: 'Litter', stock_litter_2: 'Mixed Litter', stock_treats: 'Treats',
-  done: 'Done', logged: 'Logged'
+  done: 'Done', logged: 'Logged',
+  every: 'Every', consume: 'Consume', select_unit: 'Select Unit',
+  day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year'
 };

@@ -23,7 +23,7 @@
           <view class="pill-icon-wrap" style="background:{{item.isLow ? '#FDEBD0' : '#F0EDE6'}};">
             <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.icon)}}" mode="aspectFit" />
           </view>
-          <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}d</text>
+          <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}{{i18n.d}}</text>
           <text class="pill-label">{{item.shortLabel}}</text>
         </view>
         <view class="pill-item-wrap" wx:if="{{isDog || isCat}}">

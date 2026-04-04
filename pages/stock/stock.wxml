@@ -27,24 +27,21 @@
       </view>
     </view>
 
-    <!-- Daily Consumption -->
-    <view style="padding:0 16rpx;">
-      <text class="text-muted font-bold" style="font-size:26rpx;">{{i18n.daily_consumption}}</text>
-      <view class="preset-row">
-        <view wx:for="{{item.presets}}" wx:for-item="val" wx:key="*this"
-          class="preset-btn {{!item.isCustomConsumption && item.dailyConsumption === val ? 'preset-active' : ''}}"
-          bindtap="selectPreset" data-id="{{item.id}}" data-val="{{val}}">
-          {{val}}{{item.unitLabel}}
+    <!-- Consumption Configuration -->
+    <view class="consumption-section">
+      <view class="consumption-row">
+        <text class="consumption-text text-muted font-bold">{{i18n.every}}</text>
+        <input type="number" class="consumption-input interval-input" value="{{item.consumptionInterval}}" bindinput="onConsumptionIntervalInput" data-id="{{item.id}}" />
+        <view class="unit-picker-box" bindtap="openUnitModal" data-id="{{item.id}}" data-unit="{{item.consumptionTimeUnit}}" data-type="timeUnit">
+          <text class="consumption-text text-muted font-bold">{{item.consumptionTimeUnitLabel}}</text>
+          <text class="picker-trigger">▼</text>
         </view>
-        <view class="preset-btn {{item.isCustomConsumption ? 'preset-active' : ''}}"
-          bindtap="toggleCustomConsumption" data-id="{{item.id}}">
-          {{i18n.custom}}
-        </view>
-      </view>
 
-      <view wx:if="{{item.isCustomConsumption}}" class="custom-consumption-row">
-        <input type="digit" class="input-field" style="flex:1;" value="{{item.dailyConsumption}}" bindinput="onDailyConsumptionInput" data-id="{{item.id}}" />
-        <text class="font-bold text-muted" style="font-size:28rpx;">{{item.unitLabel}} / {{i18n.d}}</text>
+        <text class="consumption-text text-muted font-bold">{{i18n.consume}}</text>
+        <input type="digit" class="consumption-input amount-input" value="{{item.consumptionAmount}}" bindinput="onConsumptionAmountInput" data-id="{{item.id}}" />
+        <view class="consumption-unit-badge" bindtap="openUnitModal" data-id="{{item.id}}" data-unit="{{item.consumptionUnit}}" data-type="consumption">
+          <text>{{item.consumptionUnitLabel}} ▼</text>
+        </view>
       </view>
     </view>
   </view>
@@ -95,7 +92,7 @@
       <text class="h2">{{i18n.select_unit || 'Select Unit'}}</text>
       
       <view class="flex-row gap-md flex-wrap" style="margin-top: 32rpx;">
-        <view wx:for="{{unitOptionsList}}" wx:key="value"
+        <view wx:for="{{currentUnitOptions}}" wx:key="value"
           class="preset-btn {{editingUnit === item.value ? 'preset-active' : ''}}"
           style="min-width: 140rpx;"
           bindtap="onCustomUnitChange" data-unit="{{item.value}}">
