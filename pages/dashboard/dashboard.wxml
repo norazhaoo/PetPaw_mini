@@ -49,7 +49,7 @@
       <view class="pill-row {{isEditingActions ? 'edit-mode' : ''}}">
         <!-- Quick Actions -->
         <view class="pill-item-wrap" wx:for="{{quickActions}}" wx:key="type">
-          <view class="pill-item" bindtap="handleAction" bindlongpress="startEditActions" data-type="{{item.type}}" data-label="{{item.type}}">
+          <view class="pill-item" bindtap="handleAction" bindlongpress="startEditActions" data-type="{{item.type}}" data-label="{{i18n[item.type] || item.type}}">
             <view class="pill-icon-wrap" style="background:#F0EDE6;">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>

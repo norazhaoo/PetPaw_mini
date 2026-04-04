@@ -31,5 +31,6 @@ module.exports = {
   log_weight: 'Registrar Peso', recorded_weight: 'Peso Registrado',
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_cup: 'taza', unit_bag: 'bolsa', unit_box: 'caja', unit_can: 'lata',
-  who_caring: '¿A quién cuidamos hoy?'
+  who_caring: '¿A quién cuidamos hoy?',
+  done: 'Hecho', logged: 'Registrado'
 };

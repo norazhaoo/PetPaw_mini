@@ -31,5 +31,6 @@ module.exports = {
   log_weight: 'บันทึกน้ำหนัก', recorded_weight: 'น้ำหนักที่บันทึก',
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_cup: 'ถ้วย', unit_bag: 'ถุง', unit_box: 'กล่อง', unit_can: 'กระป๋อง',
-  who_caring: 'วันนี้ดูแลใคร?'
+  who_caring: 'วันนี้ดูแลใคร?',
+  done: 'เสร็จสิ้น', logged: 'บันทึกแล้ว'
 };

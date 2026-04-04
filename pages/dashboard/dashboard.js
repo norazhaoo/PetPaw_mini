@@ -68,7 +68,10 @@ Page({
         cancel: t('cancel'), save: t('save'), log_weight: t('log_weight'),
         recorded_weight: t('recorded_weight'), last_scooped: t('last_scooped'), last_walked: t('last_walked'),
         today_logs: t('today_logs'), logs_for: t('logs_for'),
-        dog: t('dog'), cat: t('cat'), pawfile: t('pawfile'), today: t('today')
+        dog: t('dog'), cat: t('cat'), pawfile: t('pawfile'), today: t('today'),
+        vaccine: t('vaccine'), deworming: t('deworming'), brush_teeth: t('brush_teeth'),
+        scoop_litter: t('scoop_litter'), walk_dog: t('walk_dog'),
+        custom: t('custom'), done: t('done')
       }
     });
   },
@@ -364,7 +367,7 @@ Page({
     state = storage.addLog(state, type, targetDate.toISOString(), '', color, iconIdx);
     app.setState(state);
 
-    this.setData({ feedback: `Logged: ${label}` });
+    this.setData({ feedback: `${t('logged')}: ${label}` });
     setTimeout(() => this.setData({ feedback: '' }), 2000);
 
     this.refreshData();
@@ -380,7 +383,7 @@ Page({
     state = storage.addLog(state, `custom_${id}`, targetDate.toISOString(), '', color, parseInt(iconidx));
     app.setState(state);
 
-    this.setData({ feedback: `Logged: ${label}` });
+    this.setData({ feedback: `${t('logged')}: ${label}` });
     setTimeout(() => this.setData({ feedback: '' }), 2000);
 
     this.refreshData();

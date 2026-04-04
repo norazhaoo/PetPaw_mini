@@ -32,5 +32,6 @@ module.exports = {
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_cup: 'cup', unit_bag: 'bag', unit_box: 'box', unit_can: 'can',
   who_caring: 'Who are we caring for today?',
-  stock_food: 'Food', stock_litter: 'Litter', stock_litter_2: 'Mixed Litter', stock_treats: 'Treats'
+  stock_food: 'Food', stock_litter: 'Litter', stock_litter_2: 'Mixed Litter', stock_treats: 'Treats',
+  done: 'Done', logged: 'Logged'
 };

@@ -32,5 +32,6 @@ module.exports = {
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_bag: '袋', unit_box: '盒', unit_can: '罐', unit_cup: 'cup',
   who_caring: '今天照顾谁？',
-  stock_food: '主粮', stock_litter: '猫砂', stock_litter_2: '混合猫砂', stock_treats: '零食/猫条'
+  stock_food: '主粮', stock_litter: '猫砂', stock_litter_2: '混合猫砂', stock_treats: '零食/猫条',
+  done: '完成', logged: '已记录'
 };
