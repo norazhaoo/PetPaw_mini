@@ -60,7 +60,7 @@
       <view class="form-group">
         <text class="form-label">{{i18n.birthday_optional}}</text>
         <picker mode="date" value="{{birthday}}" bindchange="onBirthdayChange">
-          <view class="input-field">{{birthday || '----/--/--'}}</view>
+          <view class="input-field">{{birthday || ''}}</view>
         </picker>
       </view>
 
@@ -70,11 +70,6 @@
         <input class="input-field" type="digit" value="{{initialWeight}}" bindinput="onWeightInput" />
       </view>
 
-      <!-- Photo URL -->
-      <view class="form-group">
-        <text class="form-label">{{i18n.photo_url}}</text>
-        <input class="input-field" value="{{avatar || ''}}" bindinput="onAvatarUrlInput" placeholder="https://..." />
-      </view>
 
       <!-- Buttons -->
       <view class="btn-row">

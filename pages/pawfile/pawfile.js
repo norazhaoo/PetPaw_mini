@@ -12,7 +12,7 @@ Page({
     species: 'cat',
     breed: '',
     birthday: '',
-    initialWeight: '4.0',
+    initialWeight: '',
     avatar: null,
     speciesList: ['cat', 'dog', 'other'],
     i18n: {}
@@ -59,7 +59,7 @@ Page({
   resetForm() {
     this.setData({
       isAdding: false, editingPetId: null,
-      name: '', species: 'cat', breed: '', birthday: '', initialWeight: '4.0', avatar: null
+      name: '', species: 'cat', breed: '', birthday: '', initialWeight: '', avatar: null
     });
   },
 
