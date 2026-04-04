@@ -10,7 +10,7 @@ const CUSTOM_ICON_NAMES = ['Star', 'Heart', 'Droplet', 'Sun', 'Zap', 'Smile', 'M
 
 const COLOR_MAP = {
   vaccine: '#FF7B54', deworming: '#93C653', brush_teeth: '#5DADE2',
-  scoop_litter: '#8F8377', walk_dog: '#8F8377'
+  scoop_litter: '#C49A6C', walk_dog: '#7EAA72', log_weight: '#6C8EBF'
 };
 const COLORS = ['#FF7B54', '#93C653', '#5DADE2', '#FEE140', '#9B59B6', '#E74C3C'];
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -161,7 +161,13 @@ Page({
       const fullLabel = item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label;
       const shortLabel = fullLabel.replace(/ .*/, '');
 
-      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel };
+      // Assign theme colors
+      let color = '#8F8377';
+      if (item.typeId === 'food') color = '#D35400'; // Warm orange
+      if (item.typeId === 'litter' || item.typeId === 'litter_2') color = '#C49A6C'; // Dirt/sand brown
+      if (item.typeId === 'treats') color = '#F39C12'; // Bright amber
+
+      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel, color };
     });
 
     const showWarning = inventoryItems.some(item => item.isLow) || false;

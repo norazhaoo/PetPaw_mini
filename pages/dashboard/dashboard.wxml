@@ -20,15 +20,15 @@
     <scroll-view scroll-x="true" class="pill-scroll">
       <view class="pill-row">
         <view class="pill-item" wx:for="{{inventoryItems}}" wx:key="id">
-          <view class="pill-icon-wrap" style="background:{{item.isLow ? '#FDEBD0' : '#F0EDE6'}};">
-            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.icon)}}" mode="aspectFit" />
+          <view class="pill-icon-wrap" style="background:{{item.isLow ? '#FDEBD0' : item.color + '22'}};">
+            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx; opacity:0.65;" src="{{ic.src(item.iconName || 'Package')}}" mode="aspectFit" />
           </view>
           <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}{{i18n.d}}</text>
           <text class="pill-label">{{item.shortLabel}}</text>
         </view>
         <view class="pill-item-wrap" wx:if="{{showLastAction}}">
-          <view class="pill-item">
-            <view class="pill-icon-wrap">
+          <view class="pill-item" bindtap="handleLastAction" bindlongpress="startEditStocks">
+            <view class="pill-icon-wrap" style="background:{{isDog ? '#7EAA7222' : '#C49A6C22'}};">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(isDog ? 'walk_dog' : 'scoop_litter')}}" mode="aspectFit" />
             </view>
             <text class="pill-value">{{lastActionText}}</text>
@@ -50,7 +50,7 @@
         <!-- Quick Actions -->
         <view class="pill-item-wrap" wx:for="{{quickActions}}" wx:key="type">
           <view class="pill-item {{item.hidden ? 'hidden-item' : ''}}" bindtap="handleAction" bindlongpress="startEditActions" data-type="{{item.type}}" data-label="{{i18n[item.type] || item.type}}">
-            <view class="pill-icon-wrap" style="background:#F0EDE6;">
+            <view class="pill-icon-wrap" style="background:{{item.color}}22;">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>
             <text class="pill-label">{{i18n[item.type] || item.type}}</text>
