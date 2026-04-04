@@ -79,6 +79,10 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 1 });
+      this.getTabBar().updateLang();
+    }
     // 延迟数据加载，让页面模板先渲染出来
     setTimeout(() => this.refreshData(), 0);
   },

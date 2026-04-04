@@ -1,0 +1,58 @@
+.tab-bar-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24rpx 40rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 9999;
+  background-color: #FFF3E0; /* Matches app background */
+  pointer-events: auto; /* Blocks touches from going through to the page */
+}
+
+.tab-bar {
+  height: 112rpx;
+  background: #FFFFFF;
+  display: flex;
+  box-shadow: 0 16rpx 40rpx rgba(139, 105, 20, 0.12);
+  border-radius: 60rpx;
+  overflow: visible; /* Icons might pop out slightly */
+  box-sizing: border-box;
+  padding: 0 16rpx;
+}
+
+.tab-bar-item {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.tab-bar-item image {
+  width: 56rpx;
+  height: 56rpx;
+  margin-bottom: 6rpx;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tab-bar-item text {
+  font-size: 20rpx;
+  color: #8F8377;
+  font-weight: 600;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.tab-bar-item.active image {
+  transform: translateY(-4rpx) scale(1.1);
+}
+
+.tab-bar-item.active text {
+  color: #4A403A;
+  font-weight: 800;
+  transform: translateY(-2rpx);
+}
