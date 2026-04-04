@@ -15,6 +15,11 @@ Page({
     initialWeight: '',
     avatar: null,
     speciesList: ['cat', 'dog', 'other'],
+    catBreeds: [],
+    dogBreeds: [],
+    filteredBreeds: [],
+    showBreedModal: false,
+    breedSearchQuery: '',
     i18n: {}
   },
 
@@ -26,9 +31,26 @@ Page({
         weight_kg: t('weight_kg'), photo: t('photo'), photo_url: t('photo_url'),
         save: t('save'), cancel: t('cancel'), species: t('species'),
         cat: t('cat'), dog: t('dog'), other: t('other'),
-        who_caring: t('who_caring'), delete_confirm: t('delete_confirm')
+        who_caring: t('who_caring'), delete_confirm: t('delete_confirm'),
+        search_breed: t('search_breed'), customize: t('customize'), no_results: t('no_results')
       }
     });
+
+    // Load cat breeds
+    try {
+      this.setData({ catBreeds: require('../../static/catbreed.js') });
+    } catch (e) {
+      console.error('Failed to load cat breeds', e);
+    }
+    
+    // Load dog breeds
+    try {
+      this.setData({ dogBreeds: require('../../static/dogbreed.js') });
+    } catch (e) {
+      console.error('Failed to load dog breeds', e);
+    }
+
+    this.refreshData();
   },
 
   onShow() {
@@ -64,11 +86,78 @@ Page({
   },
 
   setSpecies(e) {
-    this.setData({ species: e.currentTarget.dataset.species });
+    const species = e.currentTarget.dataset.species;
+    this.setData({ 
+      species: species,
+      breed: '' // Reset breed when species changes to avoid cat breeds on dogs
+    });
   },
 
   onNameInput(e) { this.setData({ name: e.detail.value }); },
-  onBreedInput(e) { this.setData({ breed: e.detail.value }); },
+  
+  onBreedInput(e) { 
+    if (this.data.species === 'cat') {
+      this.openBreedModal();
+    } else {
+      this.setData({ breed: e.detail.value }); 
+    }
+  },
+
+  openBreedModal() {
+    const breeds = this.data.species === 'cat' ? this.data.catBreeds : 
+                   (this.data.species === 'dog' ? this.data.dogBreeds : []);
+    this.setData({ 
+      showBreedModal: true, 
+      breedSearchQuery: '',
+      filteredBreeds: breeds
+    });
+  },
+
+  closeBreedModal() {
+    this.setData({ showBreedModal: false });
+  },
+
+  onBreedSearch(e) {
+    const rawValue = (e.detail.value || '').trim();
+    const query = rawValue.toLowerCase();
+    const currentBreeds = this.data.species === 'cat' ? this.data.catBreeds : 
+                          (this.data.species === 'dog' ? this.data.dogBreeds : []);
+
+    if (!query) {
+      this.setData({ breedSearchQuery: '', filteredBreeds: currentBreeds });
+      return;
+    }
+
+    const filtered = (currentBreeds || []).filter(item => {
+      const zh = String(item.chinese_name || '').toLowerCase();
+      const en = String(item.english_name || '').toLowerCase();
+      return zh.indexOf(query) !== -1 || en.indexOf(query) !== -1;
+    });
+
+    this.setData({ 
+      breedSearchQuery: rawValue,
+      filteredBreeds: filtered
+    });
+  },
+
+  selectBreed(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const selected = this.data.filteredBreeds[idx];
+    if (!selected) return;
+    
+    this.setData({ 
+      breed: selected.chinese_name,
+      showBreedModal: false
+    });
+  },
+
+  useCustomBreed() {
+    this.setData({ 
+      breed: this.data.breedSearchQuery || '',
+      showBreedModal: false
+    });
+  },
+
   onBirthdayChange(e) { this.setData({ birthday: e.detail.value }); },
   onWeightInput(e) { this.setData({ initialWeight: e.detail.value }); },
   onAvatarUrlInput(e) { this.setData({ avatar: e.detail.value }); },

@@ -53,7 +53,11 @@
       <!-- Breed -->
       <view class="form-group">
         <text class="form-label">{{i18n.breed_optional}}</text>
-        <input class="input-field" value="{{breed}}" bindinput="onBreedInput" />
+        <view wx:if="{{species === 'cat' || species === 'dog'}}" class="input-field flex-row align-center space-between" bindtap="openBreedModal">
+          <text style="{{breed ? 'color:var(--text-main);' : 'color:var(--text-muted);'}}">{{breed || i18n.search_breed}}</text>
+          <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
+        </view>
+        <input wx:else class="input-field" value="{{breed}}" bindinput="onBreedInput" />
       </view>
 
       <!-- Birthday -->
@@ -132,6 +136,40 @@
           <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
         </view>
       </view>
+    </view>
+  </view>
+
+  <!-- Cat Breed Search Modal -->
+  <view wx:if="{{showBreedModal}}" class="modal-overlay" catchtap="closeBreedModal">
+    <view class="modal-content card breed-modal" catchtap="noop">
+      <view class="flex-row align-center space-between" style="margin-bottom:32rpx;">
+        <text class="h3" style="margin:0;">{{i18n.cat}} {{i18n.breed_optional}}</text>
+        <view class="close-icon" bindtap="closeBreedModal">X</view>
+      </view>
+
+      <view class="search-bar">
+        <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('Star')}}" mode="aspectFit" />
+        <input class="flex-1" placeholder="{{i18n.search_breed}}" value="{{breedSearchQuery}}" bindinput="onBreedSearch" confirm-type="search" focus />
+      </view>
+
+      <scroll-view scroll-y class="breed-list">
+        <!-- Customize Option -->
+        <view wx:if="{{breedSearchQuery}}" class="breed-item customize-item" bindtap="useCustomBreed">
+          <text class="font-bold">{{i18n.customize}}:</text>
+          <text class="text-primary" style="margin-left:12rpx;">"{{breedSearchQuery}}"</text>
+        </view>
+
+        <view wx:for="{{filteredBreeds}}" wx:key="index" class="breed-item" bindtap="selectBreed" data-idx="{{index}}">
+          <view class="flex-col">
+            <text class="breed-zh">{{item.chinese_name}}</text>
+            <text class="breed-en">{{item.english_name}}</text>
+          </view>
+        </view>
+
+        <view wx:if="{{filteredBreeds.length === 0 && breedSearchQuery}}" class="text-center text-muted" style="padding:40rpx;">
+          {{i18n.no_results}}
+        </view>
+      </scroll-view>
     </view>
   </view>
 </view>
