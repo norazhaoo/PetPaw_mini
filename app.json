@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/splash/splash",
     "pages/pawfile/pawfile",
     "pages/dashboard/dashboard",
     "pages/stock/stock",
@@ -21,31 +22,31 @@
     "list": [
       {
         "pagePath": "pages/pawfile/pawfile",
-        "text": "Pawfile",
+        "text": "宠物档案",
         "iconPath": "static/icons/tab-pawfile.png",
         "selectedIconPath": "static/icons/tab-pawfile-active.png"
       },
       {
         "pagePath": "pages/dashboard/dashboard",
-        "text": "Diary",
+        "text": "日常",
         "iconPath": "static/icons/tab-diary.png",
         "selectedIconPath": "static/icons/tab-diary-active.png"
       },
       {
         "pagePath": "pages/stock/stock",
-        "text": "Stock",
+        "text": "余量",
         "iconPath": "static/icons/tab-stock.png",
         "selectedIconPath": "static/icons/tab-stock-active.png"
       },
       {
         "pagePath": "pages/medical/medical",
-        "text": "Medical",
+        "text": "医疗记录",
         "iconPath": "static/icons/tab-medical.png",
         "selectedIconPath": "static/icons/tab-medical-active.png"
       },
       {
         "pagePath": "pages/settings/settings",
-        "text": "Settings",
+        "text": "设置",
         "iconPath": "static/icons/tab-settings.png",
         "selectedIconPath": "static/icons/tab-settings-active.png"
       }

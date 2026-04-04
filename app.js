@@ -1,4 +1,5 @@
 const storage = require('./utils/storage');
+const i18n = require('./utils/i18n');
 
 App({
   globalData: {
@@ -10,10 +11,23 @@ App({
     const state = storage.loadState();
     this.globalData.state = state;
 
+    // TabBar 国际化（同步执行，避免闪烁）
+    this._updateTabBar();
+
     // 库存自动扣减延迟到下一个时间片，不阻塞首屏渲染
     setTimeout(() => {
       this.globalData.state = storage.performDailyDeduction(this.globalData.state);
     }, 0);
+  },
+
+  _updateTabBar() {
+    try {
+      wx.setTabBarItem({ index: 0, text: i18n.t('pawfile') });
+      wx.setTabBarItem({ index: 1, text: i18n.t('diary') });
+      wx.setTabBarItem({ index: 2, text: i18n.t('stock') });
+      wx.setTabBarItem({ index: 3, text: i18n.t('medical_log') });
+      wx.setTabBarItem({ index: 4, text: i18n.t('settings') });
+    } catch (e) {}
   },
 
   onHide() {

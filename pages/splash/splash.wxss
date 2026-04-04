@@ -1,0 +1,55 @@
+/* pages/splash/splash.wxss */
+.splash-container {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #FFF3E0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32rpx;
+}
+
+.splash-icon {
+  font-size: 120rpx;
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20rpx); }
+}
+
+.splash-title {
+  font-size: 56rpx;
+  font-weight: 900;
+  color: #4A403A;
+  letter-spacing: 4rpx;
+}
+
+.splash-dots {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 48rpx;
+}
+
+.dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #C4A882;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.dot2 { animation-delay: 0.2s; }
+.dot3 { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}

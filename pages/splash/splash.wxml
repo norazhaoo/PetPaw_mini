@@ -1,0 +1,12 @@
+<!-- pages/splash/splash.wxml -->
+<view class="splash-container">
+  <view class="splash-content">
+    <view class="splash-icon">🐾</view>
+    <text class="splash-title">PetPaw</text>
+    <view class="splash-dots">
+      <view class="dot dot1"></view>
+      <view class="dot dot2"></view>
+      <view class="dot dot3"></view>
+    </view>
+  </view>
+</view>
