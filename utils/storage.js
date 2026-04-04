@@ -70,12 +70,12 @@ function _syncDefaultInventory(items, pets) {
   for (const pet of pets) {
     // food
     const existFood = items.find(i => i.petId === pet.id && i.typeId === 'food');
-    defaults.push(existFood || { id: generateId(), petId: pet.id, typeId: 'food', label: 'Food', current: 0, consumptionAmount: 50, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', icon: 'FoodBowl', color: '#F5B041', unit: 'g' });
+    defaults.push(existFood || { id: generateId(), petId: pet.id, typeId: 'food', label: 'Food', current: 0, consumptionAmount: 50, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', icon: 'FoodBowl', color: '#F5B041', unit: 'g', hidden: false });
 
     // litter 仅猫
     if (pet.species === 'cat' || !pet.species) {
       const existLitter = items.find(i => i.petId === pet.id && i.typeId === 'litter');
-      defaults.push(existLitter || { id: generateId(), petId: pet.id, typeId: 'litter', label: 'Litter', current: 0, consumptionAmount: 200, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', icon: 'LitterBox', color: '#AAB7B8', unit: 'g' });
+      defaults.push(existLitter || { id: generateId(), petId: pet.id, typeId: 'litter', label: 'Litter', current: 0, consumptionAmount: 200, consumptionInterval: 1, consumptionTimeUnit: 'day', consumptionUnit: 'g', icon: 'LitterBox', color: '#AAB7B8', unit: 'g', hidden: false });
     }
   }
 

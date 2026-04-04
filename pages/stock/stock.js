@@ -23,6 +23,9 @@ Page({
     showUnitModal: false,
     editingUnitItemId: null,
     editingUnit: '',
+    editingUnitType: '',
+    currentUnitOptions: [],
+    isEditing: false,
     i18n: {}
   },
   onLoad() {
@@ -37,7 +40,8 @@ Page({
         select_unit: t('unit_g') ? t('select_unit') : 'Select Unit',
         every: t('every') || 'Every', consume: t('consume') || 'Consume',
         day: t('day') || 'Day', week: t('week') || 'Week', month: t('month') || 'Month',
-        quarter: t('quarter') || 'Quarter', year: t('year') || 'Year'
+        quarter: t('quarter') || 'Quarter', year: t('year') || 'Year',
+        done: t('done') || 'Done'
       },
       unitOptionsList: UNITS.map(u => ({ value: u, label: t('unit_' + u) || u })),
       intervalOptionsList: INTERVALS.map(v => ({ value: v, label: String(v) })),
@@ -51,8 +55,10 @@ Page({
 
   refreshData() {
     const state = app.getState();
+    const isEditing = this.data.isEditing;
     const items = (state.inventoryItems || [])
       .filter(item => item.petId === state.activePetId)
+      .filter(item => isEditing || !item.hidden)
       .map(item => {
       const unit = item.unit || 'g';
       const isLargeVolume = unit === 'g' || unit === 'ml';
@@ -83,7 +89,30 @@ Page({
        };
     });
 
-    this.setData({ inventoryItems: items });
+    this.setData({ inventoryItems: items, isEditing });
+  },
+
+  startEdit() {
+    this.setData({ isEditing: true });
+    this.refreshData();
+    if (wx.vibrateShort) wx.vibrateShort();
+  },
+
+  stopEdit() {
+    this.setData({ isEditing: false });
+    this.refreshData();
+  },
+
+  toggleHide(e) {
+    const { id } = e.currentTarget.dataset;
+    const items = this.data.inventoryItems;
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    let state = app.getState();
+    state = storage.updateInventory(state, id, { hidden: !item.hidden });
+    app.setState(state);
+    this.refreshData();
   },
 
   adjustInventory(e) {

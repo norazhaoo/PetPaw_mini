@@ -2,11 +2,17 @@
 <wxs src="../../utils/icons.wxs" module="ic" />
 
 <view class="app-container">
+  <view class="title-row flex-row justify-between align-center">
+    <text class="h1">{{i18n.stock}}</text>
+    <text wx:if="{{isEditing}}" class="text-primary font-bold" style="padding: 10rpx 20rpx;" bindtap="stopEdit">{{i18n.done}}</text>
+  </view>
+
   <!-- Inventory Cards -->
-  <view wx:for="{{inventoryItems}}" wx:key="id" class="card stock-card">
-    <!-- Delete button for non-default items -->
-    <view wx:if="{{!item.isDefault}}" class="stock-delete-btn" bindtap="deleteItem" data-id="{{item.id}}" data-label="{{item.label}}">
-      <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+  <view wx:for="{{inventoryItems}}" wx:key="id" class="card stock-card {{isEditing ? 'edit-mode' : ''}} {{item.hidden ? 'hidden-item' : ''}}" bindlongpress="startEdit">
+    <!-- Delete/Hide button -->
+    <view wx:if="{{isEditing}}" class="stock-delete-btn {{item.hidden ? 'hidden-item' : ''}}" bindtap="deleteItem" data-id="{{item.id}}" data-label="{{item.label}}">
+      <image wx:if="{{item.hidden}}" class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('Eye')}}" mode="aspectFit" />
+      <image wx:else class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
     </view>
 
     <text class="h2 text-center">{{item.label}}</text>

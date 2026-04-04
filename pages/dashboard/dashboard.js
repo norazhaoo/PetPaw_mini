@@ -97,21 +97,39 @@ Page({
     const isDog = activePet.species === 'dog';
     const isCat = activePet.species === 'cat';
     const quickActions = isDog
-      ? ['vaccine', 'deworming', 'brush_teeth', 'walk_dog']
+      ? ['vaccine', 'deworming', 'brush_teeth', 'log_weight', 'walk_dog']
       : isCat 
-        ? ['vaccine', 'deworming', 'brush_teeth', 'scoop_litter']
-        : ['vaccine', 'deworming', 'brush_teeth'];
+        ? ['vaccine', 'deworming', 'brush_teeth', 'log_weight', 'scoop_litter']
+        : ['vaccine', 'deworming', 'brush_teeth', 'log_weight'];
 
     // 过滤掉被用户隐藏的动作
     const hidden = activePet.hiddenActions || [];
-    const filteredQuickActions = quickActions.filter(type => !hidden.includes(type));
+    const isEditingActions = this.data.isEditingActions || false;
+
+    // 过滤展示列表：编辑模式显示所有，非编辑模式隐藏 hidden 的
+    const filteredQuickActions = quickActions
+      .map(type => {
+        let iconName = type;
+        if (type === 'log_weight') iconName = 'scale';
+        if (type === 'walk_dog') iconName = 'walk_dog';
+        if (type === 'scoop_litter') iconName = 'scoop_litter';
+        
+        return { 
+          type, 
+          color: COLOR_MAP[type] || '#8F8377', 
+          iconName,
+          hidden: hidden.includes(type)
+        };
+      })
+      .filter(item => isEditingActions || !item.hidden);
 
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId).map(ca => ({
       ...ca, iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
     }));
 
-    // Stock Alert - only for active pet
-    const petInventory = (state.inventoryItems || []).filter(item => item.petId === state.activePetId);
+    // Stock Alert - only for active pet and visible items
+    const petInventory = (state.inventoryItems || [])
+      .filter(item => item.petId === state.activePetId && !item.hidden);
     
     const TIME_CONV = { 'day': 1, 'week': 7, 'month': 30, 'quarter': 91, 'year': 365 };
     const UNIT_CONV = {
@@ -146,13 +164,18 @@ Page({
 
     const showWarning = inventoryItems.some(item => item.isLow) || false;
 
+    // 判断"上次铲屎/遛狗"是否显示（与日常追踪联动）
+    const actionType = isDog ? 'walk_dog' : 'scoop_litter';
+    const showLastAction = (isDog || isCat) && !hidden.includes(actionType);
+
     // === 第一阶段：先渲染头部、快速操作等轻量数据 ===
     this.setData({
       activePet,
       isDog,
       isCat,
-      isEditingActions: this.data.isEditingActions || false,
-      quickActions: filteredQuickActions.map(type => ({ type, color: COLOR_MAP[type] || '#8F8377', iconName: type })),
+      showLastAction,
+      isEditingActions,
+      quickActions: filteredQuickActions,
       customActions,
       inventoryItems,
       showWarning
@@ -384,6 +407,12 @@ Page({
   handleAction(e) {
     const type = e.currentTarget.dataset.type;
     const label = e.currentTarget.dataset.label || t(type) || type;
+
+    if (type === 'log_weight') {
+        this.openWeightModal();
+        return;
+    }
+    
     const color = e.currentTarget.dataset.color || null;
     const iconIdx = e.currentTarget.dataset.iconidx !== undefined ? parseInt(e.currentTarget.dataset.iconidx) : null;
 
@@ -455,12 +484,15 @@ Page({
     const pet = state.pets.find(p => p.id === state.activePetId);
     if (pet) {
       if (!pet.hiddenActions) pet.hiddenActions = [];
-      if (!pet.hiddenActions.includes(type)) {
+      const idx = pet.hiddenActions.indexOf(type);
+      if (idx > -1) {
+        pet.hiddenActions.splice(idx, 1);
+      } else {
         pet.hiddenActions.push(type);
-        state = storage.editPet(state, pet.id, { hiddenActions: pet.hiddenActions });
-        app.setState(state);
-        this.refreshData();
       }
+      state = storage.editPet(state, pet.id, { hiddenActions: pet.hiddenActions });
+      app.setState(state);
+      this.refreshData();
     }
   },
 

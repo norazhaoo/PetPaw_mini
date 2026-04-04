@@ -30,9 +30,34 @@
 
 .stock-delete-btn {
   position: absolute;
-  top: 24rpx;
-  right: 24rpx;
-  z-index: 2;
+  top: 10rpx;
+  right: 10rpx;
+  width: 50rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Edit Mode refinements */
+.edit-mode {
+  animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+  0% { transform: rotate(0.5deg); }
+  50% { transform: rotate(-0.5deg); }
+  100% { transform: rotate(0.5deg); }
+}
+
+.stock-card.hidden-item {
+  opacity: 0.5;
+  filter: grayscale(0.5);
+}
+
+.stock-delete-btn.hidden-item {
+  background: rgba(0,0,0,0.1);
+  border-radius: 50%;
 }
 
 .amount-row {
