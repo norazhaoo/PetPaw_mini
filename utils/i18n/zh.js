@@ -22,6 +22,8 @@ module.exports = {
   delete: '删除', stock: '余量', species: '宠物种类',
   cat: '猫咪 🐱', dog: '狗狗 🐶', other: '其他 🐾',
   help: '帮助与支持', about: '关于 PetPaw', today: '今天',
+  months: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+  weekdays: ['日', '一', '二', '三', '四', '五', '六'],
   clear_data: '清除所有数据', data_cleared: '数据已清空！',
   clear_confirm: '此操作将永久删除所有宠物和记录。确定吗？',
   stock_alert: '库存警报', things_to_track: '日常追踪',

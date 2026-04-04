@@ -71,8 +71,10 @@ Page({
         dog: t('dog'), cat: t('cat'), pawfile: t('pawfile'), today: t('today'),
         vaccine: t('vaccine'), deworming: t('deworming'), brush_teeth: t('brush_teeth'),
         scoop_litter: t('scoop_litter'), walk_dog: t('walk_dog'),
-        custom: t('custom'), done: t('done'), d: t('d')
-      }
+        custom: t('custom'), done: t('done'), d: t('d'),
+        months: t('months'), weekdays: t('weekdays')
+      },
+      weekdays: t('weekdays') || WEEKDAYS
     });
   },
 
@@ -315,7 +317,7 @@ Page({
 
     return {
       currentMonth,
-      currentMonthLabel: dateUtil.formatDate(currentMonth, 'MMMM yyyy'),
+      currentMonthLabel: dateUtil.formatDate(currentMonth, 'MMMM yyyy', { months: this.data.i18n.months }),
       selectedDate,
       selectedDateStr: dateUtil.formatDate(selectedDate, 'YYYY-MM-DD'),
       blanks,

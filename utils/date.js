@@ -4,8 +4,9 @@
  * 格式化日期
  * @param {Date|string} date
  * @param {string} fmt - 支持: 'YYYY-MM-DD', 'MM-DD', 'HH:mm', 'MMMM yyyy', 'MMM dd', 'MMM do, yyyy h:mm a', 'd'
+ * @param {object} options - 可选列表: { months: [], weekdays: [] }
  */
-function formatDate(date, fmt) {
+function formatDate(date, fmt, options = {}) {
   if (typeof date === 'string') date = new Date(date);
   if (!(date instanceof Date) || isNaN(date)) return '';
 
@@ -15,7 +16,7 @@ function formatDate(date, fmt) {
   const hours = date.getHours();
   const minutes = date.getMinutes();
 
-  const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const MONTHS_FULL = options.months || ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   const pad = (n) => n.toString().padStart(2, '0');

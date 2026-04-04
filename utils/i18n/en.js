@@ -22,6 +22,8 @@ module.exports = {
   delete: 'Delete', stock: 'Stock', species: 'Species',
   cat: 'Cat 🐱', dog: 'Dog 🐶', other: 'Other 🐾',
   help: 'Help & Support', about: 'About PetPaw', today: 'Today',
+  months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  weekdays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
   clear_data: 'Clear All Data', data_cleared: 'Data cleared!',
   clear_confirm: 'This will permanently delete ALL pets and records. Are you sure?',
   stock_alert: 'Stock Alert', things_to_track: 'Things to track',
