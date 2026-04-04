@@ -104,15 +104,30 @@
   margin-top: 64rpx;
 }
 
-/* Pet List */
-.pet-list-item {
+/* Pet List Swipe */
+.pet-swipe-item {
+  width: 100%;
+  height: 192rpx;
+  margin-bottom: 32rpx;
+}
+
+.swipe-area {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.swipe-view {
+  width: calc(100% + 240rpx); /* Combined width for card and buttons */
+  height: 100%;
   display: flex;
-  align-items: center;
-  gap: 16rpx;
 }
 
 .pet-card {
-  flex: 1;
+  width: calc(100% - 240rpx); /* Fills visible area (100% of swipe-area) */
+  height: 100%;
   background: var(--card-bg);
   padding: 32rpx;
   border-radius: var(--radius-lg);
@@ -120,12 +135,51 @@
   display: flex;
   align-items: center;
   gap: 32rpx;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .pet-card-add {
+  width: 100%;
+  height: 160rpx;
   background: transparent;
   border: 4rpx dashed var(--primary);
   box-shadow: none;
+  display: flex;
+  align-items: center;
+  gap: 32rpx;
+  padding: 32rpx;
+  box-sizing: border-box;
+  border-radius: var(--radius-lg);
+}
+
+.swipe-buttons {
+  width: 240rpx;
+  height: 100%;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.swipe-btn {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.edit-btn {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.delete-btn {
+  background: transparent;
+  color: #E74C3C;
 }
 
 .pet-avatar-add {
