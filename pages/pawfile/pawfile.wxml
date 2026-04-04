@@ -80,8 +80,11 @@
 
   <!-- 宠物列表 -->
   <view wx:else>
-    <view class="text-center" style="margin-bottom:64rpx;">
-      <text class="h1" style="font-size:72rpx;">🐾 PetPaw</text>
+    <view class="text-center flex-col" style="align-items:center; margin-bottom:64rpx;">
+      <view class="flex-center gap-sm">
+        <image class="icon-img" lazy-load style="width:72rpx;height:72rpx; mix-blend-mode: multiply;" src="/static/icons/tab-pawfile-active.png" mode="aspectFit" />
+        <text class="h1" style="font-size:72rpx; font-family: 'Arial Rounded MT Bold', 'Nunito', 'Varela Round', system-ui, sans-serif;">PetPaw</text>
+      </view>
       <text class="text-muted" style="display:block;margin-top:16rpx;">{{i18n.who_caring}}</text>
     </view>
 

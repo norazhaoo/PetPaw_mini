@@ -32,11 +32,19 @@
   transition: all 0.3s ease;
 }
 
-.tab-bar-item image {
+.tab-bar-item .tab-icon {
   width: 56rpx;
   height: 56rpx;
   margin-bottom: 6rpx;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Specific scale adjustment for pawfile icon due to its visual weight */
+.tab-bar-item .icon-pawfile {
+  width: 72rpx;
+  height: 72rpx;
+  margin-top: -8rpx;
+  margin-bottom: -2rpx;
 }
 
 .tab-bar-item text {
@@ -47,7 +55,7 @@
   transition: all 0.3s ease;
 }
 
-.tab-bar-item.active image {
+.tab-bar-item.active .tab-icon {
   transform: translateY(-4rpx) scale(1.1);
 }
 
