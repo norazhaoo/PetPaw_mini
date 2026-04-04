@@ -131,7 +131,8 @@ Page({
     const id = e.currentTarget.dataset.id;
     const value = e.detail.value;
     let state = app.getState();
-    state = storage.updateInventory(state, id, { current: value === '' ? '' : (parseFloat(value) || 0) });
+    // Save raw string to allow decimal typing ("1." shouldn't be auto-normalized to "1" instantly)
+    state = storage.updateInventory(state, id, { current: value });
     app.setState(state);
   },
 
@@ -178,7 +179,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     const value = e.detail.value;
     let state = app.getState();
-    state = storage.updateInventory(state, id, { consumptionAmount: value === '' ? '' : (parseFloat(value) || 0) });
+    state = storage.updateInventory(state, id, { consumptionAmount: value });
     app.setState(state);
   },
 
@@ -186,7 +187,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     const value = e.detail.value;
     let state = app.getState();
-    state = storage.updateInventory(state, id, { consumptionInterval: value === '' ? '' : (parseInt(value) || 1) });
+    state = storage.updateInventory(state, id, { consumptionInterval: value });
     app.setState(state);
   },
 
