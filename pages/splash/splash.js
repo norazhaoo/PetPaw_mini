@@ -14,12 +14,8 @@ Page({
       const remaining = Math.max(0, minDelay - elapsed);
 
       setTimeout(() => {
-        // 根据是否有宠物决定跳转目标
-        if (state && state.pets && state.pets.length > 0) {
-          wx.switchTab({ url: '/pages/dashboard/dashboard' });
-        } else {
-          wx.switchTab({ url: '/pages/pawfile/pawfile' });
-        }
+        // 统一强制进入首页（Pawfile）
+        wx.switchTab({ url: '/pages/pawfile/pawfile' });
       }, remaining);
     };
 
