@@ -207,9 +207,12 @@
   <view wx:if="{{showWeightModal}}" class="modal-overlay" catchtap="closeWeightModal">
     <view class="modal-content card" catchtap="noop">
       <text class="h3">{{i18n.log_weight}}</text>
-      <view class="flex-row gap-lg" style="margin:40rpx 0;">
-        <slider min="5" max="150" value="{{newWeight * 10}}" bindchange="onWeightSliderChange" activeColor="var(--warning)" style="flex:1;" />
-        <text class="font-bold" style="width:120rpx;">{{newWeight}} kg</text>
+      <view class="flex-row gap-lg align-center" style="margin:40rpx 0;">
+        <slider min="5" max="300" value="{{newWeight * 10}}" bindchange="onWeightSliderChange" bindchanging="onWeightSliderChange" activeColor="var(--warning)" style="flex:1;" />
+        <view class="flex-row align-center" style="background:var(--bg-color); border-radius:16rpx; padding:12rpx 24rpx; width:180rpx; box-sizing:border-box;">
+          <input type="digit" value="{{newWeight}}" bindinput="onWeightInput" style="flex:1; text-align:right; font-weight:bold; font-size:32rpx; color:var(--text-main);" />
+          <text class="font-bold" style="margin-left:8rpx; font-size:28rpx; color:var(--text-muted);">kg</text>
+        </view>
       </view>
       <view class="flex-row gap-md" style="margin-top:48rpx;">
         <button class="btn-secondary flex-1" bindtap="closeWeightModal">{{i18n.cancel}}</button>

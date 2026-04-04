@@ -528,6 +528,7 @@ Page({
   noop() {},
   closeWeightModal() { this.setData({ showWeightModal: false }); },
   onWeightSliderChange(e) { this.setData({ newWeight: (e.detail.value / 10).toFixed(1) }); },
+  onWeightInput(e) { this.setData({ newWeight: e.detail.value }); },
   saveWeight() {
     const now = new Date();
     const targetDate = new Date(this.data.selectedDate);
