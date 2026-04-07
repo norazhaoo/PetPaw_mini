@@ -177,30 +177,7 @@ Page({
     });
   },
 
-  openBirthdayModal() {
-    this.setData({ showBirthdayModal: true });
-  },
-
-  closeBirthdayModal() {
-    this.setData({ showBirthdayModal: false });
-  },
-
-  onDateChange(e) {
-    this.setData({ dateValues: e.detail.value });
-  },
-
-  confirmBirthday() {
-    const { years, months, days, dateValues } = this.data;
-    const y = years[dateValues[0]];
-    const m = months[dateValues[1]];
-    const d = days[dateValues[2]];
-    const dateString = `${y}-${m < 10 ? '0' + m : m}-${d < 10 ? '0' + d : d}`;
-    this.setData({ 
-      birthday: dateString,
-      showBirthdayModal: false
-    });
-  },
-
+  stopBubble() {},
 
   openBirthdayModal() {
     this.setData({ showBirthdayModal: true });
@@ -225,7 +202,6 @@ Page({
       showBirthdayModal: false
     });
   },
-
 
   useCustomBreed() {
     this.setData({ 

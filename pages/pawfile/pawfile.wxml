@@ -153,12 +153,12 @@
 
       <scroll-view scroll-y class="breed-list">
         <!-- Customize Option -->
-        <view wx:if="{{breedSearchQuery}}" class="breed-item customize-item" bindtap="useCustomBreed">
+        <view wx:if="{{breedSearchQuery}}" class="breed-item customize-item" catchtap="useCustomBreed">
           <text class="font-bold">{{i18n.customize}}:</text>
           <text class="text-primary" style="margin-left:12rpx;">"{{breedSearchQuery}}"</text>
         </view>
 
-        <view wx:for="{{filteredBreeds}}" wx:key="index" class="breed-item" bindtap="selectBreed" data-idx="{{index}}">
+        <view wx:for="{{filteredBreeds}}" wx:for-index="bIdx" wx:key="bIdx" class="breed-item" catchtap="selectBreed" data-idx="{{bIdx}}">
           <view class="flex-col">
             <text class="breed-zh">{{item.chinese_name}}</text>
             <text class="breed-en">{{item.english_name}}</text>
