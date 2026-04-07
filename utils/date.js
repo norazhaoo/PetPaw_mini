@@ -17,11 +17,12 @@ function formatDate(date, fmt, options = {}) {
   const minutes = date.getMinutes();
 
   const MONTHS_FULL = options.months || ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS_SHORT = options.monthsShort || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   const pad = (n) => n.toString().padStart(2, '0');
 
   const ordinal = (n) => {
+    if (options.noOrdinal) return n;
     const s = ['th', 'st', 'nd', 'rd'];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
@@ -35,14 +36,18 @@ function formatDate(date, fmt, options = {}) {
     case 'HH:mm':
       return `${pad(hours)}:${pad(minutes)}`;
     case 'MMMM yyyy':
-      return `${MONTHS_FULL[month]} ${year}`;
+      return options.isZH ? `${year}年 ${MONTHS_FULL[month]}` : `${MONTHS_FULL[month]} ${year}`;
     case 'MMM dd':
-      return `${MONTHS_SHORT[month]} ${pad(day)}`;
+      return options.isZH ? `${MONTHS_SHORT[month]}${pad(day)}日` : `${MONTHS_SHORT[month]} ${pad(day)}`;
     case 'MMM do':
-      return `${MONTHS_SHORT[month]} ${ordinal(day)}`;
+      return options.isZH ? `${MONTHS_SHORT[month]}${day}日` : `${MONTHS_SHORT[month]} ${ordinal(day)}`;
     case 'MMM dd, yyyy h:mm a': {
       const h = hours % 12 || 12;
       const ampm = hours < 12 ? 'AM' : 'PM';
+      if (options.isZH) {
+        const ap = hours < 12 ? '上午' : '下午';
+        return `${year}年 ${MONTHS_SHORT[month]}${pad(day)}日 ${ap}${h}:${pad(minutes)}`;
+      }
       return `${MONTHS_SHORT[month]} ${pad(day)}, ${year} ${h}:${pad(minutes)} ${ampm}`;
     }
     case 'd':

@@ -37,6 +37,7 @@ Page({
       this.getTabBar().setData({ selected: 4 });
       this.getTabBar().updateLang();
     }
+    wx.setNavigationBarTitle({ title: i18n.t('settings') || 'Settings' });
     setTimeout(() => this.refreshData(), 0);
   },
 

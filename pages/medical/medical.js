@@ -1,7 +1,7 @@
 // pages/medical/medical.js
 const app = getApp();
 const storage = require('../../utils/storage');
-const { t } = require('../../utils/i18n');
+const { t, getLanguage } = require('../../utils/i18n');
 const dateUtil = require('../../utils/date');
 
 const SYMPTOM_ICONS = {
@@ -38,14 +38,19 @@ Page({
       this.getTabBar().setData({ selected: 3 });
       this.getTabBar().updateLang();
     }
+    wx.setNavigationBarTitle({ title: t('medical_log') || 'Medical Log' });
     setTimeout(() => this.refreshData(), 0);
   },
 
   refreshData() {
     const state = app.getState();
+    const isZH = getLanguage() === 'zh';
     const petRecords = state.medicalRecords.filter(m => m.petId === state.activePetId).map(record => ({
       ...record,
-      dateFormatted: dateUtil.formatDate(dateUtil.parseISO(record.date), 'MMM dd, yyyy h:mm a'),
+      dateFormatted: dateUtil.formatDate(dateUtil.parseISO(record.date), 'MMM dd, yyyy h:mm a', { 
+        isZH, 
+        monthsShort: t('months') 
+      }),
       tagDetails: record.tags.map(tagId => {
         const si = SYMPTOM_ICONS[tagId];
         return { id: tagId, label: t(tagId), icon: si ? si.icon : 'Star', color: si ? si.color : '#8F8377' };

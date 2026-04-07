@@ -1,7 +1,7 @@
 // pages/pawfile/pawfile.js
 const app = getApp();
 const storage = require('../../utils/storage');
-const { t } = require('../../utils/i18n');
+const { t, getLanguage } = require('../../utils/i18n');
 
 Page({
   data: {
@@ -78,6 +78,7 @@ Page({
       this.getTabBar().setData({ selected: 0 });
       this.getTabBar().updateLang();
     }
+    wx.setNavigationBarTitle({ title: t('pawfile') || 'Pawfile' });
     setTimeout(() => this.refreshData(), 0);
   },
 

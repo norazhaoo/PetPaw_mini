@@ -54,6 +54,7 @@ Page({
       this.getTabBar().setData({ selected: 2 });
       this.getTabBar().updateLang();
     }
+    wx.setNavigationBarTitle({ title: t('stock') || 'Stock' });
     setTimeout(() => this.refreshData(), 0);
   },
 

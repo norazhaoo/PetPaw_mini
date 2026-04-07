@@ -1,7 +1,7 @@
 // pages/dashboard/dashboard.js
 const app = getApp();
 const storage = require('../../utils/storage');
-const { t } = require('../../utils/i18n');
+const { t, getLanguage } = require('../../utils/i18n');
 const dateUtil = require('../../utils/date');
 
 // 自定义图标列表，对应 CUSTOM_ICONS 数组
@@ -83,6 +83,9 @@ Page({
       this.getTabBar().setData({ selected: 1 });
       this.getTabBar().updateLang();
     }
+    // Set navigation title
+    wx.setNavigationBarTitle({ title: t('diary') || 'Diary' });
+    
     // 延迟数据加载，让页面模板先渲染出来
     setTimeout(() => this.refreshData(), 0);
   },
@@ -327,7 +330,10 @@ Page({
 
     return {
       currentMonth,
-      currentMonthLabel: dateUtil.formatDate(currentMonth, 'MMMM yyyy', { months: this.data.i18n.months }),
+      currentMonthLabel: dateUtil.formatDate(currentMonth, 'MMMM yyyy', { 
+        months: this.data.i18n.months,
+        isZH: getLanguage() === 'zh' 
+      }),
       selectedDate,
       selectedDateStr: dateUtil.formatDate(selectedDate, 'YYYY-MM-DD'),
       blanks,
@@ -361,7 +367,13 @@ Page({
       }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const listTitle = dateUtil.isToday(selectedDate) ? t('today_logs') : `${t('logs_for')} ${dateUtil.formatDate(selectedDate, 'MMM do')}`;
+    const isZH = getLanguage() === 'zh';
+    const listTitle = dateUtil.isToday(selectedDate) 
+      ? t('today_logs') 
+      : `${t('logs_for')} ${dateUtil.formatDate(selectedDate, 'MMM do', { 
+          isZH, 
+          monthsShort: this.data.i18n.months 
+        })}`;
 
     return { combinedLogs, listTitle };
   },
