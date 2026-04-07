@@ -1,10 +1,65 @@
 /* pages/medical/medical.wxss */
 
+/* ===== Symptom Grid ===== */
+.symptom-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.symptom-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 16rpx 8rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid #E0DACA;
+  background: var(--card-bg);
+  transition: all 0.2s;
+}
+
+.symptom-tag .symptom-icon-wrap {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFF3E0;
+}
+
+.symptom-tag .symptom-icon-wrap .icon-img {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.symptom-tag .symptom-label {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.symptom-tag-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 6rpx 20rpx rgba(254, 225, 64, 0.45);
+}
+
+.symptom-tag-active .symptom-icon-wrap {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* ===== Photo + Save Row ===== */
 .photo-preview {
   position: relative;
-  flex: 1;
-  height: 200rpx;
-  border-radius: 24rpx;
+  width: 100%;
+  height: 120rpx;
+  border-radius: 20rpx;
   overflow: hidden;
 }
 
@@ -15,35 +70,48 @@
 
 .photo-remove {
   position: absolute;
-  top: 16rpx;
-  right: 16rpx;
-  width: 60rpx;
-  height: 60rpx;
+  top: 12rpx;
+  right: 12rpx;
+  width: 48rpx;
+  height: 48rpx;
   background: rgba(0,0,0,0.5);
   color: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36rpx;
+  font-size: 32rpx;
 }
 
 .photo-placeholder {
-  flex: 1;
-  height: 200rpx;
+  width: 100%;
+  height: 120rpx;
   border: 4rpx dashed #E0DACA;
-  border-radius: 24rpx;
+  border-radius: 20rpx;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  gap: 16rpx;
 }
 
+.save-row {
+  width: 100%;
+}
+
+.save-row .btn-primary {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 32rpx;
+}
+
+/* ===== Record Cards ===== */
 .record-card {
   position: relative;
-  padding: 24rpx;
+  padding: 28rpx;
   border: 2rpx solid #F0EDE6;
   border-radius: 24rpx;
+  background: var(--card-bg);
 }
 
 .record-delete {
@@ -52,13 +120,33 @@
   right: 24rpx;
 }
 
-.record-tag {
+.record-tags-wrap {
   display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.record-tag {
+  display: inline-flex;
   align-items: center;
-  gap: 12rpx;
-  background: var(--primary);
+  gap: 8rpx;
+  background: #FFF8E1;
   padding: 8rpx 20rpx;
   border-radius: 32rpx;
+  border: 2rpx solid #F5E6B8;
+}
+
+.record-tag .icon-img {
+  width: 28rpx;
+  height: 28rpx;
+}
+
+.record-tag text {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
 .record-image {

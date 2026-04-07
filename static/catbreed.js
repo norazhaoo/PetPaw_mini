@@ -746,4 +746,4 @@ module.exports = [
         "coat": "Long",
         "pattern": "White"
     }
-]
+];

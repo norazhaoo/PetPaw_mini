@@ -11,31 +11,34 @@
 
     <view class="card" style="background:var(--bg-color);box-shadow:none;">
       <text class="h3">{{i18n.symptoms}}</text>
-      <view class="flex-row flex-wrap gap-md" style="margin-bottom:48rpx;">
+
+      <!-- Symptom Grid: 3-column layout -->
+      <view class="symptom-grid">
         <view wx:for="{{symptoms}}" wx:key="id"
-          class="tag {{selectedSymptoms.indexOf(item.id) > -1 ? 'tag-active' : ''}}"
+          class="symptom-tag {{selectedSymptoms.indexOf(item.id) > -1 ? 'symptom-tag-active' : ''}}"
           bindtap="toggleSymptom" data-id="{{item.id}}">
-          <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src(item.icon)}}" mode="aspectFit" />
-          <text style="font-weight:700;font-size:26rpx;color:var(--text-main);">{{item.label}}</text>
+          <view class="symptom-icon-wrap">
+            <image class="icon-img" lazy-load src="{{ic.src(item.icon)}}" mode="aspectFit" />
+          </view>
+          <text class="symptom-label">{{item.label}}</text>
         </view>
       </view>
 
-      <!-- Photo + Save Row -->
-      <view class="flex-row gap-md" style="margin-bottom:40rpx;">
-        <!-- Image -->
-        <view wx:if="{{image}}" class="photo-preview">
-          <image src="{{image}}" mode="aspectFill" class="photo-img" />
-          <view class="photo-remove" bindtap="removeImage">×</view>
-        </view>
-        <view wx:else class="photo-placeholder" bindtap="chooseImage">
-          <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
-          <text style="font-size:26rpx;font-weight:700;color:var(--text-main);margin-top:8rpx;">{{i18n.photo}}</text>
-        </view>
+      <!-- Photo -->
+      <view wx:if="{{image}}" class="photo-preview">
+        <image src="{{image}}" mode="aspectFill" class="photo-img" />
+        <view class="photo-remove" bindtap="removeImage">×</view>
+      </view>
+      <view wx:else class="photo-placeholder" bindtap="chooseImage">
+        <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
+        <text style="font-size:24rpx;font-weight:700;color:var(--text-muted);">{{i18n.photo}}</text>
+      </view>
 
-        <!-- Save button -->
-        <button class="btn-primary flex-1" style="height:200rpx;" bindtap="handleSave"
+      <!-- Save button (own row) -->
+      <view class="save-row">
+        <button class="btn-primary" bindtap="handleSave"
           disabled="{{selectedSymptoms.length === 0 && !image}}">
-          <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('Check')}}" mode="aspectFit" />
+          <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('Check')}}" mode="aspectFit" />
           {{i18n.add_record}}
         </button>
       </view>
@@ -57,10 +60,10 @@
           <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
         </view>
         <text class="text-muted" style="font-size:24rpx;margin-bottom:16rpx;">{{item.dateFormatted}}</text>
-        <view class="flex-row flex-wrap gap-md" style="margin-bottom:16rpx;">
+        <view class="record-tags-wrap">
           <view wx:for="{{item.tagDetails}}" wx:for-item="tag" wx:key="id" class="record-tag">
-            <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(tag.icon)}}" mode="aspectFit" />
-            <text style="font-size:24rpx;font-weight:700;">{{tag.label}}</text>
+            <image class="icon-img" lazy-load src="{{ic.src(tag.icon)}}" mode="aspectFit" />
+            <text>{{tag.label}}</text>
           </view>
         </view>
         <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="record-image" />
