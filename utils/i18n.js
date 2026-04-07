@@ -4,12 +4,7 @@
 // 静态加载所有语言文件（每个文件独立便于维护）
 const LANG_SETS = {
   en: require('./i18n/en'),
-  zh: require('./i18n/zh'),
-  zh_tw: require('./i18n/zh_tw'),
-  ja: require('./i18n/ja'),
-  ko: require('./i18n/ko'),
-  es: require('./i18n/es'),
-  th: require('./i18n/th')
+  zh: require('./i18n/zh')
 };
 
 // 冷启动时读取一次语言设置

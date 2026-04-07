@@ -165,8 +165,13 @@ Page({
     const selected = this.data.filteredBreeds[idx];
     if (!selected) return;
     
+    const lang = getLanguage();
+    const breedName = lang === 'en' 
+      ? (selected.english_name || selected.chinese_name)
+      : (selected.chinese_name || selected.english_name);
+    
     this.setData({ 
-      breed: selected.chinese_name,
+      breed: breedName,
       showBreedModal: false
     });
   },
