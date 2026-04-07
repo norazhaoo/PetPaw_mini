@@ -38,5 +38,6 @@ module.exports = {
   done: '完成', logged: '已记录',
   every: '每', consume: '消耗', select_unit: '选择单位',
   day: '天', week: '周', month: '月', quarter: '季度', year: '年',
-  search_breed: '搜索品种...', customize: '自定义输入', no_results: '未找到相关品种'
+  search_breed: '搜索品种...', customize: '自定义输入', no_results: '未找到相关品种',
+  take_photo: '拍照', choose_from_album: '从相册选择'
 };

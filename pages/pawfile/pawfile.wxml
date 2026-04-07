@@ -18,10 +18,13 @@
       <!-- 头像上传 -->
       <view class="avatar-upload-wrap">
         <view wx:if="{{avatar}}" style="position: relative;">
-          <view class="avatar-preview-wrap">
+          <view class="avatar-preview-wrap" bindtap="chooseAvatar">
             <image class="avatar-preview" src="{{avatar}}" mode="aspectFill" />
+            <view class="avatar-change-overlay">
+              <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
+            </view>
           </view>
-          <view class="avatar-remove-btn" bindtap="removeAvatar">×</view>
+          <view class="avatar-remove-btn" catchtap="removeAvatar">×</view>
         </view>
         <view wx:else class="avatar-placeholder" bindtap="chooseAvatar">
           <image class="icon-img" lazy-load style="width:64rpx;height:64rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />

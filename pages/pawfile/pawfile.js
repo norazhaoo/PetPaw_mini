@@ -37,7 +37,8 @@ Page({
         save: t('save'), cancel: t('cancel'), species: t('species'),
         cat: t('cat'), dog: t('dog'), other: t('other'),
         who_caring: t('who_caring'), delete_confirm: t('delete_confirm'),
-        search_breed: t('search_breed'), customize: t('customize'), no_results: t('no_results')
+        search_breed: t('search_breed'), customize: t('customize'), no_results: t('no_results'),
+        take_photo: t('take_photo'), choose_from_album: t('choose_from_album')
       }
     });
 
@@ -218,27 +219,28 @@ Page({
 
   chooseAvatar() {
     const that = this;
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
+    const takePhotoText = this.data.i18n.take_photo || '拍照';
+    const chooseAlbumText = this.data.i18n.choose_from_album || '从相册选择';
+    wx.showActionSheet({
+      itemList: [takePhotoText, chooseAlbumText],
       success(res) {
-        const tempPath = res.tempFiles[0].tempFilePath;
-        // 压缩图片到 200px
-        const ctx = wx.createCanvasContext('avatarCanvas', that);
-        wx.getImageInfo({
-          src: tempPath,
-          success(info) {
-            const maxDim = 200;
-            let w = info.width, h = info.height;
-            if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
-            else if (h > maxDim) { w *= maxDim / h; h = maxDim; }
-            // 简单使用临时路径
-            that.setData({ avatar: tempPath });
-          },
-          fail() {
-            that.setData({ avatar: tempPath });
+        const sourceType = res.tapIndex === 0 ? ['camera'] : ['album'];
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ['image'],
+          sizeType: ['compressed'],
+          sourceType: sourceType,
+          success(mediaRes) {
+            const tempPath = mediaRes.tempFiles[0].tempFilePath;
+            wx.getImageInfo({
+              src: tempPath,
+              success() {
+                that.setData({ avatar: tempPath });
+              },
+              fail() {
+                that.setData({ avatar: tempPath });
+              }
+            });
           }
         });
       }

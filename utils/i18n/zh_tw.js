@@ -37,5 +37,7 @@ module.exports = {
   stock_food: '主糧', stock_litter: '貓砂', stock_litter_2: '混合貓砂', stock_treats: '零食/貓條',
   done: '完成', logged: '已記錄',
   every: '每', consume: '消耗', select_unit: '選擇單位',
-  day: '天', week: '周', month: '月', quarter: '季度', year: '年'
+  day: '天', week: '周', month: '月', quarter: '季度', year: '年',
+  search_breed: '搜索品種...', customize: '自定義輸入', no_results: '未找到相關品種',
+  take_photo: '拍照', choose_from_album: '從相冊選擇'
 };

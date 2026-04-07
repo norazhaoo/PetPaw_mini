@@ -25,9 +25,12 @@
       </view>
 
       <!-- Photo -->
-      <view wx:if="{{image}}" class="photo-preview">
+      <view wx:if="{{image}}" class="photo-preview" bindtap="chooseImage">
         <image src="{{image}}" mode="aspectFill" class="photo-img" />
-        <view class="photo-remove" bindtap="removeImage">×</view>
+        <view class="photo-change-overlay">
+          <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
+        </view>
+        <view class="photo-remove" catchtap="removeImage">×</view>
       </view>
       <view wx:else class="photo-placeholder" bindtap="chooseImage">
         <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />

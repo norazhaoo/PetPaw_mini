@@ -64,6 +64,18 @@
   border: 4rpx dashed var(--text-muted);
 }
 
+.avatar-change-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80rpx;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .form-group {
   margin-bottom: 32rpx;
 }

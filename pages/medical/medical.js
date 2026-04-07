@@ -28,7 +28,8 @@ Page({
       i18n: {
         medical_log: t('medical_log'), symptoms: t('symptoms'),
         photo: t('photo'), add_record: t('add_record'),
-        no_records_yet: t('no_records_yet')
+        no_records_yet: t('no_records_yet'),
+        take_photo: t('take_photo'), choose_from_album: t('choose_from_album')
       }
     });
   },
@@ -78,13 +79,21 @@ Page({
 
   chooseImage() {
     const that = this;
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
+    const takePhotoText = this.data.i18n.take_photo || '拍照';
+    const chooseAlbumText = this.data.i18n.choose_from_album || '从相册选择';
+    wx.showActionSheet({
+      itemList: [takePhotoText, chooseAlbumText],
       success(res) {
-        that.setData({ image: res.tempFiles[0].tempFilePath });
+        const sourceType = res.tapIndex === 0 ? ['camera'] : ['album'];
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ['image'],
+          sizeType: ['compressed'],
+          sourceType: sourceType,
+          success(mediaRes) {
+            that.setData({ image: mediaRes.tempFiles[0].tempFilePath });
+          }
+        });
       }
     });
   },

@@ -37,5 +37,7 @@ module.exports = {
   stock_food: 'Food', stock_litter: 'Litter', stock_litter_2: 'Mixed Litter', stock_treats: 'Treats',
   done: 'Done', logged: 'Logged',
   every: 'Every', consume: 'Consume', select_unit: 'Select Unit',
-  day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year'
+  day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year',
+  search_breed: 'Search breed...', customize: 'Custom input', no_results: 'No results found',
+  take_photo: 'Take Photo', choose_from_album: 'Choose from Album'
 };
