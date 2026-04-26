@@ -6,6 +6,7 @@ module.exports = {
   weight_kg: '当前体重 (kg)', photo: '照片', photo_url: '照片链接 (选填)',
   save: '保存', cancel: '取消',
   delete_confirm: '你确定要删除吗',
+  delete_action_history_confirm: '该操作会删除所有的历史记录。',
   add_custom_stock: '添加物资',
   new_stock_item: '新物资 📦', select_icon: '选择图标', create: '创建',
   daily_consumption: '日消耗', g_per_day: '克 / 天',

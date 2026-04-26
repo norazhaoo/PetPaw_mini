@@ -6,6 +6,7 @@ module.exports = {
   weight_kg: 'Current Weight (kg)', photo: 'Photo', photo_url: 'Photo URL (Optional)',
   save: 'Save', cancel: 'Cancel',
   delete_confirm: 'Are you sure you want to delete',
+  delete_action_history_confirm: 'This will delete all historical records for this item.',
   add_custom_stock: 'Add Custom Stock',
   new_stock_item: 'New Stock Item 📦', select_icon: 'Select Icon', create: 'Create',
   daily_consumption: 'Daily Consumption', g_per_day: 'g / day',

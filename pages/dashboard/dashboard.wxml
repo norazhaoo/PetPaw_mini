@@ -27,16 +27,7 @@
           <text class="pill-label">{{item.shortLabel}}</text>
         </view>
         <view class="pill-item-wrap" wx:for="{{stockActionItems}}" wx:key="actionKey">
-          <view
-            class="pill-item"
-            bindtap="handleTrackAction"
-            data-kind="{{item.actionKind}}"
-            data-type="{{item.type}}"
-            data-id="{{item.id}}"
-            data-label="{{item.stockLabel}}"
-            data-color="{{item.color}}"
-            data-iconidx="{{item.iconIdx}}"
-          >
+          <view class="pill-item">
             <view class="pill-icon-wrap" style="background:{{item.color}}22;">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>
@@ -72,6 +63,7 @@
             class="pill-item {{item.hidden ? 'hidden-item' : ''}}"
             bindtap="handleTrackAction"
             bindlongpress="startEditActions"
+            data-source="track"
             data-action-key="{{item.actionKey}}"
             data-index="{{index}}"
             data-kind="{{item.actionKind}}"
@@ -93,6 +85,7 @@
             data-kind="{{item.actionKind}}"
             data-type="{{item.type}}"
             data-id="{{item.id}}"
+            data-label="{{item.actionKind === 'custom' ? item.label : (i18n[item.type] || item.type)}}"
           >
              <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src(item.actionKind === 'custom' ? 'XCircle' : (item.hidden ? 'Eye' : 'XCircle'))}}" mode="aspectFit" />
           </view>

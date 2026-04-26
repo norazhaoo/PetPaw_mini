@@ -5,7 +5,11 @@ const { t, getLanguage } = require('../../utils/i18n');
 const dateUtil = require('../../utils/date');
 
 // 自定义图标列表，对应 CUSTOM_ICONS 数组
-const CUSTOM_ICON_NAMES = ['Star', 'Heart', 'Droplet', 'Sun', 'Zap', 'Smile', 'Music', 'Coffee', 'Camera', 'Gift', 'Umbrella', 'Book', 'Feather', 'Flame', 'Moon', 'Cloud'];
+const CUSTOM_ICON_NAMES = [
+  'vaccine', 'deworming', 'brush_teeth', 'log_weight', 'walk_dog', 'scoop_litter',
+  'Star', 'Heart', 'Droplet', 'Sun', 'Zap', 'Smile', 'Music', 'Coffee',
+  'CameraCustom', 'Gift', 'Umbrella', 'Book', 'Feather', 'Flame', 'Moon', 'Cloud'
+];
 // Remove LABEL_MAP as we use t() for i18n
 
 const COLOR_MAP = {
@@ -615,7 +619,10 @@ Page({
   handleTrackAction(e) {
     if (this.data.isEditingActions) return;
 
-    const kind = e.currentTarget.dataset.kind;
+    const dataset = e.currentTarget.dataset || {};
+    if (dataset.source !== 'track') return;
+
+    const kind = dataset.kind;
     if (kind === 'custom') {
       this.handleCustomAction(e);
       return;
@@ -630,6 +637,18 @@ Page({
       return;
     }
     this.hideQuickAction(e);
+  },
+
+  _confirmDeleteActionHistory(label, onConfirm) {
+    wx.showModal({
+      title: t('delete') || 'Delete',
+      content: `${t('delete_confirm')} ${label}?\n${t('delete_action_history_confirm')}`,
+      confirmText: t('delete') || 'Delete',
+      cancelText: t('cancel') || 'Cancel',
+      success: (res) => {
+        if (res.confirm && typeof onConfirm === 'function') onConfirm();
+      }
+    });
   },
 
   onTrackActionTouchStart(e) {
@@ -722,11 +741,19 @@ Page({
   },
 
   deleteCustomAction(e) {
-    const id = e.currentTarget.dataset.id;
-    let state = app.getState();
-    state = storage.deleteCustomAction(state, id);
-    app.setState(state);
-    this.refreshData();
+    const { id } = e.currentTarget.dataset;
+    if (!id) return;
+
+    const state = app.getState();
+    const action = state.customActions.find(ca => ca.id === id);
+    const label = e.currentTarget.dataset.label || (action && action.label) || t('custom');
+
+    this._confirmDeleteActionHistory(label, () => {
+      let nextState = app.getState();
+      nextState = storage.deleteCustomAction(nextState, id);
+      app.setState(nextState);
+      this.refreshData();
+    });
   },
 
   deleteLog(e) {
@@ -759,19 +786,39 @@ Page({
 
   hideQuickAction(e) {
     const { type } = e.currentTarget.dataset;
-    let state = app.getState();
+    if (!type) return;
+
+    const state = app.getState();
     const pet = state.pets.find(p => p.id === state.activePetId);
     if (pet) {
-      if (!pet.hiddenActions) pet.hiddenActions = [];
-      const idx = pet.hiddenActions.indexOf(type);
-      if (idx > -1) {
-        pet.hiddenActions.splice(idx, 1);
-      } else {
-        pet.hiddenActions.push(type);
+      const hiddenActions = pet.hiddenActions || [];
+      const isHidden = hiddenActions.includes(type);
+      const label = e.currentTarget.dataset.label || t(type) || type;
+
+      const applyVisibilityChange = () => {
+        let nextState = app.getState();
+        const currentPet = nextState.pets.find(p => p.id === nextState.activePetId);
+        if (!currentPet) return;
+
+        const currentHidden = currentPet.hiddenActions || [];
+        const nextHiddenActions = isHidden
+          ? currentHidden.filter(action => action !== type)
+          : Array.from(new Set([...currentHidden, type]));
+
+        nextState = storage.editPet(nextState, currentPet.id, { hiddenActions: nextHiddenActions });
+        if (!isHidden) {
+          nextState = storage.deleteActionHistory(nextState, currentPet.id, type);
+        }
+        app.setState(nextState);
+        this.refreshData();
+      };
+
+      if (isHidden) {
+        applyVisibilityChange();
+        return;
       }
-      state = storage.editPet(state, pet.id, { hiddenActions: pet.hiddenActions });
-      app.setState(state);
-      this.refreshData();
+
+      this._confirmDeleteActionHistory(label, applyVisibilityChange);
     }
   },
 

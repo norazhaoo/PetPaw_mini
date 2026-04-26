@@ -8,6 +8,7 @@ var ICON_MAP = {
   'brush_teeth':   '/static/icons/tooth.png',
   'scoop_litter':  '/static/icons/shovel.png',
   'walk_dog':      '/static/icons/bone.png',
+  'log_weight':    '/static/icons/scale.png',
   'scale':         '/static/icons/scale.png',
   // 库存
   'Package':       '/static/icons/package.png',
@@ -25,6 +26,7 @@ var ICON_MAP = {
   'Smile':     '/static/icons/icon-smile.png',
   'Music':     '/static/icons/icon-music.png',
   'Coffee':    '/static/icons/icon-coffee.png',
+  'CameraCustom': '/static/icons/icon-camera.png',
   'Camera':    '/static/icons/camera.png',
   'Gift':      '/static/icons/icon-gift.png',
   'Umbrella':  '/static/icons/icon-umbrella.png',

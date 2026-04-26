@@ -270,8 +270,26 @@ function addCustomAction(state, label, color, iconIdx) {
   return state;
 }
 
+function _removeActionHistory(state, petId, type) {
+  if (type === 'log_weight') {
+    state.weightHistory = state.weightHistory.filter(entry => entry.petId !== petId);
+    return;
+  }
+
+  state.logs = state.logs.filter(log => !(log.petId === petId && log.type === type));
+}
+
 function deleteCustomAction(state, id) {
+  const action = state.customActions.find(ca => ca.id === id);
+  const petId = action && action.petId;
   state.customActions = state.customActions.filter(ca => ca.id !== id);
+  _removeActionHistory(state, petId, `custom_${id}`);
+  saveState(state);
+  return state;
+}
+
+function deleteActionHistory(state, petId, type) {
+  _removeActionHistory(state, petId, type);
   saveState(state);
   return state;
 }
@@ -366,6 +384,7 @@ module.exports = {
   deleteInventoryItem,
   addCustomAction,
   deleteCustomAction,
+  deleteActionHistory,
   addLog,
   deleteLog,
   addWeight,
