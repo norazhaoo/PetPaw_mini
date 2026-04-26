@@ -122,8 +122,14 @@
     </view>
 
     <!-- Monthly Stats -->
-    <view style="margin-top:40rpx;padding-top:32rpx;border-top:2rpx solid #F0EDE6;">
-      <text style="font-size:26rpx;color:var(--text-muted);margin-bottom:24rpx;display:block;">{{i18n.monthly_stats}}</text>
+    <view style="margin-top:40rpx;padding-top:32rpx;border-top:2rpx solid #F0EDE6; position:relative;">
+      <view class="flex-row justify-between align-center" style="margin-bottom:24rpx;">
+        <text style="font-size:26rpx;color:var(--text-muted);">{{i18n.monthly_stats}}</text>
+        <view bindtap="exportReport" hover-class="opacity-half" style="display:flex;align-items:center;gap:8rpx;background:var(--primary);color:#4A403A;border-radius:32rpx;padding:12rpx 28rpx;box-shadow:var(--shadow-button);">
+          <image class="icon-img" style="width:28rpx;height:28rpx;" src="{{ic.src('FileText')}}" mode="aspectFit" />
+          <text style="font-size:26rpx;font-weight:800;">{{i18n.export_report || '导出报告'}}</text>
+        </view>
+      </view>
       <view class="flex-row flex-wrap gap-md" wx:if="{{monthlyStats.length > 0}}">
         <view wx:for="{{monthlyStats}}" wx:key="type" class="stat-badge">
           <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
@@ -208,10 +214,10 @@
     <view class="modal-content card" catchtap="noop">
       <text class="h3">{{i18n.log_weight}}</text>
       <view class="flex-row gap-lg align-center" style="margin:40rpx 0;">
-        <slider min="5" max="300" value="{{newWeight * 10}}" bindchange="onWeightSliderChange" bindchanging="onWeightSliderChange" activeColor="var(--warning)" style="flex:1;" />
-        <view class="flex-row align-center" style="background:var(--bg-color); border-radius:16rpx; padding:12rpx 24rpx; width:180rpx; box-sizing:border-box;">
-          <input type="digit" value="{{newWeight}}" bindinput="onWeightInput" style="flex:1; text-align:right; font-weight:bold; font-size:32rpx; color:var(--text-main);" />
-          <text class="font-bold" style="margin-left:8rpx; font-size:28rpx; color:var(--text-muted);">kg</text>
+        <slider min="5" max="300" value="{{newWeight * 10}}" bindchange="onWeightSliderChange" activeColor="#FF7B54" style="flex:1;" />
+        <view class="flex-row align-center" style="background:#FFF3E0; border-radius:16rpx; padding:12rpx 24rpx; width:180rpx; box-sizing:border-box;">
+          <input type="digit" value="{{newWeight}}" bindinput="onWeightInput" style="flex:1; text-align:right; font-weight:bold; font-size:32rpx; color:#4A403A;" />
+          <text class="font-bold" style="margin-left:8rpx; font-size:28rpx; color:#8F8377;">kg</text>
         </view>
       </view>
       <view class="flex-row gap-md" style="margin-top:48rpx;">
@@ -220,4 +226,49 @@
       </view>
     </view>
   </view>
+
+  <!-- Export Loading Overlay -->
+  <view wx:if="{{exportGenerating}}" class="modal-overlay">
+    <view style="background:#fff;border-radius:40rpx;padding:60rpx 80rpx;display:flex;flex-direction:column;align-items:center;gap:32rpx;">
+      <text style="font-size:36rpx;font-weight:700;color:#2C2C2C;">{{i18n.exporting || '生成中...'}}</text>
+      <text style="font-size:24rpx;color:#8A8A8A;">正在绘制您的专属报告</text>
+    </view>
+  </view>
+
+  <!-- Export Preview Modal -->
+  <view wx:if="{{showExportModal}}" class="modal-overlay" style="flex-direction:column;background:rgba(0,0,0,0.85);z-index:2000;" catchtap="closeExportModal">
+    <!-- Scrollable Image Area -->
+    <scroll-view scroll-y="true" style="width:100%; flex:1; height: 0;" catchtap="closeExportModal">
+      <view style="padding:60rpx 40rpx 200rpx; display:flex; flex-direction:column; align-items:center;">
+        <image
+          wx:if="{{exportImageUrl}}"
+          src="{{exportImageUrl}}"
+          style="width:100%; border-radius:32rpx; box-shadow:0 40rpx 100rpx rgba(0,0,0,0.6);"
+          mode="widthFix"
+          catchtap="previewExportImage"
+        />
+        <text style="color:#FFF; font-size:24rpx; margin-top:32rpx; opacity:0.6;">{{i18n.export_success || '此图已保存至临时预览，点击可全屏查看'}}</text>
+      </view>
+    </scroll-view>
+
+    <!-- Bottom Action Bar -->
+    <view class="safe-bottom" style="width:100%; background:#FFFFFF; border-top-left-radius:56rpx; border-top-right-radius:56rpx; padding:40rpx 40rpx 64rpx; box-sizing:border-box; box-shadow:0 -20rpx 60rpx rgba(0,0,0,0.1);" catchtap="noop">
+      <view style="width:80rpx; height:8rpx; background:#E5E5EA; border-radius:8rpx; margin:0 auto 32rpx;" />
+      
+      <view class="flex-row gap-md">
+        <button class="btn-secondary flex-1" style="border-radius:32rpx; border:4rpx solid #F0EDE6; padding:24rpx 0;" bindtap="closeExportModal">{{i18n.done || '关闭'}}</button>
+        <button class="btn-primary flex-2" style="border-radius:32rpx; padding:32rpx 0; background:var(--primary); color:#4A403A;" bindtap="saveExportImage">
+          <image class="icon-img" style="width:32rpx;height:32rpx;" src="{{ic.src('Check')}}" mode="aspectFit" />
+          <text>保存到相册</text>
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Hidden canvas for export (off-screen) -->
+  <canvas
+    type="2d"
+    id="exportCanvas"
+    style="position:fixed;left:-99999px;top:0;width:750px;height:1860px;"
+  />
 </view>

@@ -39,5 +39,7 @@ module.exports = {
   every: 'Every', consume: 'Consume', select_unit: 'Select Unit',
   day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year',
   search_breed: 'Search breed...', customize: 'Custom input', no_results: 'No results found',
-  take_photo: 'Take Photo', choose_from_album: 'Choose from Album'
+  take_photo: 'Take Photo', choose_from_album: 'Choose from Album',
+  export_report: 'Export Report', exporting: 'Generating...', export_success: 'Long press to save', export_fail: 'Generation failed',
+  report_period: 'Report Period', total_records: 'Total Records: '
 };
