@@ -26,13 +26,22 @@
           <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}{{i18n.d}}</text>
           <text class="pill-label">{{item.shortLabel}}</text>
         </view>
-        <view class="pill-item-wrap" wx:if="{{showLastAction}}">
-          <view class="pill-item" bindtap="handleLastAction" bindlongpress="startEditStocks">
-            <view class="pill-icon-wrap" style="background:{{isDog ? '#7EAA7222' : '#C49A6C22'}};">
-              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(isDog ? 'walk_dog' : 'scoop_litter')}}" mode="aspectFit" />
+        <view class="pill-item-wrap" wx:for="{{stockActionItems}}" wx:key="actionKey">
+          <view
+            class="pill-item"
+            bindtap="handleTrackAction"
+            data-kind="{{item.actionKind}}"
+            data-type="{{item.type}}"
+            data-id="{{item.id}}"
+            data-label="{{item.stockLabel}}"
+            data-color="{{item.color}}"
+            data-iconidx="{{item.iconIdx}}"
+          >
+            <view class="pill-icon-wrap" style="background:{{item.color}}22;">
+              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>
-            <text class="pill-value">{{lastActionText}}</text>
-            <text class="pill-label">{{isDog ? i18n.last_walked : i18n.last_scooped}}</text>
+            <text class="pill-value">{{item.lastActionText}}</text>
+            <text class="pill-label">{{item.stockLabel}}</text>
           </view>
         </view>
       </view>
@@ -45,33 +54,47 @@
       <text class="section-title">{{i18n.things_to_track}}</text>
       <text wx:if="{{isEditingActions}}" class="text-primary font-bold" style="font-size:24rpx;padding:8rpx 16rpx;" bindtap="stopEditActions">{{i18n.done || 'Done'}}</text>
     </view>
-    <scroll-view scroll-x="true" class="pill-scroll">
+    <scroll-view scroll-x="{{!dragActionKey}}" class="pill-scroll">
       <view class="pill-row {{isEditingActions ? 'edit-mode' : ''}}">
-        <!-- Quick Actions -->
-        <view class="pill-item-wrap" wx:for="{{quickActions}}" wx:key="type">
-          <view class="pill-item {{item.hidden ? 'hidden-item' : ''}}" bindtap="handleAction" bindlongpress="startEditActions" data-type="{{item.type}}" data-label="{{i18n[item.type] || item.type}}">
+        <!-- Track actions -->
+        <view
+          class="pill-item-wrap {{dragActionKey === item.actionKey ? 'dragging' : ''}}"
+          wx:for="{{trackActions}}"
+          wx:key="actionKey"
+          data-action-key="{{item.actionKey}}"
+          data-index="{{index}}"
+          bindtouchstart="onTrackActionTouchStart"
+          bindtouchmove="onTrackActionTouchMove"
+          bindtouchend="onTrackActionTouchEnd"
+          bindtouchcancel="onTrackActionTouchEnd"
+        >
+          <view
+            class="pill-item {{item.hidden ? 'hidden-item' : ''}}"
+            bindtap="handleTrackAction"
+            bindlongpress="startEditActions"
+            data-action-key="{{item.actionKey}}"
+            data-index="{{index}}"
+            data-kind="{{item.actionKind}}"
+            data-type="{{item.type}}"
+            data-id="{{item.id}}"
+            data-label="{{item.actionKind === 'custom' ? item.label : (i18n[item.type] || item.type)}}"
+            data-color="{{item.color}}"
+            data-iconidx="{{item.iconIdx}}"
+          >
             <view class="pill-icon-wrap" style="background:{{item.color}}22;">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>
-            <text class="pill-label">{{i18n[item.type] || item.type}}</text>
+            <text class="pill-label">{{item.actionKind === 'custom' ? item.label : (i18n[item.type] || item.type)}}</text>
           </view>
-          <view wx:if="{{isEditingActions}}" class="pill-delete-btn {{item.hidden ? 'hidden-item' : ''}}" catchtap="hideQuickAction" data-type="{{item.type}}">
-             <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src(item.hidden ? 'Eye' : 'XCircle')}}" mode="aspectFit" />
-          </view>
-        </view>
-
-        <!-- Custom actions -->
-        <view class="pill-item-wrap" wx:for="{{customActions}}" wx:key="id">
-          <view class="pill-item"
-            bindtap="handleCustomAction" bindlongpress="startEditActions"
-            data-id="{{item.id}}" data-label="{{item.label}}" data-color="{{item.color}}" data-iconidx="{{item.iconIdx}}">
-            <view class="pill-icon-wrap" style="background:{{item.color}}22;">
-              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
-            </view>
-            <text class="pill-label">{{item.label}}</text>
-          </view>
-          <view wx:if="{{isEditingActions}}" class="pill-delete-btn" catchtap="deleteCustomAction" data-id="{{item.id}}">
-             <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+          <view
+            wx:if="{{isEditingActions}}"
+            class="pill-delete-btn {{item.hidden ? 'hidden-item' : ''}}"
+            catchtap="hideTrackAction"
+            data-kind="{{item.actionKind}}"
+            data-type="{{item.type}}"
+            data-id="{{item.id}}"
+          >
+             <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src(item.actionKind === 'custom' ? 'XCircle' : (item.hidden ? 'Eye' : 'XCircle'))}}" mode="aspectFit" />
           </view>
         </view>
 
@@ -86,7 +109,7 @@
     </scroll-view>
 
     <!-- Feedback -->
-    <text wx:if="{{feedback}}" class="feedback-text" style="margin-top:16rpx;">{{feedback}}</text>
+    <text wx:if="{{feedback}}" class="feedback-text" style="margin-top:16rpx;color:{{feedbackColor || 'var(--success)'}};">{{feedback}}</text>
   </view>
 
   <!-- Calendar Card (延迟渲染) -->
@@ -116,7 +139,9 @@
         bindtap="selectDate" data-date="{{item.dateStr}}">
         <text class="cal-day-num {{item.isToday ? 'cal-today-num' : ''}}">{{item.dayNum}}</text>
         <view class="cal-icons">
-          <image wx:for="{{item.icons}}" wx:for-item="ic2" wx:key="name" class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(ic2.name)}}" mode="aspectFit" />
+          <view wx:for="{{item.icons}}" wx:for-item="ic2" wx:key="name" class="cal-icon-dot" style="background:{{ic2.color}}22;">
+            <image class="icon-img" lazy-load style="width:22rpx;height:22rpx;" src="{{ic.src(ic2.name)}}" mode="aspectFit" />
+          </view>
         </view>
       </view>
     </view>
@@ -132,7 +157,9 @@
       </view>
       <view class="flex-row flex-wrap gap-md" wx:if="{{monthlyStats.length > 0}}">
         <view wx:for="{{monthlyStats}}" wx:key="type" class="stat-badge">
-          <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+          <view class="stat-icon-wrap" style="background:{{item.color}}22;">
+            <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+          </view>
           <text style="font-size:26rpx;font-weight:700;">x{{item.count}}</text>
         </view>
       </view>
@@ -163,7 +190,9 @@
     <view class="flex-col gap-md" wx:else>
       <view wx:for="{{combinedLogs}}" wx:key="id" class="log-item">
         <view class="flex-row gap-md flex-1">
-          <image class="icon-img" lazy-load style="width:72rpx;height:72rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+          <view class="log-icon-wrap" style="background:{{item.iconColor}}22;">
+            <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+          </view>
           <view class="flex-col">
             <text style="font-weight:700;font-size:26rpx;">{{item.label}}</text>
             <text class="text-muted" style="font-size:20rpx;">{{item.time}}</text>
@@ -180,7 +209,7 @@
   <view wx:if="{{showCustomModal}}" class="modal-overlay" catchtap="closeCustomModal">
     <view class="modal-content card" catchtap="noop">
       <text class="h3">{{i18n.new_custom_event}}</text>
-      <input class="input-field" placeholder="e.g. Bath Time" value="{{customName}}" bindinput="onCustomNameInput" />
+      <input class="input-field" placeholder="{{i18n.custom_event_placeholder}}" value="{{customName}}" bindinput="onCustomNameInput" />
 
       <text class="font-bold" style="margin-top:24rpx;font-size:28rpx;">{{i18n.select_icon}}</text>
       <scroll-view scroll-x="true" style="margin-top:16rpx;">

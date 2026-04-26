@@ -12,6 +12,9 @@ const COLOR_MAP = {
   vaccine: '#FF7B54', deworming: '#93C653', brush_teeth: '#5DADE2',
   scoop_litter: '#C49A6C', walk_dog: '#7EAA72', log_weight: '#6C8EBF'
 };
+const LAST_ACTION_KEYWORDS = {
+  scoop_litter: ['铲屎', '鏟屎', 'scoop']
+};
 const COLORS = ['#FF7B54', '#93C653', '#5DADE2', '#FEE140', '#9B59B6', '#E74C3C'];
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -21,9 +24,12 @@ Page({
     isDog: false,
     quickActions: [],
     customActions: [],
+    trackActions: [],
+    stockActionItems: [],
     inventoryItems: [],
     showWarning: false,
     lastActionText: 'Never',
+    dragActionKey: null,
     // Calendar
     currentMonth: null,
     currentMonthLabel: '',
@@ -36,6 +42,7 @@ Page({
     listTitle: '',
     combinedLogs: [],
     feedback: '',
+    feedbackColor: '',
     // Stats
     monthlyStats: [],
     // Weight
@@ -68,6 +75,7 @@ Page({
         monthly_stats: t('monthly_stats'), no_activity: t('no_activity'),
         weight_history: t('weight_history'), no_weight_history: t('no_weight_history'),
         no_records_day: t('no_records_day'), new_custom_event: t('new_custom_event'),
+        custom_event_placeholder: t('custom_event_placeholder'),
         select_icon: t('select_icon'), select_color: t('select_color'),
         cancel: t('cancel'), save: t('save'), log_weight: t('log_weight'),
         recorded_weight: t('recorded_weight'), last_scooped: t('last_scooped'), last_walked: t('last_walked'),
@@ -130,6 +138,8 @@ Page({
         if (type === 'scoop_litter') iconName = 'scoop_litter';
 
         return {
+          actionKey: `builtin:${type}`,
+          actionKind: 'builtin',
           type,
           color: COLOR_MAP[type] || '#8F8377',
           iconName,
@@ -139,8 +149,16 @@ Page({
       .filter(item => !item.hidden);
 
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId).map(ca => ({
-      ...ca, iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
+      ...ca,
+      actionKey: `custom:${ca.id}`,
+      actionKind: 'custom',
+      iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
     }));
+    const trackActions = this._orderTrackActions(
+      [...filteredQuickActions, ...customActions],
+      activePet.actionOrder
+    );
+    const stockActionItems = this._buildStockActionItems(trackActions, state);
 
     // Stock Alert - only for active pet and visible items
     const petInventory = (state.inventoryItems || [])
@@ -187,7 +205,8 @@ Page({
 
     // 判断"上次铲屎/遛狗"是否显示（与日常追踪联动）
     const actionType = isDog ? 'walk_dog' : 'scoop_litter';
-    const showLastAction = (isDog || isCat) && !hidden.includes(actionType);
+    const hasReplacementLastAction = this._getReplacementLastActionIds(customActions, actionType).length > 0;
+    const showLastAction = (isDog || isCat) && (!hidden.includes(actionType) || hasReplacementLastAction);
 
     // === 第一阶段：先渲染头部、快速操作等轻量数据 ===
     this.setData({
@@ -196,8 +215,10 @@ Page({
       isCat,
       showLastAction,
       isEditingActions,
-      quickActions: filteredQuickActions,
-      customActions,
+      quickActions: trackActions.filter(item => item.actionKind === 'builtin'),
+      customActions: trackActions.filter(item => item.actionKind === 'custom'),
+      trackActions,
+      stockActionItems,
       inventoryItems,
       showWarning
     });
@@ -214,14 +235,11 @@ Page({
   _computeHeavyData(state, activePet, isDog) {
     // ----- Last action -----
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
+    const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
     const targetLogType = isDog ? 'walk_dog' : 'scoop_litter';
-    const actionLogs = petLogs.filter(l => l.type === targetLogType).sort((a, b) => new Date(b.date) - new Date(a.date));
-    let lastActionText = t('never');
-    if (actionLogs.length > 0) {
-      const dist = dateUtil.formatDistanceToNow(dateUtil.parseISO(actionLogs[0].date));
-      lastActionText = dist.replace('about ', '').replace('less than a minute', t('just_now'));
-      if (lastActionText !== t('just_now')) lastActionText += ' ' + t('ago');
-    }
+    const lastActionLogTypes = this._getLastActionLogTypes(customActions, targetLogType);
+    const actionLogs = petLogs.filter(l => lastActionLogTypes.includes(l.type)).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const lastActionText = this._formatLastActionText(actionLogs[0] && actionLogs[0].date);
 
     // ----- Weight chart data -----
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
@@ -275,11 +293,8 @@ Page({
     petLogs.forEach(l => {
       const k = _key(l.date);
       if (!iconMap[k]) iconMap[k] = [];
-      if (l.type.startsWith('custom_') && l.color) {
-        iconMap[k].push({ name: CUSTOM_ICON_NAMES[l.iconIdx] || 'Star', color: l.color });
-      } else {
-        iconMap[k].push({ name: l.type, color: COLOR_MAP[l.type] || '#8F8377' });
-      }
+      const presentation = this._getActionPresentation(l.type, customActions, l);
+      iconMap[k].push({ name: presentation.iconName, color: presentation.color });
     });
     petMeds.forEach(m => {
       const k = _key(m.date);
@@ -289,7 +304,7 @@ Page({
     petWeights.forEach(w => {
       const k = _key(w.date);
       if (!iconMap[k]) iconMap[k] = [];
-      iconMap[k].push({ name: 'scale', color: '#3498DB' });
+      iconMap[k].push({ name: 'scale', color: COLOR_MAP.log_weight });
     });
 
     // ====== 构建每天数据 — O(days) ======
@@ -312,23 +327,29 @@ Page({
     currentMonthLogs.forEach(log => {
       const key = log.type;
       if (!statsMap[key]) {
-        let label = t(key) || '';
-        if (key.startsWith('custom_')) {
-          const ca = customActions.find(c => c.id === key.split('_')[1]);
-          label = ca ? ca.label : 'Custom';
-        }
-        statsMap[key] = { count: 0, label, color: log.color || COLOR_MAP[key] || '#8F8377', iconIdx: log.iconIdx, type: key };
+        const presentation = this._getActionPresentation(key, customActions, log);
+        statsMap[key] = {
+          count: 0,
+          label: presentation.label,
+          color: presentation.color,
+          iconIdx: presentation.iconIdx,
+          iconName: presentation.iconName,
+          type: key
+        };
       }
       statsMap[key].count += 1;
     });
-    const monthlyStats = Object.values(statsMap).map(s => ({
-      ...s,
-      iconName: s.type.startsWith('custom_') ? (CUSTOM_ICON_NAMES[s.iconIdx] || 'Star') : s.type
-    }));
+    const monthlyStats = Object.values(statsMap);
     // Add weight stats
     const monthWeights = petWeights.filter(w => dateUtil.isSameMonth(dateUtil.parseISO(w.date), currentMonth));
     if (monthWeights.length > 0) {
-      monthlyStats.push({ iconName: 'scale', color: '#3498DB', count: monthWeights.length });
+      monthlyStats.push({
+        type: 'log_weight',
+        label: t('log_weight') || 'Weight',
+        iconName: 'scale',
+        color: COLOR_MAP.log_weight,
+        count: monthWeights.length
+      });
     }
 
     // ====== Selected day logs ======
@@ -359,17 +380,11 @@ Page({
 
     const combinedLogs = [
       ...selectedDayLogs.map(l => {
-        let label = t(l.type) || '';
-        let iconName = l.type;
-        if (l.type.startsWith('custom_')) {
-          const ca = customActions.find(c => c.id === l.type.split('_')[1]);
-          label = ca ? ca.label : 'Custom';
-          iconName = CUSTOM_ICON_NAMES[l.iconIdx] || 'Star';
-        }
-        return { ...l, typeGroup: 'log', label, iconName, iconColor: l.color || COLOR_MAP[l.type] || '#8F8377', time: dateUtil.formatDate(dateUtil.parseISO(l.date), 'HH:mm') };
+        const presentation = this._getActionPresentation(l.type, customActions, l);
+        return { ...l, typeGroup: 'log', label: presentation.label, iconName: presentation.iconName, iconColor: presentation.color, time: dateUtil.formatDate(dateUtil.parseISO(l.date), 'HH:mm') };
       }),
       ...selectedDayWeights.map(w => ({
-        ...w, typeGroup: 'weight', label: `${t('recorded_weight')}: ${w.weight} kg`, iconName: 'scale', iconColor: '#3498DB', time: dateUtil.formatDate(dateUtil.parseISO(w.date), 'HH:mm')
+        ...w, typeGroup: 'weight', label: `${t('recorded_weight')}: ${w.weight} kg`, iconName: 'scale', iconColor: COLOR_MAP.log_weight, time: dateUtil.formatDate(dateUtil.parseISO(w.date), 'HH:mm')
       }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -433,6 +448,231 @@ Page({
     });
   },
 
+  _matchesLastActionKeyword(label, actionType) {
+    const keywords = LAST_ACTION_KEYWORDS[actionType] || [];
+    const normalizedLabel = String(label || '').toLowerCase();
+    return keywords.some(keyword => normalizedLabel.includes(keyword.toLowerCase()));
+  },
+
+  _getReplacementLastActionIds(customActions, actionType) {
+    return (customActions || [])
+      .filter(action => this._matchesLastActionKeyword(action.label, actionType))
+      .map(action => action.id);
+  },
+
+  _getLastActionLogTypes(customActions, actionType) {
+    return [
+      actionType,
+      ...this._getReplacementLastActionIds(customActions, actionType).map(id => `custom_${id}`)
+    ];
+  },
+
+  _getActionPresentation(type, customActions, fallback) {
+    const fallbackData = fallback || {};
+    if (type === 'log_weight') {
+      return {
+        label: t('log_weight') || 'Weight',
+        iconName: 'scale',
+        color: COLOR_MAP.log_weight,
+        iconIdx: null
+      };
+    }
+
+    if (type && type.startsWith('custom_')) {
+      const id = type.split('_')[1];
+      const action = (customActions || []).find(c => c.id === id);
+      const iconIdx = action ? action.iconIdx : fallbackData.iconIdx;
+      return {
+        label: action ? action.label : 'Custom',
+        iconName: CUSTOM_ICON_NAMES[iconIdx] || 'Star',
+        color: (action && action.color) || fallbackData.color || '#8F8377',
+        iconIdx
+      };
+    }
+
+    return {
+      label: t(type) || type,
+      iconName: type === 'log_weight' ? 'scale' : type,
+      color: COLOR_MAP[type] || fallbackData.color || '#8F8377',
+      iconIdx: null
+    };
+  },
+
+  _formatLastActionText(date) {
+    if (!date) return t('never');
+
+    const dist = dateUtil.formatDistanceToNow(dateUtil.parseISO(date));
+    let text = dist.replace('about ', '').replace('less than a minute', t('just_now'));
+    if (text !== t('just_now')) text += ' ' + t('ago');
+    return text
+      .replace(' minutes', t('m')).replace(' minute', t('m'))
+      .replace(' hours', t('h')).replace(' hour', t('h'))
+      .replace(' days', t('d')).replace(' day', t('d'));
+  },
+
+  _getStockActionLogDate(action, state) {
+    if (action.type === 'log_weight') {
+      const weights = (state.weightHistory || [])
+        .filter(w => w.petId === state.activePetId)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      return weights[0] && weights[0].date;
+    }
+
+    const logType = action.actionKind === 'custom' ? `custom_${action.id}` : action.type;
+    const logs = (state.logs || [])
+      .filter(log => log.petId === state.activePetId && log.type === logType)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    return logs[0] && logs[0].date;
+  },
+
+  _buildStockActionItems(trackActions, state) {
+    return trackActions.map(action => ({
+      ...action,
+      stockLabel: action.actionKind === 'custom' ? action.label : (t(action.type) || action.type),
+      lastActionText: this._formatLastActionText(this._getStockActionLogDate(action, state))
+    }));
+  },
+
+  _orderTrackActions(actions, actionOrder) {
+    if (!Array.isArray(actionOrder) || actionOrder.length === 0) return actions;
+
+    const actionByKey = actions.reduce((map, action) => {
+      map[action.actionKey] = action;
+      return map;
+    }, {});
+    const ordered = [];
+
+    actionOrder.forEach(key => {
+      if (actionByKey[key]) {
+        ordered.push(actionByKey[key]);
+        delete actionByKey[key];
+      }
+    });
+
+    return ordered.concat(actions.filter(action => actionByKey[action.actionKey]));
+  },
+
+  _setTrackActions(trackActions) {
+    this.setData({
+      trackActions,
+      quickActions: trackActions.filter(item => item.actionKind === 'builtin'),
+      customActions: trackActions.filter(item => item.actionKind === 'custom'),
+      stockActionItems: this._buildStockActionItems(trackActions, app.getState())
+    });
+  },
+
+  _moveTrackAction(actions, fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= actions.length || toIndex >= actions.length) {
+      return actions;
+    }
+
+    const nextActions = actions.slice();
+    const [moved] = nextActions.splice(fromIndex, 1);
+    nextActions.splice(toIndex, 0, moved);
+    return nextActions;
+  },
+
+  _getTrackActionStepPx() {
+    const fallbackWindowWidth = 375;
+    let windowWidth = fallbackWindowWidth;
+    if (wx.getSystemInfoSync) {
+      try {
+        windowWidth = wx.getSystemInfoSync().windowWidth || fallbackWindowWidth;
+      } catch (e) {}
+    }
+    return (windowWidth / 750) * 136;
+  },
+
+  _beginTrackActionDrag(e) {
+    const dataset = (e && e.currentTarget && e.currentTarget.dataset) || {};
+    if (!dataset.actionKey) return null;
+
+    const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || null;
+    const index = parseInt(dataset.index, 10);
+    if (Number.isNaN(index)) return null;
+
+    const drag = {
+      actionKey: dataset.actionKey,
+      startIndex: index,
+      currentIndex: index,
+      startX: touch ? touch.clientX : null,
+      moved: false
+    };
+    this._trackActionDrag = drag;
+    return drag;
+  },
+
+  _saveTrackActionOrder(trackActions) {
+    const state = app.getState();
+    const pet = state.pets.find(p => p.id === state.activePetId);
+    if (!pet) return;
+
+    const actionOrder = trackActions.map(action => action.actionKey);
+    const nextState = storage.editPet(state, pet.id, { actionOrder });
+    app.setState(nextState);
+  },
+
+  handleTrackAction(e) {
+    if (this.data.isEditingActions) return;
+
+    const kind = e.currentTarget.dataset.kind;
+    if (kind === 'custom') {
+      this.handleCustomAction(e);
+      return;
+    }
+    this.handleAction(e);
+  },
+
+  hideTrackAction(e) {
+    const kind = e.currentTarget.dataset.kind;
+    if (kind === 'custom') {
+      this.deleteCustomAction(e);
+      return;
+    }
+    this.hideQuickAction(e);
+  },
+
+  onTrackActionTouchStart(e) {
+    if (!this.data.isEditingActions) return;
+
+    const drag = this._beginTrackActionDrag(e);
+    if (drag) this.setData({ dragActionKey: drag.actionKey });
+  },
+
+  onTrackActionTouchMove(e) {
+    if (!this.data.isEditingActions) return;
+
+    const drag = this._trackActionDrag || this._beginTrackActionDrag(e);
+    const touch = e.touches && e.touches[0];
+    if (!drag || !touch) return;
+
+    if (drag.startX === null || drag.startX === undefined) {
+      drag.startX = touch.clientX;
+      return;
+    }
+
+    const stepPx = this._getTrackActionStepPx();
+    const deltaSlots = Math.round((touch.clientX - drag.startX) / stepPx);
+    const maxIndex = this.data.trackActions.length - 1;
+    const targetIndex = Math.max(0, Math.min(maxIndex, drag.startIndex + deltaSlots));
+    if (targetIndex === drag.currentIndex) return;
+
+    const nextTrackActions = this._moveTrackAction(this.data.trackActions, drag.currentIndex, targetIndex);
+    drag.currentIndex = targetIndex;
+    drag.moved = true;
+    this._setTrackActions(nextTrackActions);
+  },
+
+  onTrackActionTouchEnd() {
+    const drag = this._trackActionDrag;
+    this._trackActionDrag = null;
+    this.setData({ dragActionKey: null });
+
+    if (drag && drag.moved) {
+      this._saveTrackActionOrder(this.data.trackActions);
+    }
+  },
+
   // === Quick Actions ===
   handleAction(e) {
     if (this.data.isEditingActions) return;
@@ -445,7 +685,7 @@ Page({
       return;
     }
 
-    const color = e.currentTarget.dataset.color || null;
+    const color = e.currentTarget.dataset.color || COLOR_MAP[type] || null;
     const iconIdx = e.currentTarget.dataset.iconidx !== undefined ? parseInt(e.currentTarget.dataset.iconidx) : null;
 
     // Apply current time to selected date
@@ -457,8 +697,8 @@ Page({
     state = storage.addLog(state, type, targetDate.toISOString(), '', color, iconIdx);
     app.setState(state);
 
-    this.setData({ feedback: `${t('logged')}: ${label}` });
-    setTimeout(() => this.setData({ feedback: '' }), 2000);
+    this.setData({ feedback: `${t('logged')}: ${label}`, feedbackColor: color || '' });
+    setTimeout(() => this.setData({ feedback: '', feedbackColor: '' }), 2000);
 
     this.refreshData();
   },
@@ -475,8 +715,8 @@ Page({
     state = storage.addLog(state, `custom_${id}`, targetDate.toISOString(), '', color, parseInt(iconidx));
     app.setState(state);
 
-    this.setData({ feedback: `${t('logged')}: ${label}` });
-    setTimeout(() => this.setData({ feedback: '' }), 2000);
+    this.setData({ feedback: `${t('logged')}: ${label}`, feedbackColor: color || '' });
+    setTimeout(() => this.setData({ feedback: '', feedbackColor: '' }), 2000);
 
     this.refreshData();
   },
@@ -502,14 +742,19 @@ Page({
   },
 
   // === Edit Actions Mode ===
-  startEditActions() {
-    this.setData({ isEditingActions: true });
+  startEditActions(e) {
+    const drag = this._beginTrackActionDrag(e);
+    this.setData({
+      isEditingActions: true,
+      dragActionKey: drag ? drag.actionKey : null
+    });
     // 可以加一个震动触感反馈
     if (wx.vibrateShort) wx.vibrateShort();
   },
 
   stopEditActions() {
-    this.setData({ isEditingActions: false });
+    this._trackActionDrag = null;
+    this.setData({ isEditingActions: false, dragActionKey: null });
   },
 
   hideQuickAction(e) {
@@ -562,8 +807,8 @@ Page({
     let state = app.getState();
     state = storage.addWeight(state, parseFloat(this.data.newWeight), targetDate.toISOString());
     app.setState(state);
-    this.setData({ showWeightModal: false, feedback: `Logged Weight: ${this.data.newWeight} kg` });
-    setTimeout(() => this.setData({ feedback: '' }), 2000);
+    this.setData({ showWeightModal: false, feedback: `Logged Weight: ${this.data.newWeight} kg`, feedbackColor: COLOR_MAP.log_weight });
+    setTimeout(() => this.setData({ feedback: '', feedbackColor: '' }), 2000);
     this.refreshData();
   },
 
@@ -863,6 +1108,51 @@ Page({
     return cardY + cardH + 28;
   },
 
+  _getReportHeatmapColor(count) {
+    if (count <= 0) return { fill: '#F0EFEA', stroke: 'transparent' };
+
+    const alpha = Math.min(0.15 + count * 0.18, 1);
+    const roundedAlpha = Math.round(alpha * 100) / 100;
+    const strokeAlpha = Math.round(roundedAlpha * 0.5 * 100) / 100;
+    return {
+      fill: `rgba(254,225,64,${roundedAlpha})`,
+      stroke: `rgba(200,170,0,${strokeAlpha})`
+    };
+  },
+
+  _buildReportActivityData(petLogs, currentMonth) {
+    const state = app.getState();
+    const customActions = (state.customActions || []).filter(c => c.petId === state.activePetId);
+    const monthLogs = petLogs.filter(l => dateUtil.isSameMonth(dateUtil.parseISO(l.date), currentMonth));
+    const validMonthLogs = monthLogs.filter(log => {
+      if (!log.type || !log.type.startsWith('custom_')) return true;
+      const id = log.type.split('_')[1];
+      return customActions.some(action => action.id === id);
+    });
+
+    const statsMap = {};
+    const logCountMap = {};
+
+    validMonthLogs.forEach(log => {
+      const key = log.type;
+      const dateKey = dateUtil.formatDate(dateUtil.parseISO(log.date), 'YYYY-MM-DD');
+      logCountMap[dateKey] = (logCountMap[dateKey] || 0) + 1;
+
+      if (!statsMap[key]) {
+        const presentation = this._getActionPresentation(key, customActions, log);
+        statsMap[key] = { count: 0, label: presentation.label, type: key };
+      }
+      statsMap[key].count += 1;
+    });
+
+    const stats = Object.values(statsMap)
+      .map(item => ({ ...item, color: this._getReportHeatmapColor(item.count).fill }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    return { stats, logCountMap, totalCount: validMonthLogs.length };
+  },
+
   // ─── Section 2: Activity Highlights ─────────────────────────
   _drawActivitySection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petLogs, currentMonth, startY, isZH) {
     const GAP = 20;
@@ -870,27 +1160,12 @@ Page({
     const cardH_cal = 180;   // mini calendar heatmap
 
     // ── Event count card ──────────────────────────────────────
-    const monthLogs = petLogs.filter(l => dateUtil.isSameMonth(dateUtil.parseISO(l.date), currentMonth));
-    const statsMap = {};
-    monthLogs.forEach(l => {
-      const k = l.type;
-      if (!statsMap[k]) statsMap[k] = { count: 0, label: '', color: COLOR_MAP[k] || '#FEE140' };
-      // Build label
-      if (!statsMap[k].label) {
-        if (k.startsWith('custom_')) {
-          const ca = (app.getState().customActions || []).find(c => c.id === k.split('_')[1]);
-          statsMap[k].label = ca ? ca.label : 'Custom';
-        } else {
-          statsMap[k].label = t(k) || k;
-        }
-      }
-      statsMap[k].count++;
-    });
-    const stats = Object.values(statsMap).sort((a, b) => b.count - a.count).slice(0, 6);
+    const activityData = this._buildReportActivityData(petLogs, currentMonth);
+    const stats = activityData.stats;
 
     // section label
     ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    const totalCount = monthLogs.length;
+    const totalCount = activityData.totalCount;
     ctx.fillText((isZH ? `本月足迹 (${totalCount})` : `THIS MONTH (${totalCount})`).toUpperCase(), MARGIN, startY + 0);
 
     const card1Y = startY + 22;
@@ -929,11 +1204,7 @@ Page({
     const firstDay = dateUtil.startOfMonth(currentMonth);
     const lastDay  = dateUtil.endOfMonth(currentMonth);
     const days     = dateUtil.eachDayOfInterval(firstDay, lastDay);
-    const logCountMap = {};
-    petLogs.forEach(l => {
-      const k = dateUtil.formatDate(dateUtil.parseISO(l.date), 'YYYY-MM-DD');
-      logCountMap[k] = (logCountMap[k] || 0) + 1;
-    });
+    const logCountMap = activityData.logCountMap;
 
     const totalDays = days.length;
     const dotR = 7;
@@ -955,10 +1226,9 @@ Page({
       const cy = startDotY + 30 + row * dotSpacingY;
       const k  = dateUtil.formatDate(day, 'YYYY-MM-DD');
       const count = logCountMap[k] || 0;
-      // Heatmap color intensity
-      const alpha = count > 0 ? Math.min(0.15 + count * 0.18, 1) : 0.08;
-      ctx.fillStyle = count > 0 ? `rgba(254,225,64,${alpha})` : '#F0EFEA';
-      ctx.strokeStyle= count > 0 ? `rgba(200,170,0,${alpha * 0.5})` : 'transparent';
+      const heatmapColor = this._getReportHeatmapColor(count);
+      ctx.fillStyle = heatmapColor.fill;
+      ctx.strokeStyle= heatmapColor.stroke;
       ctx.lineWidth  = 1;
       ctx.beginPath(); ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
       ctx.fill(); if (count > 0) ctx.stroke();

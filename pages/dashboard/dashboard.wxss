@@ -36,6 +36,15 @@
   flex-shrink: 0;
 }
 
+.pill-item-wrap.dragging {
+  z-index: 3;
+}
+
+.pill-item-wrap.dragging .pill-item {
+  transform: scale(1.06);
+  opacity: 0.88;
+}
+
 .pill-icon-wrap {
   width: 96rpx;
   height: 96rpx;
@@ -165,6 +174,15 @@
   margin-top: 8rpx;
 }
 
+.cal-icon-dot {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Stats */
 .stat-badge {
   display: flex;
@@ -175,6 +193,15 @@
   border-radius: 32rpx;
 }
 
+.stat-icon-wrap {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Log items */
 .log-item {
   display: flex;
@@ -183,6 +210,16 @@
   padding: 16rpx 24rpx;
   background: var(--bg-color);
   border-radius: 16rpx;
+}
+
+.log-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Modal extras */

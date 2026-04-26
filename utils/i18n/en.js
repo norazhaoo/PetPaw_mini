@@ -29,7 +29,7 @@ module.exports = {
   stock_alert: 'Stock Alert', things_to_track: 'Things to track',
   monthly_stats: 'Monthly Stats', no_activity: 'No activity.',
   no_weight_history: 'No weight history.', no_records_day: 'No records for this day.',
-  new_custom_event: 'New Custom Event', select_color: 'Select Color',
+  new_custom_event: 'New Custom Event', custom_event_placeholder: 'e.g. Bath Time', select_color: 'Select Color',
   log_weight: 'Log Weight', recorded_weight: 'Recorded Weight',
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_cup: 'cup', unit_bag: 'bag', unit_box: 'box', unit_can: 'can',

@@ -29,7 +29,7 @@ module.exports = {
   stock_alert: '库存警报', things_to_track: '日常追踪',
   monthly_stats: '月度统计', no_activity: '暂无记录。',
   no_weight_history: '暂无体重记录。', no_records_day: '当日无记录。',
-  new_custom_event: '新建自定义事件', select_color: '选择颜色',
+  new_custom_event: '新建自定义事件', custom_event_placeholder: '例如：洗澡时间', select_color: '选择颜色',
   log_weight: '记录体重', recorded_weight: '记录体重',
   unit_g: 'g', unit_kg: 'kg', unit_ml: 'ml', unit_L: 'L',
   unit_bag: '袋', unit_box: '盒', unit_can: '罐', unit_cup: 'cup',
