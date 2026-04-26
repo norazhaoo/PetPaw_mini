@@ -135,6 +135,10 @@ assert.notStrictEqual(
   dominantOpaqueRgb('static/icons/camera.png'),
   'custom camera icon should not keep the original colored camera color'
 );
+assert(
+  !fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxml'), 'utf8').includes('i18n[item.type]'),
+  'dashboard WXML should use precomputed track action labels instead of dynamic i18n indexing'
+);
 
 state = createState();
 const reportDate = sameMonthDate();
@@ -179,6 +183,10 @@ assert.deepStrictEqual(
   pageWithStockActions.data.stockActionItems.map((item) => item.actionKey),
   pageWithStockActions.data.trackActions.map((item) => item.actionKey),
   'Stock Alert should include every visible Things to Track event'
+);
+assert(
+  !pageWithStockActions.data.trackActions.some((item) => item.type === 'mood_photo'),
+  'Things to Track should not include mood photo as a daily action'
 );
 
 state = createState();
@@ -243,6 +251,58 @@ assert.strictEqual(
   pageWithRecentStockActions.data.stockActionItems.find((item) => item.id === 'custom-1').lastActionText,
   '刚刚',
   'custom Stock Alert event should show its latest log time'
+);
+
+state = createState();
+const badgeMonth = new Date(2026, 3, 1);
+const badgeDate = (day) => new Date(2026, 3, day, 12, 0, 0).toISOString();
+state.logs = [
+  ...Array.from({ length: 18 }, (_, i) => ({ id: `walk-${i + 1}`, petId: 'pet-1', type: 'walk_dog', date: badgeDate(i + 1) })),
+  ...Array.from({ length: 5 }, (_, i) => ({ id: `brush-${i + 1}`, petId: 'pet-1', type: 'brush_teeth', date: badgeDate(i + 1) }))
+];
+state.weightHistory = [
+  { id: 'weight-1', petId: 'pet-1', date: badgeDate(2), weight: 4.2 },
+  { id: 'weight-2', petId: 'pet-1', date: badgeDate(16), weight: 4.3 }
+];
+const pageWithMonthlyBadges = createPage();
+const monthlyBadges = pageWithMonthlyBadges._buildMonthlyBadgeData(
+  state.logs,
+  state.weightHistory,
+  badgeMonth,
+  'dog'
+);
+assert.deepStrictEqual(
+  monthlyBadges.recordBadges.map((badge) => [badge.id, badge.progress, badge.target, badge.unlocked]),
+  [
+    ['record_3', 18, 3, true],
+    ['record_7', 18, 7, true],
+    ['record_15', 18, 15, true],
+    ['record_25', 18, 25, false]
+  ],
+  'monthly record badges should expose clear progress and unlock state'
+);
+assert.deepStrictEqual(
+  monthlyBadges.habitBadges.map((badge) => [badge.id, badge.progress, badge.target, badge.unlocked]),
+  [
+    ['brush_teeth_8', 5, 8, false],
+    ['weight_4', 2, 4, false],
+    ['guardian_20', 18, 20, false]
+  ],
+  'monthly habit badges should expose clear progress and unlock state'
+);
+assert.strictEqual(
+  monthlyBadges.unlockedCount,
+  3,
+  'monthly badge data should count unlocked badges'
+);
+assert.strictEqual(
+  typeof pageWithMonthlyBadges._drawMonthlyBadgeSection,
+  'function',
+  'export report should define a monthly badge drawing section'
+);
+assert(
+  !fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxml'), 'utf8').includes('本月奖章'),
+  'dashboard page should not add monthly badge UI outside the export poster'
 );
 
 state = createState();

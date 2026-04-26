@@ -69,14 +69,14 @@
             data-kind="{{item.actionKind}}"
             data-type="{{item.type}}"
             data-id="{{item.id}}"
-            data-label="{{item.actionKind === 'custom' ? item.label : (i18n[item.type] || item.type)}}"
+            data-label="{{item.displayLabel}}"
             data-color="{{item.color}}"
             data-iconidx="{{item.iconIdx}}"
           >
             <view class="pill-icon-wrap" style="background:{{item.color}}22;">
               <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
             </view>
-            <text class="pill-label">{{item.actionKind === 'custom' ? item.label : (i18n[item.type] || item.type)}}</text>
+            <text class="pill-label">{{item.displayLabel}}</text>
           </view>
           <view
             wx:if="{{isEditingActions}}"
@@ -85,7 +85,7 @@
             data-kind="{{item.actionKind}}"
             data-type="{{item.type}}"
             data-id="{{item.id}}"
-            data-label="{{item.actionKind === 'custom' ? item.label : (i18n[item.type] || item.type)}}"
+            data-label="{{item.displayLabel}}"
           >
              <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src(item.actionKind === 'custom' ? 'XCircle' : (item.hidden ? 'Eye' : 'XCircle'))}}" mode="aspectFit" />
           </view>
@@ -291,6 +291,6 @@
   <canvas
     type="2d"
     id="exportCanvas"
-    style="position:fixed;left:-99999px;top:0;width:750px;height:1860px;"
+    style="position:fixed;left:-99999px;top:0;width:750px;height:2260px;"
   />
 </view>

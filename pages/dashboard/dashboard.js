@@ -145,6 +145,7 @@ Page({
           actionKey: `builtin:${type}`,
           actionKind: 'builtin',
           type,
+          displayLabel: t(type) || type,
           color: COLOR_MAP[type] || '#8F8377',
           iconName,
           hidden: hidden.includes(type)
@@ -156,6 +157,7 @@ Page({
       ...ca,
       actionKey: `custom:${ca.id}`,
       actionKind: 'custom',
+      displayLabel: ca.label,
       iconName: CUSTOM_ICON_NAMES[ca.iconIdx] || CUSTOM_ICON_NAMES[0]
     }));
     const trackActions = this._orderTrackActions(
@@ -385,7 +387,17 @@ Page({
     const combinedLogs = [
       ...selectedDayLogs.map(l => {
         const presentation = this._getActionPresentation(l.type, customActions, l);
-        return { ...l, typeGroup: 'log', label: presentation.label, iconName: presentation.iconName, iconColor: presentation.color, time: dateUtil.formatDate(dateUtil.parseISO(l.date), 'HH:mm') };
+        return {
+          id: l.id,
+          type: l.type,
+          date: l.date,
+          note: l.note || '',
+          typeGroup: 'log',
+          label: presentation.label,
+          iconName: presentation.iconName,
+          iconColor: presentation.color,
+          time: dateUtil.formatDate(dateUtil.parseISO(l.date), 'HH:mm')
+        };
       }),
       ...selectedDayWeights.map(w => ({
         ...w, typeGroup: 'weight', label: `${t('recorded_weight')}: ${w.weight} kg`, iconName: 'scale', iconColor: COLOR_MAP.log_weight, time: dateUtil.formatDate(dateUtil.parseISO(w.date), 'HH:mm')
@@ -481,7 +493,6 @@ Page({
         iconIdx: null
       };
     }
-
     if (type && type.startsWith('custom_')) {
       const id = type.split('_')[1];
       const action = (customActions || []).find(c => c.id === id);
@@ -959,7 +970,7 @@ Page({
         }
         const canvas = res[0].node;
         const W = 750;  // logical pixels
-        const H = 1860;
+        const H = 2260;
         const info = wx.getSystemInfoSync();
         const dpr = info.pixelRatio || 2;
         canvas.width  = W * dpr;
@@ -1068,11 +1079,14 @@ Page({
     // ── Section 3: Health & Weight ────────────────────────────
     cursorY = this._drawHealthSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petWeights, petMeds, currentMonth, cursorY, isZH);
 
-    // ── Section 4: Supply Snapshot ────────────────────────────
+    // ── Section 4: Monthly Badges ─────────────────────────────
+    cursorY = this._drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, cursorY, isZH);
+
+    // ── Section 5: Supply Snapshot ────────────────────────────
     cursorY = this._drawSupplySection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petInventory, cursorY);
 
-    // ── Section 5: Reminders & Quote ─────────────────────────
-    this._drawFooterSection(ctx, W, MARGIN, CARD_W, INK, MUTED, ACCENT, petReminders, petLogs, cursorY, isZH);
+    // ── Section 6: Reminders & Quote ─────────────────────────
+    this._drawFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, ACCENT, petReminders, petLogs, cursorY, isZH);
   },
 
   // ─── Section 1: Profile ─────────────────────────────────────
@@ -1377,6 +1391,137 @@ Page({
     return cardY + cardH + 36;
   },
 
+  _buildMonthlyBadgeData(petLogs, petWeights, currentMonth, species) {
+    const isZH = getLanguage() === 'zh';
+    const monthLogs = (petLogs || []).filter(l => dateUtil.isSameMonth(dateUtil.parseISO(l.date), currentMonth));
+    const monthWeights = (petWeights || []).filter(w => dateUtil.isSameMonth(dateUtil.parseISO(w.date), currentMonth));
+    const daySet = {};
+
+    monthLogs.forEach(log => {
+      daySet[dateUtil.formatDate(dateUtil.parseISO(log.date), 'YYYY-MM-DD')] = true;
+    });
+    monthWeights.forEach(weight => {
+      daySet[dateUtil.formatDate(dateUtil.parseISO(weight.date), 'YYYY-MM-DD')] = true;
+    });
+
+    const recordDays = Object.keys(daySet).length;
+    const brushCount = monthLogs.filter(log => log.type === 'brush_teeth').length;
+    const guardianTypes = species === 'dog'
+      ? ['walk_dog']
+      : species === 'cat'
+        ? ['scoop_litter']
+        : ['walk_dog', 'scoop_litter'];
+    const guardianCount = monthLogs.filter(log => guardianTypes.includes(log.type)).length;
+
+    const makeBadge = (id, titleZH, titleEN, shortLabel, progress, target) => ({
+      id,
+      title: isZH ? titleZH : titleEN,
+      shortLabel,
+      progress,
+      target,
+      unlocked: progress >= target,
+      progressText: `${Math.min(progress, target)}/${target}`
+    });
+
+    const recordBadges = [
+      makeBadge('record_3', '初次陪伴', 'First Steps', '3天', recordDays, 3),
+      makeBadge('record_7', '一周好朋友', 'Good Week', '7天', recordDays, 7),
+      makeBadge('record_15', '银爪陪伴', 'Silver Paw', '15天', recordDays, 15),
+      makeBadge('record_25', '金爪守护', 'Golden Paw', '25天', recordDays, 25)
+    ];
+    const habitBadges = [
+      makeBadge('brush_teeth_8', '亮亮牙', 'Bright Teeth', isZH ? '刷牙' : 'Teeth', brushCount, 8),
+      makeBadge('weight_4', '稳稳长大', 'Growing Steady', isZH ? '体重' : 'Weight', monthWeights.length, 4),
+      makeBadge('guardian_20', '日常守护', 'Daily Care', isZH ? (species === 'dog' ? '遛狗' : '照护') : 'Care', guardianCount, 20)
+    ];
+    const allBadges = recordBadges.concat(habitBadges);
+
+    return {
+      recordDays,
+      recordBadges,
+      habitBadges,
+      unlockedCount: allBadges.filter(badge => badge.unlocked).length,
+      totalCount: allBadges.length
+    };
+  },
+
+  _drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, startY, isZH) {
+    const badgeData = this._buildMonthlyBadgeData(petLogs, petWeights, currentMonth, pet && pet.species);
+    const cardH = 310;
+
+    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((isZH ? `本月奖章 (${badgeData.unlockedCount}/${badgeData.totalCount})` : `Monthly Badges (${badgeData.unlockedCount}/${badgeData.totalCount})`).toUpperCase(), MARGIN, startY);
+
+    const cardY = startY + 22;
+    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+
+    const medalY = cardY + 72;
+    const colW = CARD_W / 4;
+    badgeData.recordBadges.forEach((badge, i) => {
+      const cx = MARGIN + colW * i + colW / 2;
+      this._drawReportBadgeMedal(ctx, cx, medalY, badge, ACCENT, INK, MUTED);
+    });
+
+    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(isZH ? '习惯奖章' : 'Habit Badges', MARGIN + 24, cardY + 188);
+
+    const chipY = cardY + 218;
+    const chipW = (CARD_W - 72) / 3;
+    badgeData.habitBadges.forEach((badge, i) => {
+      const x = MARGIN + 24 + i * (chipW + 12);
+      const fill = badge.unlocked ? 'rgba(254,225,64,0.78)' : '#F0EFEA';
+      const stroke = badge.unlocked ? '#E8BC00' : '#D7D2C8';
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.5;
+      this.drawRoundedRectPath(ctx, x, chipY, chipW, 58, 22);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = badge.unlocked ? INK : MUTED;
+      ctx.font = 'bold 22px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
+      ctx.fillText(title, x + chipW / 2, chipY + 24);
+      ctx.font = '18px -apple-system,sans-serif';
+      ctx.fillText(badge.unlocked ? '✓' : badge.progressText, x + chipW / 2, chipY + 46);
+    });
+
+    return cardY + cardH + 36;
+  },
+
+  _drawReportBadgeMedal(ctx, cx, cy, badge, ACCENT, INK, MUTED) {
+    const unlocked = badge.unlocked;
+    const r = 36;
+    const outer = unlocked ? ACCENT : '#F4F1EA';
+    const inner = unlocked ? '#FFF4A3' : '#FFFFFF';
+    const stroke = unlocked ? '#D9A900' : '#D7D2C8';
+
+    ctx.fillStyle = outer;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = inner;
+    ctx.beginPath(); ctx.arc(cx, cy, r - 12, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = unlocked ? '#A56A00' : '#B4ADA0';
+    ctx.font = 'bold 20px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(unlocked ? '✓' : badge.shortLabel.replace('天', ''), cx, cy + 7);
+
+    if (unlocked) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.arc(cx - 17, cy - 18, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 20, cy - 8, 2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.fillStyle = INK; ctx.font = 'bold 20px -apple-system,sans-serif';
+    const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
+    ctx.fillText(title, cx, cy + 58);
+    ctx.fillStyle = MUTED; ctx.font = '18px -apple-system,sans-serif';
+    ctx.fillText(unlocked ? badge.shortLabel + ' ✓' : badge.progressText, cx, cy + 82);
+  },
+
   // ─── Section 4: Supply Snapshot ─────────────────────────────
   _drawSupplySection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petInventory, startY) {
     const SUPPLY_COLORS = { food: '#F5A623', litter: '#C49A6C', treats: '#FF7B54' };
@@ -1429,7 +1574,7 @@ Page({
   },
 
   // ─── Section 5: Reminders & Quote ───────────────────────────
-  _drawFooterSection(ctx, W, MARGIN, CARD_W, INK, MUTED, ACCENT, petReminders, petLogs, startY, isZH) {
+  _drawFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, ACCENT, petReminders, petLogs, startY, isZH) {
     const cardH = 200;
     this.drawCardSection(ctx, MARGIN, startY, CARD_W, cardH, 32, '#FFFFFF');
 
@@ -1455,7 +1600,7 @@ Page({
     ctx.fillText(`"${shortQuote}"`, MARGIN + 24, startY + 100);
 
     // ─── Brand Footer (Outside Card, at the very bottom) ────────
-    const footerY = 1860 - 80; // Near the bottom edge
+    const footerY = H - 80; // Near the bottom edge
     ctx.textAlign = 'center';
     
     // Tiny heart deco
