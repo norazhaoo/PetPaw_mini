@@ -66,6 +66,7 @@ Page({
     exportGenerating: false,
     showExportModal: false,
     exportImageUrl: '',
+    exportCanvasVisible: false,
     showStatsRules: false,
     // i18n
     i18n: {},
@@ -1206,50 +1207,118 @@ Page({
   // ============================================================
 
   exportReport() {
-    this.setData({ exportGenerating: true, showExportModal: false });
-    // Give the loading overlay time to render before heavy canvas work
-    setTimeout(() => {
-      const query = wx.createSelectorQuery().in(this);
-      query.select('#exportCanvas').fields({ node: true, size: true }).exec(async (res) => {
-        if (!res || !res[0] || !res[0].node) {
-          this.setData({ exportGenerating: false });
+    this.setData({ exportGenerating: true, showExportModal: false, exportCanvasVisible: false }, async () => {
+      if (typeof wx.createOffscreenCanvas === 'function') {
+        try {
+          await this._exportReportWithOffscreenCanvas();
+          return;
+        } catch (err) {
+          console.error('offscreen export fail', err);
+          this.setData({ exportGenerating: false, exportCanvasVisible: false });
           wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
           return;
         }
-        const canvas = res[0].node;
-        const W = 750;  // logical pixels
-        const H = 2260;
-        const info = wx.getSystemInfoSync();
-        const dpr = info.pixelRatio || 2;
-        canvas.width  = W * dpr;
-        canvas.height = H * dpr;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
+      }
+      this._exportReportWithNodeCanvas();
+    });
+  },
 
-        try {
-          await this._drawAppleReport(canvas, ctx, W, H);
+  async _exportReportWithOffscreenCanvas() {
+    const W = 750;
+    const H = 2260;
+    const info = wx.getSystemInfoSync();
+    const dpr = info.pixelRatio || 2;
+    const canvas = wx.createOffscreenCanvas({ type: '2d', width: W * dpr, height: H * dpr });
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
 
-          wx.canvasToTempFilePath({
-            canvas,
-            destWidth:  W * 3,
-            destHeight: H * 3,
-            fileType: 'png',
-            success: (r) => {
-              this.setData({ exportGenerating: false, exportImageUrl: r.tempFilePath, showExportModal: true });
-            },
-            fail: (err) => {
-              this.setData({ exportGenerating: false });
-              console.error('canvasToTempFilePath fail', err);
-              wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
-            }
-          }, this);
-        } catch (err) {
-          this.setData({ exportGenerating: false });
-          console.error('draw error', err);
-          wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
-        }
+    await this._drawAppleReport(canvas, ctx, W, H);
+    const tempFilePath = await this._saveOffscreenCanvasToTempFile(canvas, W, H);
+    this.setData({ exportGenerating: false, exportCanvasVisible: false, exportImageUrl: tempFilePath, showExportModal: true });
+  },
+
+  _saveOffscreenCanvasToTempFile(canvas, W, H) {
+    return this._canvasToTempFilePath(canvas, W, H).catch(() => new Promise((resolve, reject) => {
+      if (typeof canvas.toDataURL !== 'function' || typeof wx.getFileSystemManager !== 'function') {
+        reject(new Error('Offscreen canvas export is not available'));
+        return;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const filePath = `${wx.env.USER_DATA_PATH}/petpaw-poster-${Date.now()}.png`;
+      wx.getFileSystemManager().writeFile({
+        filePath,
+        data: base64,
+        encoding: 'base64',
+        success: () => resolve(filePath),
+        fail: reject
       });
-    }, 100);
+    }));
+  },
+
+  _canvasToTempFilePath(canvas, W, H) {
+    return new Promise((resolve, reject) => {
+      if (typeof wx.canvasToTempFilePath !== 'function') {
+        reject(new Error('canvasToTempFilePath is not available'));
+        return;
+      }
+      wx.canvasToTempFilePath({
+        canvas,
+        destWidth: W * 3,
+        destHeight: H * 3,
+        fileType: 'png',
+        success: (r) => resolve(r.tempFilePath),
+        fail: reject
+      }, this);
+    });
+  },
+
+  _exportReportWithNodeCanvas() {
+    this.setData({ exportCanvasVisible: true }, () => {
+      // Give the loading overlay and on-demand canvas node time to render before heavy canvas work.
+      setTimeout(() => {
+        const query = wx.createSelectorQuery().in(this);
+        query.select('#exportCanvas').fields({ node: true, size: true }).exec(async (res) => {
+          if (!res || !res[0] || !res[0].node) {
+            this.setData({ exportGenerating: false, exportCanvasVisible: false });
+            wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
+            return;
+          }
+          const canvas = res[0].node;
+          const W = 750;  // logical pixels
+          const H = 2260;
+          const info = wx.getSystemInfoSync();
+          const dpr = info.pixelRatio || 2;
+          canvas.width  = W * dpr;
+          canvas.height = H * dpr;
+          const ctx = canvas.getContext('2d');
+          ctx.scale(dpr, dpr);
+
+          try {
+            await this._drawAppleReport(canvas, ctx, W, H);
+
+            wx.canvasToTempFilePath({
+              canvas,
+              destWidth:  W * 3,
+              destHeight: H * 3,
+              fileType: 'png',
+              success: (r) => {
+                this.setData({ exportGenerating: false, exportCanvasVisible: false, exportImageUrl: r.tempFilePath, showExportModal: true });
+              },
+              fail: (err) => {
+                this.setData({ exportGenerating: false, exportCanvasVisible: false });
+                console.error('canvasToTempFilePath fail', err);
+                wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
+              }
+            }, this);
+          } catch (err) {
+            this.setData({ exportGenerating: false, exportCanvasVisible: false });
+            console.error('draw error', err);
+            wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
+          }
+        });
+      }, 50);
+    });
   },
 
   closeExportModal() { this.setData({ showExportModal: false }); },
@@ -1313,9 +1382,18 @@ Page({
     cursorY = this._drawPosterHighlightsSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
     cursorY = this._drawPosterCareChangesSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
     cursorY = this._drawPosterWeightTrendSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, posterStats, cursorY);
-    cursorY = this._drawPosterHeatmapSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
     cursorY = this._drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, [], [], posterStats.ranges.currentStart, pet, cursorY, getLanguage() === 'zh', posterStats.badges);
     this._drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, cursorY);
+  },
+
+  _formatPosterMonthLabel(date) {
+    const month = new Date(date).getMonth();
+    if (getLanguage() === 'zh') {
+      const zhMonths = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+      return zhMonths[month] || '';
+    }
+    const months = t('months');
+    return Array.isArray(months) ? months[month] : '';
   },
 
   async _drawPosterHeroSection(canvas, ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, pet, posterStats) {
@@ -1346,10 +1424,10 @@ Page({
     ctx.fillStyle = INK; ctx.font = 'bold 52px -apple-system,sans-serif';
     ctx.textAlign = 'center'; ctx.fillText(pet.name || '', W / 2, 210);
     ctx.fillStyle = MUTED; ctx.font = '26px -apple-system,sans-serif';
-    ctx.fillText(`${posterStats.monthLabel} ${t('monthly_care_poster')}`, W / 2, 246);
+    ctx.fillText(this._formatPosterMonthLabel(posterStats.ranges.currentStart), W / 2, 246);
 
     const cardY = 286;
-    const cardH = 172;
+    const cardH = 142;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const itemW = CARD_W / Math.max(posterStats.overview.length, 1);
     posterStats.overview.forEach((item, index) => {
@@ -1359,21 +1437,17 @@ Page({
         ctx.beginPath(); ctx.moveTo(MARGIN + itemW * index, cardY + 32); ctx.lineTo(MARGIN + itemW * index, cardY + cardH - 32); ctx.stroke();
       }
       ctx.fillStyle = INK; ctx.font = 'bold 42px -apple-system,sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(String(item.value), cx, cardY + 76);
+      ctx.fillText(String(item.value), cx, cardY + 68);
       ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif';
-      ctx.fillText(item.label, cx, cardY + 112);
-      ctx.font = '18px -apple-system,sans-serif';
-      ctx.fillText(item.helper, cx, cardY + 140);
+      ctx.fillText(item.label, cx, cardY + 106);
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
   _drawPosterHighlightsSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((getLanguage() === 'zh' ? '本月亮点' : 'Highlights').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
-    const cardH = 170;
+    const cardY = startY;
+    const cardH = 330;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const highlights = [
       { label: t('top_record'), value: posterStats.highlights.topRecord ? `${posterStats.highlights.topRecord.label} ${posterStats.highlights.topRecord.count}` : t('no_activity') },
@@ -1382,26 +1456,31 @@ Page({
     ];
     const colW = CARD_W / 3;
     highlights.forEach((item, index) => {
-      const x = MARGIN + colW * index + 24;
+      const cx = MARGIN + colW * index + colW / 2;
       if (index > 0) {
         ctx.strokeStyle = '#F0EFEA'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(MARGIN + colW * index, cardY + 32); ctx.lineTo(MARGIN + colW * index, cardY + cardH - 32); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(MARGIN + colW * index, cardY + 32); ctx.lineTo(MARGIN + colW * index, cardY + 128); ctx.stroke();
       }
-      ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(item.label, x, cardY + 58);
+      ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(item.label, cx, cardY + 54);
       ctx.fillStyle = INK; ctx.font = 'bold 30px -apple-system,sans-serif';
       const value = String(item.value).length > 8 ? String(item.value).slice(0, 7) + '…' : item.value;
-      ctx.fillText(value, x, cardY + 104);
+      ctx.fillText(value, cx, cardY + 100);
     });
-    return cardY + cardH + 36;
+
+    ctx.strokeStyle = '#F0EFEA'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(MARGIN + 28, cardY + 146); ctx.lineTo(MARGIN + CARD_W - 28, cardY + 146); ctx.stroke();
+
+    ctx.fillStyle = INK; ctx.font = 'bold 24px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(t('checkin_distribution') || 'Check-in Map', W / 2, cardY + 188);
+    this._drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210);
+    return cardY + cardH + 30;
   },
 
   _drawPosterCareChangesSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((t('care_changes') || 'Care Changes').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
+    const cardY = startY;
     const rows = Math.max(1, Math.ceil(posterStats.careChanges.length / 2));
-    const cardH = posterStats.careChanges.length === 0 ? 150 : 54 + rows * 104;
+    const cardH = posterStats.careChanges.length === 0 ? 150 : 50 + rows * 104;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
 
     if (posterStats.careChanges.length === 0) {
@@ -1409,7 +1488,7 @@ Page({
       ctx.fillText(posterStats.careChangesEmptyText, W / 2, cardY + 64);
       ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif';
       ctx.fillText(posterStats.careChangesEmptyHint, W / 2, cardY + 100);
-      return cardY + cardH + 36;
+      return cardY + cardH + 30;
     }
 
     const cellW = (CARD_W - 72) / 2;
@@ -1430,14 +1509,12 @@ Page({
       ctx.fillText(`${sign}${item.delta}`, x + cellW - 18, y + 50);
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
   _drawPosterWeightTrendSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, posterStats, startY) {
     if (posterStats.weightTrend.status === 'hidden') return startY;
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((t('weight_trend') || 'Weight Trend').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
+    const cardY = startY;
     const cardH = 230;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const trend = posterStats.weightTrend;
@@ -1452,7 +1529,7 @@ Page({
     if (trend.status === 'single') {
       ctx.fillStyle = ACCENT;
       ctx.beginPath(); ctx.arc(W * 0.67, cardY + 120, 18, 0, Math.PI * 2); ctx.fill();
-      return cardY + cardH + 36;
+      return cardY + cardH + 30;
     }
 
     const chartX = MARGIN + 240;
@@ -1477,31 +1554,25 @@ Page({
       ctx.beginPath(); ctx.arc(toX(index), toY(record.weight), 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
-  _drawPosterHeatmapSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((t('checkin_distribution') || 'Check-in Map').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
-    const cardH = 220;
-    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+  _drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, startY) {
     const colors = ['#F0EFEA', 'rgba(254,225,64,0.35)', 'rgba(254,225,64,0.65)', 'rgba(254,225,64,1)'];
     const cols = 16;
-    const dotGapX = (CARD_W - 64) / cols;
+    const heatmapW = CARD_W - 120;
+    const dotGapX = heatmapW / cols;
     const dotGapY = 48;
+    const startX = W / 2 - heatmapW / 2;
     posterStats.heatmap.forEach((item, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const cx = MARGIN + 32 + col * dotGapX + dotGapX / 2;
-      const cy = cardY + 58 + row * dotGapY;
+      const cx = startX + col * dotGapX + dotGapX / 2;
+      const cy = startY + row * dotGapY;
       ctx.fillStyle = item.isFuture ? '#F8F6F1' : colors[item.level];
       this.drawRoundedRectPath(ctx, cx - 12, cy - 12, 24, 24, 8);
       ctx.fill();
     });
-    ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(t('active_days_helper'), MARGIN + 24, cardY + cardH - 28);
-    return cardY + cardH + 36;
   },
 
   _drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, startY) {
@@ -1515,10 +1586,8 @@ Page({
     ctx.textAlign = 'center';
     ctx.fillStyle = '#B0ADA6'; ctx.font = 'bold 22px -apple-system,sans-serif';
     ctx.fillText('PetPaw', W / 2, footerY);
-    ctx.font = '20px -apple-system,sans-serif';
-    ctx.fillText('记录宠物生活的每一天', W / 2, footerY + 32);
     ctx.fillStyle = '#C7C4BC'; ctx.font = '18px sans-serif';
-    ctx.fillText(dateUtil.formatDate(new Date(), 'YYYY-MM-DD'), W / 2, footerY + 60);
+    ctx.fillText(dateUtil.formatDate(new Date(), 'YYYY-MM-DD'), W / 2, footerY + 34);
   },
 
   // ─── Section 1: Profile ─────────────────────────────────────
@@ -1879,79 +1948,252 @@ Page({
 
   _drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, startY, isZH, badgeDataOverride) {
     const badgeData = badgeDataOverride || this._buildMonthlyBadgeData(petLogs, petWeights, currentMonth, pet && pet.species);
-    const cardH = 310;
-
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((isZH ? `本月奖章 (${badgeData.unlockedCount}/${badgeData.totalCount})` : `Monthly Badges (${badgeData.unlockedCount}/${badgeData.totalCount})`).toUpperCase(), MARGIN, startY);
-
-    const cardY = startY + 22;
+    const configs = this._getPosterBadgeStickerConfig();
+    const cardH = 430;
+    const cardY = startY;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
 
-    const medalY = cardY + 72;
+    const pillW = 104;
+    ctx.fillStyle = 'rgba(254,225,64,0.32)';
+    this.drawRoundedRectPath(ctx, W / 2 - pillW / 2, cardY + 28, pillW, 38, 19);
+    ctx.fill();
+    ctx.fillStyle = '#A56A00'; ctx.font = 'bold 20px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${badgeData.unlockedCount}/${badgeData.totalCount}`, W / 2, cardY + 54);
+
+    const recordY = cardY + 120;
     const colW = CARD_W / 4;
     badgeData.recordBadges.forEach((badge, i) => {
       const cx = MARGIN + colW * i + colW / 2;
-      this._drawReportBadgeMedal(ctx, cx, medalY, badge, ACCENT, INK, MUTED);
+      this._drawPosterStickerBadge(ctx, cx, recordY, badge, configs.record[i], INK, MUTED);
     });
 
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(isZH ? '习惯奖章' : 'Habit Badges', MARGIN + 24, cardY + 188);
-
-    const chipY = cardY + 218;
-    const chipW = (CARD_W - 72) / 3;
+    const habitY = cardY + 306;
+    const habitColW = CARD_W / 3;
     badgeData.habitBadges.forEach((badge, i) => {
-      const x = MARGIN + 24 + i * (chipW + 12);
-      const fill = badge.unlocked ? 'rgba(254,225,64,0.78)' : '#F0EFEA';
-      const stroke = badge.unlocked ? '#E8BC00' : '#D7D2C8';
-      ctx.fillStyle = fill;
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1.5;
-      this.drawRoundedRectPath(ctx, x, chipY, chipW, 58, 22);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = badge.unlocked ? INK : MUTED;
-      ctx.font = 'bold 22px -apple-system,sans-serif';
-      ctx.textAlign = 'center';
-      const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
-      ctx.fillText(title, x + chipW / 2, chipY + 24);
-      ctx.font = '18px -apple-system,sans-serif';
-      ctx.fillText(badge.unlocked ? '✓' : badge.progressText, x + chipW / 2, chipY + 46);
+      const cx = MARGIN + habitColW * i + habitColW / 2;
+      this._drawPosterStickerBadge(ctx, cx, habitY, badge, configs.habit[i], INK, MUTED);
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
-  _drawReportBadgeMedal(ctx, cx, cy, badge, ACCENT, INK, MUTED) {
+  _getPosterBadgeStickerConfig() {
+    return {
+      record: [
+        { shape: 'paw-sticker', symbol: 'paw', fill: '#FFE6A7', stroke: '#D99320', accent: '#F6C54E', innerFill: '#FFF8DE', iconBg: '#FFF1B8', labelFill: '#FFF6CE', decorations: [[-30, -25, 4], [29, 23, 3], [22, -29, 2.5]] },
+        { shape: 'bone-sticker', symbol: 'bone', fill: '#FFE1D6', stroke: '#DB7658', accent: '#FFAD8E', innerFill: '#FFF4EE', iconBg: '#FFD0BE', labelFill: '#FFF0E8', decorations: [[-32, 22, 3.5], [30, -24, 4], [0, -33, 2.5]] },
+        { shape: 'fish-sticker', symbol: 'fish', fill: '#D8F2F0', stroke: '#3F9E98', accent: '#8ED8D3', innerFill: '#F3FFFD', iconBg: '#BDEAE6', labelFill: '#EFFFFC', decorations: [[-34, -20, 3], [28, 24, 3.5], [16, -30, 2.5]] },
+        { shape: 'star-sticker', symbol: 'star', fill: '#E9E0FF', stroke: '#8067D7', accent: '#B9A6F4', innerFill: '#FAF7FF', iconBg: '#D6C9FF', labelFill: '#F4EEFF', decorations: [[-26, 25, 3], [29, -23, 3], [0, 33, 2.5]] }
+      ],
+      habit: [
+        { shape: 'collar-sticker', symbol: 'charm', fill: '#FFDDE9', stroke: '#CF5F8D', accent: '#F5A5C0', innerFill: '#FFF5F9', iconBg: '#FFC9DC', labelFill: '#FFF0F6', decorations: [[-28, -24, 3], [31, 14, 3.5], [15, -31, 2.5]] },
+        { shape: 'bowl-sticker', symbol: 'bowl', fill: '#DCF1FF', stroke: '#4E9CCA', accent: '#9AD2F2', innerFill: '#F5FBFF', iconBg: '#BEE5FA', labelFill: '#ECF8FF', decorations: [[-31, 20, 3], [29, -25, 3], [2, -32, 2.5]] },
+        { shape: 'tag-sticker', symbol: 'sparkle', fill: '#E2F4D7', stroke: '#5B9F50', accent: '#A7D998', innerFill: '#F8FFF4', iconBg: '#C8EDB8', labelFill: '#F0FAEA', decorations: [[-29, -18, 3], [30, 22, 3], [18, -31, 2.5]] }
+      ]
+    };
+  },
+
+  _drawPosterStickerBadge(ctx, cx, cy, badge, config, INK, MUTED) {
     const unlocked = badge.unlocked;
-    const r = 36;
-    const outer = unlocked ? ACCENT : '#F4F1EA';
-    const inner = unlocked ? '#FFF4A3' : '#FFFFFF';
-    const stroke = unlocked ? '#D9A900' : '#D7D2C8';
+    const w = 98;
+    const h = 86;
+    const fill = unlocked ? config.fill : '#F3F0EA';
+    const stroke = unlocked ? config.stroke : '#CFC8BD';
+    const accent = unlocked ? config.accent : '#D9D2C8';
+    ctx.save();
 
-    ctx.fillStyle = outer;
+    ctx.fillStyle = 'rgba(80,60,30,0.08)';
+    this._drawPosterStickerShape(ctx, config.shape, cx + 3, cy + 5, w + 10, h + 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    this._drawPosterStickerShape(ctx, config.shape, cx, cy, w + 12, h + 12);
+    ctx.fill();
+
+    ctx.fillStyle = fill;
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = inner;
-    ctx.beginPath(); ctx.arc(cx, cy, r - 12, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 2.2;
+    this._drawPosterStickerShape(ctx, config.shape, cx, cy, w, h);
+    ctx.fill();
+    ctx.stroke();
 
-    ctx.fillStyle = unlocked ? '#A56A00' : '#B4ADA0';
-    ctx.font = 'bold 20px -apple-system,sans-serif';
+    ctx.fillStyle = unlocked ? this._colorWithAlpha(accent, 0.42) : 'rgba(198,190,178,0.32)';
+    (config.decorations || []).forEach(([dx, dy, r]) => {
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2); ctx.fill();
+    });
+
+    ctx.fillStyle = unlocked ? config.innerFill : '#FBFAF7';
+    ctx.beginPath(); ctx.arc(cx, cy - 4, 31, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = unlocked ? this._colorWithAlpha(stroke, 0.32) : '#DDD7CE';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = unlocked ? config.iconBg : '#ECE7DF';
+    ctx.beginPath(); ctx.arc(cx, cy - 4, 22, 0, Math.PI * 2); ctx.fill();
+
+    this._drawPosterStickerSymbol(ctx, config.symbol, cx, cy - 4, unlocked ? stroke : '#A69D91', unlocked);
+
+    ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.42)';
+    ctx.beginPath(); ctx.arc(cx - 18, cy - 30, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - 10, cy - 34, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = unlocked ? INK : MUTED;
+    ctx.font = 'bold 19px -apple-system,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(unlocked ? '✓' : badge.shortLabel.replace('天', ''), cx, cy + 7);
-
-    if (unlocked) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath(); ctx.arc(cx - 17, cy - 18, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx + 20, cy - 8, 2, 0, Math.PI * 2); ctx.fill();
-    }
-
-    ctx.fillStyle = INK; ctx.font = 'bold 20px -apple-system,sans-serif';
     const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
-    ctx.fillText(title, cx, cy + 58);
-    ctx.fillStyle = MUTED; ctx.font = '18px -apple-system,sans-serif';
-    ctx.fillText(unlocked ? badge.shortLabel + ' ✓' : badge.progressText, cx, cy + 82);
+    const labelW = 92;
+    ctx.fillStyle = unlocked ? config.labelFill : '#F6F3EF';
+    this.drawRoundedRectPath(ctx, cx - labelW / 2, cy + 48, labelW, 28, 14);
+    ctx.fill();
+    ctx.fillStyle = unlocked ? INK : MUTED;
+    ctx.fillText(title, cx, cy + 69);
+    ctx.fillStyle = unlocked ? stroke : MUTED;
+    ctx.font = 'bold 17px -apple-system,sans-serif';
+    ctx.fillText(unlocked ? badge.shortLabel : badge.progressText, cx, cy + 94);
+  },
+
+  _drawPosterStickerShape(ctx, shape, cx, cy, w, h) {
+    if (shape === 'paw-sticker') {
+      this.drawRoundedRectPath(ctx, cx - w * 0.43, cy - h * 0.43, w * 0.86, h * 0.86, 30);
+      return;
+    }
+    if (shape === 'bone-sticker') {
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.32, cy - h * 0.22);
+      ctx.quadraticCurveTo(cx - w * 0.50, cy - h * 0.34, cx - w * 0.52, cy - h * 0.10);
+      ctx.quadraticCurveTo(cx - w * 0.62, cy + h * 0.12, cx - w * 0.36, cy + h * 0.24);
+      ctx.lineTo(cx + w * 0.36, cy + h * 0.24);
+      ctx.quadraticCurveTo(cx + w * 0.62, cy + h * 0.12, cx + w * 0.52, cy - h * 0.10);
+      ctx.quadraticCurveTo(cx + w * 0.50, cy - h * 0.34, cx + w * 0.32, cy - h * 0.22);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'fish-sticker') {
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.42, cy);
+      ctx.quadraticCurveTo(cx - w * 0.12, cy - h * 0.46, cx + w * 0.32, cy - h * 0.18);
+      ctx.lineTo(cx + w * 0.45, cy - h * 0.36);
+      ctx.lineTo(cx + w * 0.45, cy + h * 0.36);
+      ctx.lineTo(cx + w * 0.32, cy + h * 0.18);
+      ctx.quadraticCurveTo(cx - w * 0.12, cy + h * 0.46, cx - w * 0.42, cy);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'star-sticker') {
+      this._drawStarPath(ctx, cx, cy, h * 0.48, h * 0.24, 5);
+      return;
+    }
+    if (shape === 'collar-sticker') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h * 0.48);
+      ctx.lineTo(cx + w * 0.42, cy - h * 0.16);
+      ctx.lineTo(cx + w * 0.28, cy + h * 0.42);
+      ctx.lineTo(cx, cy + h * 0.52);
+      ctx.lineTo(cx - w * 0.28, cy + h * 0.42);
+      ctx.lineTo(cx - w * 0.42, cy - h * 0.16);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'bowl-sticker') {
+      this.drawRoundedRectPath(ctx, cx - w * 0.44, cy - h * 0.38, w * 0.88, h * 0.76, 26);
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - h * 0.5);
+    ctx.lineTo(cx + w * 0.42, cy - h * 0.08);
+    ctx.lineTo(cx + w * 0.26, cy + h * 0.48);
+    ctx.lineTo(cx - w * 0.26, cy + h * 0.48);
+    ctx.lineTo(cx - w * 0.42, cy - h * 0.08);
+    ctx.closePath();
+  },
+
+  _drawPosterStickerSymbol(ctx, symbol, cx, cy, color) {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    if (symbol === 'paw') {
+      ctx.beginPath(); ctx.arc(cx, cy + 8, 12, 0, Math.PI * 2); ctx.fill();
+      [[-16, -8], [-5, -14], [6, -14], [17, -8]].forEach(([dx, dy]) => {
+        ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 5, 0, Math.PI * 2); ctx.fill();
+      });
+      return;
+    }
+    if (symbol === 'bone') {
+      ctx.beginPath();
+      ctx.moveTo(cx - 18, cy); ctx.lineTo(cx + 18, cy); ctx.stroke();
+      [[-22, -7], [-22, 7], [22, -7], [22, 7]].forEach(([dx, dy]) => {
+        ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 7, 0, Math.PI * 2); ctx.fill();
+      });
+      return;
+    }
+    if (symbol === 'fish') {
+      ctx.beginPath();
+      ctx.moveTo(cx - 22, cy);
+      ctx.quadraticCurveTo(cx, cy - 17, cx + 22, cy);
+      ctx.quadraticCurveTo(cx, cy + 17, cx - 22, cy);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + 20, cy); ctx.lineTo(cx + 34, cy - 12); ctx.lineTo(cx + 34, cy + 12); ctx.closePath(); ctx.fill();
+      return;
+    }
+    if (symbol === 'star') {
+      this._drawStarPath(ctx, cx, cy, 24, 11, 5);
+      ctx.fill();
+      return;
+    }
+    if (symbol === 'charm') {
+      ctx.beginPath(); ctx.arc(cx, cy + 4, 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy - 18, 5, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+    if (symbol === 'bowl') {
+      ctx.beginPath();
+      ctx.moveTo(cx - 26, cy - 5);
+      ctx.quadraticCurveTo(cx, cy + 28, cx + 26, cy - 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx - 22, cy - 8); ctx.lineTo(cx + 22, cy - 8); ctx.stroke();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 26); ctx.lineTo(cx, cy + 26);
+    ctx.moveTo(cx - 26, cy); ctx.lineTo(cx + 26, cy);
+    ctx.moveTo(cx - 16, cy - 16); ctx.lineTo(cx + 16, cy + 16);
+    ctx.moveTo(cx + 16, cy - 16); ctx.lineTo(cx - 16, cy + 16);
+    ctx.stroke();
+  },
+
+  _drawScallopPath(ctx, cx, cy, outerR, innerR, lobes) {
+    const step = (Math.PI * 2) / lobes;
+    ctx.beginPath();
+    for (let i = 0; i < lobes; i++) {
+      const angle = -Math.PI / 2 + i * step;
+      const nextAngle = angle + step;
+      const midAngle = angle + step / 2;
+      const x = cx + Math.cos(angle) * outerR;
+      const y = cy + Math.sin(angle) * outerR;
+      const mx = cx + Math.cos(midAngle) * innerR;
+      const my = cy + Math.sin(midAngle) * innerR;
+      const nx = cx + Math.cos(nextAngle) * outerR;
+      const ny = cy + Math.sin(nextAngle) * outerR;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      ctx.quadraticCurveTo(mx, my, nx, ny);
+    }
+    ctx.closePath();
+  },
+
+  _drawStarPath(ctx, cx, cy, outerR, innerR, points) {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const angle = -Math.PI / 2 + (i * Math.PI) / points;
+      const r = i % 2 === 0 ? outerR : innerR;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
   },
 
   // ─── Section 4: Supply Snapshot ─────────────────────────────

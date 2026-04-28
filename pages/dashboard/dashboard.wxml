@@ -295,8 +295,9 @@
 
   <!-- Hidden canvas for export (off-screen) -->
   <canvas
+    wx:if="{{exportCanvasVisible}}"
     type="2d"
     id="exportCanvas"
-    style="position:fixed;left:-99999px;top:0;width:750px;height:2260px;"
+    style="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;"
   />
 </view>

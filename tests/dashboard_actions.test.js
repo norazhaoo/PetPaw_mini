@@ -102,6 +102,10 @@ function readDashboardWxss() {
   return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxss'), 'utf8');
 }
 
+function readDashboardJs() {
+  return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.js'), 'utf8');
+}
+
 state = createState();
 const pageWithI18n = createPage();
 pageWithI18n.onLoad();
@@ -125,8 +129,15 @@ assert.strictEqual(
   '库存警报',
   'dashboard should load stock alert copy'
 );
+assert.strictEqual(
+  pageWithI18n.data.exportCanvasVisible,
+  false,
+  'export canvas should not be mounted before poster generation starts'
+);
 
 const dashboardWxml = readDashboardWxml();
+const dashboardJs = readDashboardJs();
+const dashboardWxss = readDashboardWxss();
 assert(
   dashboardWxml.includes('i18n.stock_alert'),
   'dashboard should render Stock Alert above the daily record area'
@@ -147,7 +158,20 @@ assert(
   dashboardWxml.includes('monthly-poster-card') && dashboardWxml.includes('openStatsRules'),
   'dashboard should render poster CTA and preview rule entry point'
 );
-const dashboardWxss = readDashboardWxss();
+assert(
+  dashboardWxml.includes('wx:if="{{exportCanvasVisible}}"') &&
+    dashboardWxml.includes('width:1px;height:1px;') &&
+    !dashboardWxml.includes('left:-99999px') &&
+    dashboardJs.includes('exportCanvasVisible: true') &&
+    dashboardJs.includes('exportCanvasVisible: false'),
+  'poster export canvas should mount as a tiny temporary node to avoid render-layer canvas updates'
+);
+assert(
+  dashboardJs.includes('wx.createOffscreenCanvas') &&
+    dashboardJs.includes('getFileSystemManager') &&
+    dashboardJs.includes('toDataURL'),
+  'poster export should prefer offscreen canvas so normal generation does not touch the render-layer canvas'
+);
 assert(
   dashboardWxss.includes('flex-wrap: nowrap') && dashboardWxss.includes('margin-left: -6rpx'),
   'calendar record icons should use a compact single-row overlap instead of vertical stacking'
@@ -155,6 +179,21 @@ assert(
 assert(
   dashboardWxml.includes('width:16rpx;height:16rpx'),
   'calendar record icon images should be small enough for compact calendar cells'
+);
+assert(
+  !dashboardJs.includes("cursorY = this._drawPosterHeatmapSection(ctx"),
+  'poster should merge check-in distribution into the highlights card instead of drawing a standalone heatmap section'
+);
+assert(
+  !dashboardJs.includes("${posterStats.monthLabel} ${t('monthly_care_poster')}"),
+  'poster hero should show only the month instead of repeating the poster CTA title'
+);
+assert(
+  !dashboardJs.includes("getLanguage() === 'zh' ? '本月亮点'") &&
+    !dashboardJs.includes("t('care_changes') || 'Care Changes'") &&
+    !dashboardJs.includes("t('weight_trend') || 'Weight Trend'") &&
+    !dashboardJs.includes('Monthly Badges'),
+  'poster should not draw external section headings above cards'
 );
 
 state = createState();
@@ -391,6 +430,11 @@ state.medicalRecords = [
 const pageWithPosterStats = createPage();
 const posterStats = pageWithPosterStats._buildPosterStats(state, state.pets[0], posterDate);
 assert.strictEqual(
+  pageWithPosterStats._formatPosterMonthLabel(posterDate),
+  '四月',
+  'poster hero month should use the lightweight Chinese month label'
+);
+assert.strictEqual(
   posterStats.overview.find(item => item.key === 'companion_days').value,
   27,
   'poster companion days should be calculated from birthday while keeping the label'
@@ -431,8 +475,35 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   posterStats.footerQuote,
-  '愿你与它，每天都是好日子。',
-  'poster footer should use fixed copy instead of note data'
+  '谢谢你陪我度过的每一天。',
+  'poster footer should use the updated companionship copy'
+);
+
+const badgeStickerConfigs = pageWithPosterStats._getPosterBadgeStickerConfig();
+assert.strictEqual(badgeStickerConfigs.record.length, 4, 'poster should define four distinct record badge stickers');
+assert.strictEqual(badgeStickerConfigs.habit.length, 3, 'poster should define three distinct habit badge stickers');
+assert.strictEqual(
+  new Set(badgeStickerConfigs.record.concat(badgeStickerConfigs.habit).map(config => config.shape)).size,
+  7,
+  'each poster badge should use a distinct sticker silhouette'
+);
+assert(
+  badgeStickerConfigs.record.concat(badgeStickerConfigs.habit).every(config => !config.eventIconName),
+  'poster badge stickers should not reuse daily event icons'
+);
+assert(
+  badgeStickerConfigs.record.concat(badgeStickerConfigs.habit).every(config =>
+    config.innerFill && config.iconBg && config.labelFill && Array.isArray(config.decorations)
+  ),
+  'poster badge stickers should define finished layers instead of sketch-like single-shape placeholders'
+);
+const stickerDrawingSource = dashboardJs.slice(
+  dashboardJs.indexOf('_drawPosterStickerBadge'),
+  dashboardJs.indexOf('// ─── Section 4: Supply Snapshot')
+);
+assert(
+  !/shadowColor|shadowBlur|shadowOffsetY|globalAlpha|bezierCurveTo/.test(stickerDrawingSource),
+  'poster badge drawing should avoid Mini Program canvas APIs that can fail in the rendering layer'
 );
 
 state = createState();
