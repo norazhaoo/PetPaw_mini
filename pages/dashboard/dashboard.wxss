@@ -110,6 +110,67 @@
   border: 2rpx solid var(--primary);
 }
 
+/* Today records */
+.today-log-card {
+  gap: 24rpx;
+}
+
+.today-log-title {
+  font-size: 32rpx;
+  margin: 0;
+}
+
+.today-empty {
+  min-height: 180rpx;
+  border-radius: 28rpx;
+  background: var(--bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Monthly poster CTA */
+.monthly-poster-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 24rpx;
+  padding: 32rpx;
+}
+
+.poster-card-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 28rpx;
+  background: rgba(254, 225, 64, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.poster-card-title {
+  font-size: 30rpx;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.poster-card-subtitle {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 4rpx;
+}
+
+.poster-card-action {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  color: var(--text-main);
+  font-size: 24rpx;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
 /* Calendar */
 .today-btn {
   padding: 4rpx 16rpx;
@@ -244,4 +305,57 @@
 
 .color-dot-active {
   border-color: var(--text-main);
+}
+
+.export-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28rpx;
+  font-size: 30rpx;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.stats-rule-btn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #F0EDE6;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.stats-rules-overlay {
+  z-index: 2500;
+}
+
+.stats-rules-card {
+  gap: 28rpx;
+}
+
+.stats-rule-close {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #F0EDE6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.stats-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  color: var(--text-muted);
+  font-size: 26rpx;
+  line-height: 1.55;
 }

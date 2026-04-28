@@ -14,35 +14,10 @@
     </view>
   </view>
 
-  <!-- Stock Alert -->
-  <view class="section-block">
-    <text class="section-title">{{i18n.stock_alert}}</text>
-    <scroll-view scroll-x="true" class="pill-scroll">
-      <view class="pill-row">
-        <view class="pill-item" wx:for="{{inventoryItems}}" wx:key="id">
-          <view class="pill-icon-wrap" style="background:{{item.isLow ? '#FDEBD0' : item.color + '22'}};">
-            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx; opacity:0.65;" src="{{ic.src(item.iconName || 'Package')}}" mode="aspectFit" />
-          </view>
-          <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}{{i18n.d}}</text>
-          <text class="pill-label">{{item.shortLabel}}</text>
-        </view>
-        <view class="pill-item-wrap" wx:for="{{stockActionItems}}" wx:key="actionKey">
-          <view class="pill-item">
-            <view class="pill-icon-wrap" style="background:{{item.color}}22;">
-              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
-            </view>
-            <text class="pill-value">{{item.lastActionText}}</text>
-            <text class="pill-label">{{item.stockLabel}}</text>
-          </view>
-        </view>
-      </view>
-    </scroll-view>
-  </view>
-
-  <!-- Things to Track -->
+  <!-- Quick daily record -->
   <view class="section-block">
     <view class="flex-row justify-between align-center" style="margin-bottom: 8rpx;">
-      <text class="section-title">{{i18n.things_to_track}}</text>
+      <text class="section-title">{{i18n.today_check_in}}</text>
       <text wx:if="{{isEditingActions}}" class="text-primary font-bold" style="font-size:24rpx;padding:8rpx 16rpx;" bindtap="stopEditActions">{{i18n.done || 'Done'}}</text>
     </view>
     <scroll-view scroll-x="{{!dragActionKey}}" class="pill-scroll">
@@ -105,80 +80,11 @@
     <text wx:if="{{feedback}}" class="feedback-text" style="margin-top:16rpx;color:{{feedbackColor || 'var(--success)'}};">{{feedback}}</text>
   </view>
 
-  <!-- Calendar Card (延迟渲染) -->
-  <view class="card" wx:if="{{ready}}">
-    <view class="flex-between" style="margin-bottom:32rpx;">
-      <view bindtap="prevMonth" style="padding:16rpx;">
-        <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronLeft')}}" mode="aspectFit" />
-      </view>
-      <view class="flex-row gap-md">
-        <text class="h3" style="margin:0;">{{currentMonthLabel}}</text>
-        <view class="today-btn" bindtap="goToday">{{i18n.today || 'Today'}}</view>
-      </view>
-      <view bindtap="nextMonth" style="padding:16rpx;">
-        <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
-      </view>
-    </view>
-
-    <!-- Weekday headers -->
-    <view class="cal-grid cal-header">
-      <text wx:for="{{weekdays}}" wx:key="*this" class="cal-weekday">{{item}}</text>
-    </view>
-
-    <!-- Days -->
-    <view class="cal-grid" style="margin-top:16rpx;">
-      <view wx:for="{{blanks}}" wx:key="*this" class="cal-cell"></view>
-      <view wx:for="{{daysInMonth}}" wx:key="dateStr" class="cal-cell {{item.isSelected ? 'cal-selected' : ''}} {{item.isToday ? 'cal-today' : ''}}"
-        bindtap="selectDate" data-date="{{item.dateStr}}">
-        <text class="cal-day-num {{item.isToday ? 'cal-today-num' : ''}}">{{item.dayNum}}</text>
-        <view class="cal-icons">
-          <view wx:for="{{item.icons}}" wx:for-item="ic2" wx:key="name" class="cal-icon-dot" style="background:{{ic2.color}}22;">
-            <image class="icon-img" lazy-load style="width:22rpx;height:22rpx;" src="{{ic.src(ic2.name)}}" mode="aspectFit" />
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- Monthly Stats -->
-    <view style="margin-top:40rpx;padding-top:32rpx;border-top:2rpx solid #F0EDE6; position:relative;">
-      <view class="flex-row justify-between align-center" style="margin-bottom:24rpx;">
-        <text style="font-size:26rpx;color:var(--text-muted);">{{i18n.monthly_stats}}</text>
-        <view bindtap="exportReport" hover-class="opacity-half" style="display:flex;align-items:center;gap:8rpx;background:var(--primary);color:#4A403A;border-radius:32rpx;padding:12rpx 28rpx;box-shadow:var(--shadow-button);">
-          <image class="icon-img" style="width:28rpx;height:28rpx;" src="{{ic.src('FileText')}}" mode="aspectFit" />
-          <text style="font-size:26rpx;font-weight:800;">{{i18n.export_report || '导出报告'}}</text>
-        </view>
-      </view>
-      <view class="flex-row flex-wrap gap-md" wx:if="{{monthlyStats.length > 0}}">
-        <view wx:for="{{monthlyStats}}" wx:key="type" class="stat-badge">
-          <view class="stat-icon-wrap" style="background:{{item.color}}22;">
-            <image class="icon-img" lazy-load style="width:28rpx;height:28rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
-          </view>
-          <text style="font-size:26rpx;font-weight:700;">x{{item.count}}</text>
-        </view>
-      </view>
-      <text wx:else class="text-muted" style="font-size:24rpx;">{{i18n.no_activity}}</text>
-    </view>
-  </view>
-
-  <!-- Weight History Chart (延迟渲染) -->
-  <view class="card" wx:if="{{ready}}">
-    <view class="flex-row gap-md" style="margin-bottom:16rpx;">
-      <text class="h2" style="font-size:32rpx;margin:0;">{{i18n.weight_history}}</text>
-      <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('scale')}}" mode="aspectFit" />
-    </view>
-    <view style="height:360rpx;">
-      <canvas wx:if="{{hasWeightData}}" type="2d" id="weightCanvas" style="width:100%;height:100%;" />
-      <view wx:else class="flex-center" style="width:100%;height:100%;">
-        <text class="text-muted" style="font-size:24rpx;">{{i18n.no_weight_history}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- Selected Day Logs (延迟渲染) -->
-  <view class="card" wx:if="{{ready}}">
-    <text class="h2" style="font-size:32rpx;margin-bottom:16rpx;">{{listTitle}}</text>
-    <view wx:if="{{combinedLogs.length === 0}}">
-      <text class="text-muted" style="font-size:26rpx;">{{i18n.no_records_day}}</text>
+  <!-- Today's Logs -->
+  <view class="card today-log-card" wx:if="{{ready}}">
+    <text class="h2 today-log-title">{{listTitle}}</text>
+    <view wx:if="{{combinedLogs.length === 0}}" class="today-empty">
+      <text class="text-muted">{{i18n.no_today_records}}</text>
     </view>
     <view class="flex-col gap-md" wx:else>
       <view wx:for="{{combinedLogs}}" wx:key="id" class="log-item">
@@ -195,6 +101,21 @@
           <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
         </view>
       </view>
+    </view>
+  </view>
+
+  <!-- Monthly poster CTA -->
+  <view class="card monthly-poster-card" bindtap="exportReport" wx:if="{{ready}}">
+    <view class="poster-card-icon">
+      <image class="icon-img" lazy-load style="width:44rpx;height:44rpx;" src="{{ic.src('FileText')}}" mode="aspectFit" />
+    </view>
+    <view class="flex-col flex-1">
+      <text class="poster-card-title">{{i18n.monthly_care_poster}}</text>
+      <text class="poster-card-subtitle">{{i18n.poster_cta_hint}}</text>
+    </view>
+    <view class="poster-card-action">
+      <text>{{i18n.poster_view}}</text>
+      <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
     </view>
   </view>
 
@@ -276,6 +197,10 @@
     <!-- Bottom Action Bar -->
     <view class="safe-bottom" style="width:100%; background:#FFFFFF; border-top-left-radius:56rpx; border-top-right-radius:56rpx; padding:40rpx 40rpx 64rpx; box-sizing:border-box; box-shadow:0 -20rpx 60rpx rgba(0,0,0,0.1);" catchtap="noop">
       <view style="width:80rpx; height:8rpx; background:#E5E5EA; border-radius:8rpx; margin:0 auto 32rpx;" />
+      <view class="export-sheet-heading">
+        <text>{{i18n.monthly_care_poster}}</text>
+        <view class="stats-rule-btn" catchtap="openStatsRules">?</view>
+      </view>
       
       <view class="flex-row gap-md">
         <button class="btn-secondary flex-1" style="border-radius:32rpx; border:4rpx solid #F0EDE6; padding:24rpx 0;" bindtap="closeExportModal">{{i18n.done || '关闭'}}</button>
@@ -284,6 +209,24 @@
           <text>保存到相册</text>
         </button>
       </view>
+    </view>
+  </view>
+
+  <!-- Stats Rules Modal (preview only, not exported) -->
+  <view wx:if="{{showStatsRules}}" class="modal-overlay stats-rules-overlay" catchtap="closeStatsRules">
+    <view class="modal-content card stats-rules-card" catchtap="noop">
+      <view class="flex-row justify-between align-center">
+        <text class="h3">{{i18n.stats_rules_title}}</text>
+        <view class="stats-rule-close" catchtap="closeStatsRules">×</view>
+      </view>
+      <view class="stats-rule-list">
+        <text>{{i18n.stats_rules_period}}</text>
+        <text>{{i18n.stats_rules_compare}}</text>
+        <text>{{i18n.stats_rules_care}}</text>
+        <text>{{i18n.stats_rules_active}}</text>
+        <text>{{i18n.stats_rules_hidden}}</text>
+      </view>
+      <button class="btn-primary" bindtap="closeStatsRules">{{i18n.got_it}}</button>
     </view>
   </view>
 

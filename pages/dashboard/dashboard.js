@@ -65,6 +65,7 @@ Page({
     exportGenerating: false,
     showExportModal: false,
     exportImageUrl: '',
+    showStatsRules: false,
     // i18n
     i18n: {},
     // 分段渲染标志：重模块（日历、图表、日志）等 ready=true 后才渲染
@@ -90,7 +91,14 @@ Page({
         custom: t('custom'), done: t('done'), d: t('d'),
         months: t('months'), weekdays: t('weekdays'),
         export_report: t('export_report'), exporting: t('exporting'),
-        export_fail: t('export_fail'), export_success: t('export_success')
+        export_fail: t('export_fail'), export_success: t('export_success'),
+        today_check_in: t('today_check_in'), monthly_care_poster: t('monthly_care_poster'),
+        poster_view: t('poster_view'), poster_cta_hint: t('poster_cta_hint'),
+        stats_rules: t('stats_rules'), stats_rules_title: t('stats_rules_title'),
+        stats_rules_period: t('stats_rules_period'), stats_rules_compare: t('stats_rules_compare'),
+        stats_rules_care: t('stats_rules_care'), stats_rules_active: t('stats_rules_active'),
+        stats_rules_hidden: t('stats_rules_hidden'), got_it: t('got_it'),
+        no_today_records: t('no_today_records')
       },
       weekdays: t('weekdays') || WEEKDAYS
     });
@@ -164,116 +172,52 @@ Page({
       [...filteredQuickActions, ...customActions],
       activePet.actionOrder
     );
-    const stockActionItems = this._buildStockActionItems(trackActions, state);
 
-    // Stock Alert - only for active pet and visible items
-    const petInventory = (state.inventoryItems || [])
-      .filter(item => item.petId === state.activePetId && !item.hidden);
-
-    const TIME_CONV = { 'day': 1, 'week': 7, 'month': 30, 'quarter': 91, 'year': 365 };
-    const UNIT_CONV = {
-      'g': { 'kg': 0.001, 'g': 1 },
-      'kg': { 'g': 1000, 'kg': 1 },
-      'ml': { 'L': 0.001, 'ml': 1 },
-      'L': { 'ml': 1000, 'L': 1 }
-    };
-
-    // Inventory items with computed daysLeft and translated labels
-    const inventoryItems = petInventory.map(item => {
-      const amount = item.consumptionAmount || item.dailyConsumption || 0;
-      const intervalVal = item.consumptionInterval || 1;
-      const timeUnit = item.consumptionTimeUnit || 'day';
-      const daysInCycle = intervalVal * (TIME_CONV[timeUnit] || 1);
-
-      const cUnit = item.consumptionUnit || item.unit || 'g';
-      const tUnit = item.unit || 'g';
-
-      let dailyInTotalUnit = amount / daysInCycle;
-      if (cUnit !== tUnit && UNIT_CONV[cUnit] && UNIT_CONV[cUnit][tUnit]) {
-        dailyInTotalUnit = (amount * UNIT_CONV[cUnit][tUnit]) / daysInCycle;
-      }
-
-      const daysLeft = Math.floor((item.current || 0) / (dailyInTotalUnit || 0.0001));
-
-      const fullLabel = item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label;
-      const shortLabel = fullLabel.replace(/ .*/, '');
-
-      // Assign theme colors
-      let color = '#8F8377';
-      if (item.typeId === 'food') color = '#D35400'; // Warm orange
-      if (item.typeId === 'litter' || item.typeId === 'litter_2') color = '#C49A6C'; // Dirt/sand brown
-      if (item.typeId === 'treats') color = '#F39C12'; // Bright amber
-
-      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel, color };
-    });
-
-    const showWarning = inventoryItems.some(item => item.isLow) || false;
-
-    // 判断"上次铲屎/遛狗"是否显示（与日常追踪联动）
-    const actionType = isDog ? 'walk_dog' : 'scoop_litter';
-    const hasReplacementLastAction = this._getReplacementLastActionIds(customActions, actionType).length > 0;
-    const showLastAction = (isDog || isCat) && (!hidden.includes(actionType) || hasReplacementLastAction);
-
-    // === 第一阶段：先渲染头部、快速操作等轻量数据 ===
+    // Dashboard now stays focused on quick recording and today's confirmation.
     this.setData({
       activePet,
       isDog,
       isCat,
-      showLastAction,
       isEditingActions,
       quickActions: trackActions.filter(item => item.actionKind === 'builtin'),
       customActions: trackActions.filter(item => item.actionKind === 'custom'),
       trackActions,
-      stockActionItems,
-      inventoryItems,
-      showWarning
+      stockActionItems: [],
+      inventoryItems: [],
+      showWarning: false
     });
 
-    // === 第二阶段：异步计算日历、日志、图表等重数据 ===
-    setTimeout(() => {
-      this._computeHeavyData(state, activePet, isDog);
-    }, 50);
+    this._computeHeavyData(state, activePet, isDog);
   },
 
   /**
-   * 重数据计算（日历 + 图表 + 日志），合并为单次 setData
+   * Dashboard only needs today's records; longer-term analysis belongs to the poster.
    */
   _computeHeavyData(state, activePet, isDog) {
-    // ----- Last action -----
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
-    const targetLogType = isDog ? 'walk_dog' : 'scoop_litter';
-    const lastActionLogTypes = this._getLastActionLogTypes(customActions, targetLogType);
-    const actionLogs = petLogs.filter(l => lastActionLogTypes.includes(l.type)).sort((a, b) => new Date(b.date) - new Date(a.date));
-    const lastActionText = this._formatLastActionText(actionLogs[0] && actionLogs[0].date);
-
-    // ----- Weight chart data -----
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
-    const chartData = petWeights.map(entry => ({
-      ...entry,
-      displayDate: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd')
-    }));
+    const today = dateUtil.startOfDay(new Date());
+    const todayData = this._buildTodayLogs(petLogs, petWeights, customActions, today);
 
-    // ----- Calendar -----
-    const currentMonth = this.data.currentMonth || dateUtil.startOfMonth(new Date());
-    const selectedDate = this.data.selectedDate || dateUtil.startOfDay(new Date());
-    const calendarData = this._buildCalendar(state, currentMonth, selectedDate, isDog);
-
-    // === 合并为单次 setData ===
-    this.setData(Object.assign({
+    this.setData({
       ready: true,
-      lastActionText: lastActionText
-        .replace(' minutes', t('m')).replace(' minute', t('m'))
-        .replace(' hours', t('h')).replace(' hour', t('h'))
-        .replace(' days', t('d')).replace(' day', t('d')),
-      chartData,
-      hasWeightData: chartData.length > 0,
-    }, calendarData));
+      selectedDate: today,
+      selectedDateStr: dateUtil.formatDate(today, 'YYYY-MM-DD'),
+      combinedLogs: todayData.combinedLogs,
+      listTitle: todayData.listTitle,
+      chartData: [],
+      hasWeightData: false,
+      monthlyStats: []
+    });
+  },
 
-    // Draw weight chart
-    if (chartData.length > 0) {
-      setTimeout(() => this.drawWeightChart(chartData), 100);
-    }
+  _buildTodayLogs(petLogs, petWeights, customActions, today) {
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, today);
+    return {
+      combinedLogs: selectedDayData.combinedLogs,
+      listTitle: t('today_logs')
+    };
   },
 
   /**
@@ -572,7 +516,7 @@ Page({
       trackActions,
       quickActions: trackActions.filter(item => item.actionKind === 'builtin'),
       customActions: trackActions.filter(item => item.actionKind === 'custom'),
-      stockActionItems: this._buildStockActionItems(trackActions, app.getState())
+      stockActionItems: []
     });
   },
 
@@ -720,7 +664,7 @@ Page({
 
     // Apply current time to selected date
     const now = new Date();
-    const targetDate = new Date(this.data.selectedDate);
+    const targetDate = new Date();
     targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
     let state = app.getState();
@@ -738,7 +682,7 @@ Page({
 
     const { id, label, color, iconidx } = e.currentTarget.dataset;
     const now = new Date();
-    const targetDate = new Date(this.data.selectedDate);
+    const targetDate = new Date();
     targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
     let state = app.getState();
@@ -859,7 +803,7 @@ Page({
   onWeightInput(e) { this.setData({ newWeight: e.detail.value }); },
   saveWeight() {
     const now = new Date();
-    const targetDate = new Date(this.data.selectedDate);
+    const targetDate = new Date();
     targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
     let state = app.getState();
@@ -953,6 +897,259 @@ Page({
     });
   },
 
+  _startOfDayKey(date) {
+    return dateUtil.formatDate(dateUtil.parseISO(date), 'YYYY-MM-DD');
+  },
+
+  _isBetween(date, start, end) {
+    const d = dateUtil.parseISO(date);
+    return d >= start && d <= end;
+  },
+
+  _colorWithAlpha(color, alpha) {
+    if (!color || color[0] !== '#' || color.length !== 7) return color || `rgba(143,131,119,${alpha})`;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  },
+
+  _buildPosterRanges(reportDate) {
+    const currentEnd = new Date(reportDate);
+    const currentStart = dateUtil.startOfMonth(currentEnd);
+    const previousStart = dateUtil.subMonths(currentStart, 1);
+    const previousMonthEnd = dateUtil.endOfMonth(previousStart);
+    const previousEnd = new Date(previousStart);
+    previousEnd.setDate(Math.min(currentEnd.getDate(), previousMonthEnd.getDate()));
+    previousEnd.setHours(currentEnd.getHours(), currentEnd.getMinutes(), currentEnd.getSeconds(), currentEnd.getMilliseconds());
+
+    return { currentStart, currentEnd, previousStart, previousEnd };
+  },
+
+  _isCurrentCustomType(type, customActions) {
+    if (!type || !type.startsWith('custom_')) return true;
+    const id = type.split('_')[1];
+    return (customActions || []).some(action => action.id === id);
+  },
+
+  _isVisibleCareType(type, pet, customActions) {
+    if (!this._isCurrentCustomType(type, customActions)) return false;
+    if (!type || type.startsWith('custom_')) return true;
+    return !(pet.hiddenActions || []).includes(type);
+  },
+
+  _buildPosterLogRecords(state, pet, start, end, options) {
+    const customActions = (state.customActions || []).filter(action => action.petId === pet.id);
+    const excludeHidden = options && options.excludeHidden;
+
+    const logs = (state.logs || [])
+      .filter(log => log.petId === pet.id && this._isBetween(log.date, start, end))
+      .filter(log => this._isCurrentCustomType(log.type, customActions))
+      .filter(log => !excludeHidden || this._isVisibleCareType(log.type, pet, customActions))
+      .map(log => {
+        const presentation = this._getActionPresentation(log.type, customActions, log);
+        return {
+          id: log.id,
+          type: log.type,
+          date: log.date,
+          label: presentation.label,
+          color: presentation.color,
+          iconName: presentation.iconName,
+          source: 'log'
+        };
+      });
+
+    const medical = (state.medicalRecords || [])
+      .filter(record => record.petId === pet.id && this._isBetween(record.date, start, end))
+      .map(record => ({
+        id: record.id,
+        type: 'medical',
+        date: record.date,
+        label: t('medical') || 'Medical',
+        color: '#E74C3C',
+        iconName: 'medical',
+        source: 'medical'
+      }));
+
+    return logs.concat(medical);
+  },
+
+  _buildWeightTrend(weightRecords) {
+    const records = weightRecords
+      .slice()
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map(record => ({
+        id: record.id,
+        date: record.date,
+        dayLabel: dateUtil.formatDate(dateUtil.parseISO(record.date), 'MM-DD'),
+        weight: record.weight
+      }));
+
+    if (records.length === 0) return { status: 'hidden', records: [] };
+    const first = records[0];
+    const last = records[records.length - 1];
+    const delta = Math.round((last.weight - first.weight) * 10) / 10;
+    return {
+      status: records.length === 1 ? 'single' : 'line',
+      records,
+      latestWeight: last.weight,
+      firstWeight: first.weight,
+      lastWeight: last.weight,
+      delta
+    };
+  },
+
+  _buildPosterHeatmap(records, reportDate) {
+    const firstDay = dateUtil.startOfMonth(reportDate);
+    const lastDay = dateUtil.endOfMonth(reportDate);
+    const days = dateUtil.eachDayOfInterval(firstDay, lastDay);
+    const countMap = {};
+    records.forEach(record => {
+      const key = this._startOfDayKey(record.date);
+      countMap[key] = (countMap[key] || 0) + 1;
+    });
+    return days.map(day => {
+      const key = dateUtil.formatDate(day, 'YYYY-MM-DD');
+      const count = countMap[key] || 0;
+      return {
+        date: day,
+        dateKey: key,
+        dayNum: dateUtil.formatDate(day, 'd'),
+        count,
+        level: count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : 3,
+        isFuture: day > reportDate
+      };
+    });
+  },
+
+  _longestStreak(dateKeys) {
+    const sorted = Array.from(new Set(dateKeys)).sort();
+    let best = 0;
+    let current = 0;
+    let previous = null;
+
+    sorted.forEach(key => {
+      const day = dateUtil.startOfDay(key);
+      if (previous) {
+        const diff = dateUtil.differenceInDays(day, previous);
+        current = diff === 1 ? current + 1 : 1;
+      } else {
+        current = 1;
+      }
+      best = Math.max(best, current);
+      previous = day;
+    });
+
+    return best;
+  },
+
+  _buildPosterStats(state, pet, reportDate) {
+    const reportAt = reportDate || new Date();
+    const ranges = this._buildPosterRanges(reportAt);
+    const customActions = (state.customActions || []).filter(action => action.petId === pet.id);
+    const monthRecords = this._buildPosterLogRecords(state, pet, ranges.currentStart, ranges.currentEnd, { excludeHidden: false });
+    const visibleCareRecords = this._buildPosterLogRecords(state, pet, ranges.currentStart, ranges.currentEnd, { excludeHidden: true });
+    const previousCareRecords = this._buildPosterLogRecords(state, pet, ranges.previousStart, ranges.previousEnd, { excludeHidden: true });
+    const monthWeights = (state.weightHistory || [])
+      .filter(record => record.petId === pet.id && this._isBetween(record.date, ranges.currentStart, ranges.currentEnd));
+
+    const effectiveRecords = monthRecords.concat(monthWeights.map(record => ({
+      id: record.id,
+      type: 'log_weight',
+      date: record.date,
+      source: 'weight'
+    })));
+    const activeDateKeys = Array.from(new Set(effectiveRecords.map(record => this._startOfDayKey(record.date))));
+
+    const overview = [];
+    if (pet.birthday) {
+      const companionDays = Math.max(1, dateUtil.differenceInDays(reportAt, dateUtil.parseISO(pet.birthday)) + 1);
+      overview.push({ key: 'companion_days', label: t('companion_days'), value: companionDays, helper: t('birthday_based') });
+    }
+    overview.push(
+      { key: 'monthly_records', label: t('monthly_records'), value: effectiveRecords.length, helper: t('records_helper') },
+      { key: 'active_days', label: t('active_days'), value: activeDateKeys.length, helper: t('active_days_helper') }
+    );
+
+    const previousCountMap = {};
+    previousCareRecords.forEach(record => {
+      previousCountMap[record.type] = (previousCountMap[record.type] || 0) + 1;
+    });
+
+    const careMap = {};
+    visibleCareRecords.forEach(record => {
+      if (!careMap[record.type]) {
+        careMap[record.type] = {
+          type: record.type,
+          label: record.label,
+          color: record.color,
+          iconName: record.iconName,
+          count: 0,
+          lastDate: record.date,
+          previousCount: previousCountMap[record.type] || 0
+        };
+      }
+      careMap[record.type].count += 1;
+      if (new Date(record.date) > new Date(careMap[record.type].lastDate)) {
+        careMap[record.type].lastDate = record.date;
+      }
+    });
+
+    const careChanges = Object.values(careMap)
+      .map(item => ({
+        ...item,
+        delta: item.count - item.previousCount,
+        helper: t('compared_same_period')
+      }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return new Date(b.lastDate) - new Date(a.lastDate);
+      })
+      .slice(0, 4);
+
+    const weekdayCounts = {};
+    activeDateKeys.forEach(key => {
+      const weekday = dateUtil.getDay(key);
+      weekdayCounts[weekday] = (weekdayCounts[weekday] || 0) + 1;
+    });
+    const weekdayNames = t('weekdays') || WEEKDAYS;
+    const regularWeekday = Object.keys(weekdayCounts)
+      .sort((a, b) => weekdayCounts[b] - weekdayCounts[a])[0];
+    const topRecord = careChanges[0] || null;
+    if (!pet.birthday) {
+      overview.push({
+        key: 'top_record',
+        label: t('top_record'),
+        value: topRecord ? topRecord.label : '-',
+        helper: topRecord ? `${topRecord.count}` : t('no_activity')
+      });
+    }
+
+    return {
+      ranges,
+      reportDate: reportAt,
+      monthLabel: dateUtil.formatDate(ranges.currentStart, 'MMMM yyyy', {
+        months: t('months'),
+        isZH: getLanguage() === 'zh'
+      }),
+      overview: overview.slice(0, 3),
+      totalRecords: effectiveRecords.length,
+      activeDays: activeDateKeys.length,
+      highlights: {
+        topRecord,
+        regularDay: regularWeekday !== undefined ? { label: weekdayNames[regularWeekday], count: weekdayCounts[regularWeekday] } : null,
+        streakDays: this._longestStreak(activeDateKeys)
+      },
+      careChanges,
+      careChangesEmptyText: t('no_care_change'),
+      careChangesEmptyHint: t('no_care_change_hint'),
+      weightTrend: this._buildWeightTrend(monthWeights),
+      heatmap: this._buildPosterHeatmap(effectiveRecords, reportAt),
+      badges: this._buildMonthlyBadgeData(monthRecords.filter(record => record.source === 'log'), monthWeights, ranges.currentStart, pet.species, activeDateKeys.length),
+      footerQuote: t('poster_footer_quote')
+    };
+  },
+
   // ============================================================
   // === EXPORT REPORT ENGINE — Apple Style 5-Section Report ====
   // ============================================================
@@ -1005,6 +1202,8 @@ Page({
   },
 
   closeExportModal() { this.setData({ showExportModal: false }); },
+  openStatsRules() { this.setData({ showStatsRules: true }); },
+  closeStatsRules() { this.setData({ showStatsRules: false }); },
 
   previewExportImage() {
     if (this.data.exportImageUrl) {
@@ -1035,14 +1234,6 @@ Page({
     const pet   = this.data.activePet;
     if (!pet) return;
 
-    const petLogs     = state.logs.filter(l => l.petId === state.activePetId);
-    const petWeights  = state.weightHistory.filter(w => w.petId === state.activePetId);
-    const petMeds     = state.medicalRecords.filter(m => m.petId === state.activePetId);
-    const petInventory = (state.inventoryItems || []).filter(i => i.petId === state.activePetId && !i.hidden);
-    const petReminders = (state.reminders || []).filter(r => r.petId === state.activePetId && !r.done);
-    const currentMonth = this.data.currentMonth || dateUtil.startOfMonth(new Date());
-    const isZH = getLanguage() === 'zh';
-
     const MARGIN = 40;
     const CARD_W = W - MARGIN * 2;
     const BG    = '#F9F7F4';
@@ -1050,12 +1241,11 @@ Page({
     const INK   = '#1C1C1E';   // near-black
     const MUTED = '#6E6E73';   // Apple gray
     const ACCENT= '#FEE140';   // PetPaw yellow
+    const posterStats = this._buildPosterStats(state, pet, new Date());
 
-    // ── Background ────────────────────────────────────────────
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
 
-    // ── Soft top arc decoration ───────────────────────────────
     const grad = ctx.createLinearGradient(0, 0, W, 320);
     grad.addColorStop(0, '#FEE140');
     grad.addColorStop(1, '#FFD580');
@@ -1068,25 +1258,216 @@ Page({
     ctx.closePath();
     ctx.fill();
 
-    let cursorY = 0;
+    let cursorY = await this._drawPosterHeroSection(canvas, ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, pet, posterStats);
+    cursorY = this._drawPosterHighlightsSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
+    cursorY = this._drawPosterCareChangesSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
+    cursorY = this._drawPosterWeightTrendSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, posterStats, cursorY);
+    cursorY = this._drawPosterHeatmapSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
+    cursorY = this._drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, [], [], posterStats.ranges.currentStart, pet, cursorY, getLanguage() === 'zh', posterStats.badges);
+    this._drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, cursorY);
+  },
 
-    // ── Section 1: Pet Profile ────────────────────────────────
-    cursorY = await this._drawProfileSection(canvas, ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, pet, petWeights, cursorY, isZH);
+  async _drawPosterHeroSection(canvas, ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, pet, posterStats) {
+    const avatarR = 72;
+    const avatarCX = W / 2;
+    const avatarCY = 96;
 
-    // ── Section 2: Activity Highlights ───────────────────────
-    cursorY = this._drawActivitySection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petLogs, currentMonth, cursorY, isZH);
+    if (pet.avatar) {
+      try {
+        const img = canvas.createImage();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = pet.avatar; });
+        ctx.save();
+        ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
+        ctx.drawImage(img, avatarCX - avatarR, avatarCY - avatarR, avatarR * 2, avatarR * 2);
+        ctx.restore();
+      } catch (e) {}
+    }
+    if (!pet.avatar) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '72px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(pet.species === 'dog' ? '🐶' : pet.species === 'other' ? '🐾' : '🐱', avatarCX, avatarCY);
+    }
+    ctx.lineWidth = 6; ctx.strokeStyle = '#FFFFFF';
+    ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.stroke();
 
-    // ── Section 3: Health & Weight ────────────────────────────
-    cursorY = this._drawHealthSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petWeights, petMeds, currentMonth, cursorY, isZH);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = INK; ctx.font = 'bold 52px -apple-system,sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText(pet.name || '', W / 2, 210);
+    ctx.fillStyle = MUTED; ctx.font = '26px -apple-system,sans-serif';
+    ctx.fillText(`${posterStats.monthLabel} ${t('monthly_care_poster')}`, W / 2, 246);
 
-    // ── Section 4: Monthly Badges ─────────────────────────────
-    cursorY = this._drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, cursorY, isZH);
+    const cardY = 286;
+    const cardH = 172;
+    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+    const itemW = CARD_W / Math.max(posterStats.overview.length, 1);
+    posterStats.overview.forEach((item, index) => {
+      const cx = MARGIN + itemW * index + itemW / 2;
+      if (index > 0) {
+        ctx.strokeStyle = '#F0EFEA'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(MARGIN + itemW * index, cardY + 32); ctx.lineTo(MARGIN + itemW * index, cardY + cardH - 32); ctx.stroke();
+      }
+      ctx.fillStyle = INK; ctx.font = 'bold 42px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(String(item.value), cx, cardY + 76);
+      ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif';
+      ctx.fillText(item.label, cx, cardY + 112);
+      ctx.font = '18px -apple-system,sans-serif';
+      ctx.fillText(item.helper, cx, cardY + 140);
+    });
 
-    // ── Section 5: Supply Snapshot ────────────────────────────
-    cursorY = this._drawSupplySection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, petInventory, cursorY);
+    return cardY + cardH + 36;
+  },
 
-    // ── Section 6: Reminders & Quote ─────────────────────────
-    this._drawFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, ACCENT, petReminders, petLogs, cursorY, isZH);
+  _drawPosterHighlightsSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
+    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((getLanguage() === 'zh' ? '本月亮点' : 'Highlights').toUpperCase(), MARGIN, startY);
+    const cardY = startY + 22;
+    const cardH = 170;
+    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+    const highlights = [
+      { label: t('top_record'), value: posterStats.highlights.topRecord ? `${posterStats.highlights.topRecord.label} ${posterStats.highlights.topRecord.count}` : t('no_activity') },
+      { label: getLanguage() === 'zh' ? '最规律一天' : 'Best Day', value: posterStats.highlights.regularDay ? posterStats.highlights.regularDay.label : '-' },
+      { label: getLanguage() === 'zh' ? '连续照护' : 'Best Streak', value: `${posterStats.highlights.streakDays}${t('d')}` }
+    ];
+    const colW = CARD_W / 3;
+    highlights.forEach((item, index) => {
+      const x = MARGIN + colW * index + 24;
+      if (index > 0) {
+        ctx.strokeStyle = '#F0EFEA'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(MARGIN + colW * index, cardY + 32); ctx.lineTo(MARGIN + colW * index, cardY + cardH - 32); ctx.stroke();
+      }
+      ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(item.label, x, cardY + 58);
+      ctx.fillStyle = INK; ctx.font = 'bold 30px -apple-system,sans-serif';
+      const value = String(item.value).length > 8 ? String(item.value).slice(0, 7) + '…' : item.value;
+      ctx.fillText(value, x, cardY + 104);
+    });
+    return cardY + cardH + 36;
+  },
+
+  _drawPosterCareChangesSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
+    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((t('care_changes') || 'Care Changes').toUpperCase(), MARGIN, startY);
+    const cardY = startY + 22;
+    const rows = Math.max(1, Math.ceil(posterStats.careChanges.length / 2));
+    const cardH = posterStats.careChanges.length === 0 ? 150 : 54 + rows * 104;
+    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+
+    if (posterStats.careChanges.length === 0) {
+      ctx.fillStyle = INK; ctx.font = 'bold 28px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(posterStats.careChangesEmptyText, W / 2, cardY + 64);
+      ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif';
+      ctx.fillText(posterStats.careChangesEmptyHint, W / 2, cardY + 100);
+      return cardY + cardH + 36;
+    }
+
+    const cellW = (CARD_W - 72) / 2;
+    posterStats.careChanges.forEach((item, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = MARGIN + 24 + col * (cellW + 24);
+      const y = cardY + 34 + row * 104;
+      ctx.fillStyle = this._colorWithAlpha(item.color, 0.14);
+      this.drawRoundedBarPath(ctx, x, y, cellW, 82, 24);
+      ctx.fillStyle = INK; ctx.font = 'bold 26px -apple-system,sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(item.label.length > 6 ? item.label.slice(0, 5) + '…' : item.label, x + 20, y + 32);
+      ctx.font = 'bold 32px -apple-system,sans-serif';
+      ctx.fillText(`${item.count}`, x + 20, y + 66);
+      ctx.fillStyle = item.delta > 0 ? '#FF7B54' : item.delta < 0 ? '#4CD964' : MUTED;
+      ctx.font = 'bold 22px -apple-system,sans-serif'; ctx.textAlign = 'right';
+      const sign = item.delta > 0 ? '+' : '';
+      ctx.fillText(`${sign}${item.delta}`, x + cellW - 18, y + 50);
+    });
+
+    return cardY + cardH + 36;
+  },
+
+  _drawPosterWeightTrendSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, posterStats, startY) {
+    if (posterStats.weightTrend.status === 'hidden') return startY;
+    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((t('weight_trend') || 'Weight Trend').toUpperCase(), MARGIN, startY);
+    const cardY = startY + 22;
+    const cardH = 230;
+    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+    const trend = posterStats.weightTrend;
+
+    ctx.fillStyle = INK; ctx.font = 'bold 42px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(`${trend.latestWeight} kg`, MARGIN + 24, cardY + 62);
+    ctx.fillStyle = trend.delta > 0 ? '#FF7B54' : trend.delta < 0 ? '#4CD964' : MUTED;
+    ctx.font = 'bold 22px -apple-system,sans-serif';
+    const sign = trend.delta > 0 ? '+' : '';
+    ctx.fillText(trend.status === 'single' ? t('recorded_weight') : `${sign}${trend.delta} kg`, MARGIN + 24, cardY + 96);
+
+    if (trend.status === 'single') {
+      ctx.fillStyle = ACCENT;
+      ctx.beginPath(); ctx.arc(W * 0.67, cardY + 120, 18, 0, Math.PI * 2); ctx.fill();
+      return cardY + cardH + 36;
+    }
+
+    const chartX = MARGIN + 240;
+    const chartY = cardY + 38;
+    const chartW = CARD_W - 280;
+    const chartH = 150;
+    const vals = trend.records.map(record => record.weight);
+    const minV = Math.min(...vals);
+    const maxV = Math.max(...vals);
+    const rangeV = maxV - minV || 0.5;
+    const toX = (i) => chartX + (i / (trend.records.length - 1)) * chartW;
+    const toY = (v) => chartY + chartH - ((v - minV) / rangeV) * chartH;
+
+    ctx.strokeStyle = '#F0C000'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    trend.records.forEach((record, index) => {
+      index === 0 ? ctx.moveTo(toX(index), toY(record.weight)) : ctx.lineTo(toX(index), toY(record.weight));
+    });
+    ctx.stroke();
+    trend.records.forEach((record, index) => {
+      ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = '#F0C000'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(toX(index), toY(record.weight), 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+
+    return cardY + cardH + 36;
+  },
+
+  _drawPosterHeatmapSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
+    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((t('checkin_distribution') || 'Check-in Map').toUpperCase(), MARGIN, startY);
+    const cardY = startY + 22;
+    const cardH = 220;
+    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+    const colors = ['#F0EFEA', 'rgba(254,225,64,0.35)', 'rgba(254,225,64,0.65)', 'rgba(254,225,64,1)'];
+    const cols = 16;
+    const dotGapX = (CARD_W - 64) / cols;
+    const dotGapY = 48;
+    posterStats.heatmap.forEach((item, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const cx = MARGIN + 32 + col * dotGapX + dotGapX / 2;
+      const cy = cardY + 58 + row * dotGapY;
+      ctx.fillStyle = item.isFuture ? '#F8F6F1' : colors[item.level];
+      this.drawRoundedRectPath(ctx, cx - 12, cy - 12, 24, 24, 8);
+      ctx.fill();
+    });
+    ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(t('active_days_helper'), MARGIN + 24, cardY + cardH - 28);
+    return cardY + cardH + 36;
+  },
+
+  _drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, startY) {
+    const cardH = 128;
+    if (startY + cardH < H - 150) {
+      this.drawCardSection(ctx, MARGIN, startY, CARD_W, cardH, 32, '#FFFFFF');
+      ctx.fillStyle = MUTED; ctx.font = 'italic 24px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`"${posterStats.footerQuote}"`, W / 2, startY + 72);
+    }
+    const footerY = H - 86;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#B0ADA6'; ctx.font = 'bold 22px -apple-system,sans-serif';
+    ctx.fillText('PetPaw', W / 2, footerY);
+    ctx.font = '20px -apple-system,sans-serif';
+    ctx.fillText('记录宠物生活的每一天', W / 2, footerY + 32);
+    ctx.fillStyle = '#C7C4BC'; ctx.font = '18px sans-serif';
+    ctx.fillText(dateUtil.formatDate(new Date(), 'YYYY-MM-DD'), W / 2, footerY + 60);
   },
 
   // ─── Section 1: Profile ─────────────────────────────────────
@@ -1391,7 +1772,7 @@ Page({
     return cardY + cardH + 36;
   },
 
-  _buildMonthlyBadgeData(petLogs, petWeights, currentMonth, species) {
+  _buildMonthlyBadgeData(petLogs, petWeights, currentMonth, species, recordDaysOverride) {
     const isZH = getLanguage() === 'zh';
     const monthLogs = (petLogs || []).filter(l => dateUtil.isSameMonth(dateUtil.parseISO(l.date), currentMonth));
     const monthWeights = (petWeights || []).filter(w => dateUtil.isSameMonth(dateUtil.parseISO(w.date), currentMonth));
@@ -1404,7 +1785,7 @@ Page({
       daySet[dateUtil.formatDate(dateUtil.parseISO(weight.date), 'YYYY-MM-DD')] = true;
     });
 
-    const recordDays = Object.keys(daySet).length;
+    const recordDays = typeof recordDaysOverride === 'number' ? recordDaysOverride : Object.keys(daySet).length;
     const brushCount = monthLogs.filter(log => log.type === 'brush_teeth').length;
     const guardianTypes = species === 'dog'
       ? ['walk_dog']
@@ -1424,15 +1805,15 @@ Page({
     });
 
     const recordBadges = [
-      makeBadge('record_3', '初次陪伴', 'First Steps', '3天', recordDays, 3),
-      makeBadge('record_7', '一周好朋友', 'Good Week', '7天', recordDays, 7),
-      makeBadge('record_15', '银爪陪伴', 'Silver Paw', '15天', recordDays, 15),
-      makeBadge('record_25', '金爪守护', 'Golden Paw', '25天', recordDays, 25)
+      makeBadge('record_3', t('little_start'), t('little_start'), '3天', recordDays, 3),
+      makeBadge('record_7', t('steady_week'), t('steady_week'), '7天', recordDays, 7),
+      makeBadge('record_15', t('half_month_care'), t('half_month_care'), '15天', recordDays, 15),
+      makeBadge('record_25', t('full_month_care'), t('full_month_care'), '25天', recordDays, 25)
     ];
     const habitBadges = [
-      makeBadge('brush_teeth_8', '亮亮牙', 'Bright Teeth', isZH ? '刷牙' : 'Teeth', brushCount, 8),
-      makeBadge('weight_4', '稳稳长大', 'Growing Steady', isZH ? '体重' : 'Weight', monthWeights.length, 4),
-      makeBadge('guardian_20', '日常守护', 'Daily Care', isZH ? (species === 'dog' ? '遛狗' : '照护') : 'Care', guardianCount, 20)
+      makeBadge('brush_teeth_8', t('bright_teeth'), t('bright_teeth'), isZH ? '刷牙' : 'Teeth', brushCount, 8),
+      makeBadge('weight_4', t('steady_growth'), t('steady_growth'), isZH ? '体重' : 'Weight', monthWeights.length, 4),
+      makeBadge('guardian_20', t('daily_guardian'), t('daily_guardian'), isZH ? (species === 'dog' ? '遛狗' : '照护') : 'Care', guardianCount, 20)
     ];
     const allBadges = recordBadges.concat(habitBadges);
 
@@ -1445,8 +1826,8 @@ Page({
     };
   },
 
-  _drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, startY, isZH) {
-    const badgeData = this._buildMonthlyBadgeData(petLogs, petWeights, currentMonth, pet && pet.species);
+  _drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, startY, isZH, badgeDataOverride) {
+    const badgeData = badgeDataOverride || this._buildMonthlyBadgeData(petLogs, petWeights, currentMonth, pet && pet.species);
     const cardH = 310;
 
     ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';

@@ -1,13 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { PNG } = require('pngjs');
-const icons = require('../utils/icons.wxs');
 
 let state;
 let capturedPage;
 let showModalCalls = [];
 let nextModalConfirm = true;
+let exportCalled = false;
 
 global.wx = {
   getStorageSync() {
@@ -53,15 +52,21 @@ function createPage() {
     },
     getTabBar() {
       return null;
-    },
-    _computeHeavyData() {}
+    }
   };
 }
 
 function createState() {
   return {
     activePetId: 'pet-1',
-    pets: [{ id: 'pet-1', species: 'dog', hiddenActions: ['vaccine'] }],
+    pets: [{
+      id: 'pet-1',
+      name: 'NaiTang',
+      species: 'dog',
+      breed: 'Corgi',
+      birthday: '2026-04-01T00:00:00.000Z',
+      hiddenActions: ['vaccine']
+    }],
     inventoryItems: [],
     logs: [],
     reminders: [],
@@ -75,10 +80,8 @@ function actionEvent(dataset) {
   return { currentTarget: { dataset } };
 }
 
-function sameMonthDate() {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  return date;
+function at(day, hour = 12, month = 3, year = 2026) {
+  return new Date(year, month, day, hour, 0, 0).toISOString();
 }
 
 function resetModal(confirm = true) {
@@ -86,134 +89,73 @@ function resetModal(confirm = true) {
   nextModalConfirm = confirm;
 }
 
-function dominantOpaqueRgb(relativePath) {
-  const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '..', relativePath)));
-  const counts = {};
-  for (let i = 0; i < png.data.length; i += 4) {
-    if (png.data[i + 3] !== 255) continue;
-    const key = `${png.data[i]},${png.data[i + 1]},${png.data[i + 2]}`;
-    counts[key] = (counts[key] || 0) + 1;
-  }
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+function readDashboardWxml() {
+  return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxml'), 'utf8');
 }
 
 state = createState();
-const pageWithCustomPlaceholder = createPage();
-pageWithCustomPlaceholder.onLoad();
+const pageWithI18n = createPage();
+pageWithI18n.onLoad();
 assert.strictEqual(
-  pageWithCustomPlaceholder.data.i18n.custom_event_placeholder,
-  '例如：洗澡时间',
-  'custom event placeholder should be loaded from i18n'
-);
-assert.deepStrictEqual(
-  pageWithCustomPlaceholder.data.customIconNames.slice(0, 6),
-  ['vaccine', 'deworming', 'brush_teeth', 'log_weight', 'walk_dog', 'scoop_litter'],
-  'custom icon picker should put built-in Things to Track icons first'
-);
-assert.deepStrictEqual(
-  pageWithCustomPlaceholder.data.customIconNames.slice(6),
-  ['Star', 'Heart', 'Droplet', 'Sun', 'Zap', 'Smile', 'Music', 'Coffee', 'CameraCustom', 'Gift', 'Umbrella', 'Book', 'Feather', 'Flame', 'Moon', 'Cloud'],
-  'custom icon picker should use the monochrome custom camera icon with other custom icons'
+  pageWithI18n.data.i18n.today_check_in,
+  '今天记什么',
+  'dashboard should load the new quick-record heading'
 );
 assert.strictEqual(
-  icons.src('CameraCustom'),
-  '/static/icons/icon-camera.png',
-  'custom camera icon should use the monochrome custom icon asset'
+  pageWithI18n.data.i18n.monthly_care_poster,
+  '本月照护海报',
+  'dashboard should load the poster CTA copy'
 );
 assert.strictEqual(
-  icons.src('Camera'),
-  '/static/icons/camera.png',
-  'regular camera icon should keep the original colored photo asset'
+  pageWithI18n.data.i18n.stats_rules,
+  '统计说明',
+  'poster preview should load rule explainer copy'
 );
-assert.strictEqual(
-  dominantOpaqueRgb('static/icons/icon-camera.png'),
-  dominantOpaqueRgb('static/icons/icon-star.png'),
-  'custom camera icon should share the same monochrome color as other custom icons'
-);
-assert.notStrictEqual(
-  dominantOpaqueRgb('static/icons/icon-camera.png'),
-  dominantOpaqueRgb('static/icons/camera.png'),
-  'custom camera icon should not keep the original colored camera color'
+
+const dashboardWxml = readDashboardWxml();
+assert(
+  !dashboardWxml.includes('i18n.stock_alert'),
+  'dashboard should not render Stock Alert in the simplified UI'
 );
 assert(
-  !fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxml'), 'utf8').includes('i18n[item.type]'),
-  'dashboard WXML should use precomputed track action labels instead of dynamic i18n indexing'
+  !dashboardWxml.includes('cal-grid') && !dashboardWxml.includes('weightCanvas') && !dashboardWxml.includes('monthlyStats'),
+  'dashboard should not render calendar, weight chart, or monthly stats cards'
+);
+assert(
+  dashboardWxml.includes('monthly-poster-card') && dashboardWxml.includes('openStatsRules'),
+  'dashboard should render poster CTA and preview rule entry point'
 );
 
 state = createState();
-const reportDate = sameMonthDate();
 state.logs = [
-  { id: 'report-log-1', petId: 'pet-1', type: 'deworming', date: reportDate.toISOString() },
-  { id: 'report-log-2', petId: 'pet-1', type: 'deworming', date: reportDate.toISOString() },
-  { id: 'report-log-3', petId: 'pet-1', type: 'custom_missing', date: reportDate.toISOString() }
+  { id: 'today-log', petId: 'pet-1', type: 'deworming', date: at(26, 9) },
+  { id: 'old-log', petId: 'pet-1', type: 'brush_teeth', date: at(25, 9) }
 ];
-const pageWithReportActivity = createPage();
-const reportActivity = pageWithReportActivity._buildReportActivityData(
-  state.logs,
-  new Date(reportDate.getFullYear(), reportDate.getMonth(), 1)
+state.weightHistory = [
+  { id: 'today-weight', petId: 'pet-1', date: at(26, 20), weight: 4.2 },
+  { id: 'old-weight', petId: 'pet-1', date: at(24, 20), weight: 4.1 }
+];
+const pageWithTodayLogs = createPage();
+const todayLogs = pageWithTodayLogs._buildTodayLogs(
+  state.logs.filter(log => log.petId === 'pet-1'),
+  state.weightHistory.filter(weight => weight.petId === 'pet-1'),
+  state.customActions,
+  new Date(2026, 3, 26, 12)
 );
-assert.strictEqual(
-  reportActivity.totalCount,
-  2,
-  'export report activity should not count deleted custom events'
-);
-assert(
-  !reportActivity.stats.some((item) => item.label === 'Custom' || item.label === '自定义'),
-  'export report activity should not show a generic Custom item'
-);
-assert.strictEqual(
-  reportActivity.stats.find((item) => item.type === 'deworming').color,
-  'rgba(254,225,64,0.51)',
-  'export report activity stat color should use heatmap intensity logic'
-);
-
-state = createState();
-const pageWithHiddenAction = createPage();
-pageWithHiddenAction.setData({ isEditingActions: true });
-pageWithHiddenAction.refreshData();
-assert(
-  !pageWithHiddenAction.data.quickActions.some((item) => item.type === 'vaccine'),
-  'hidden quick actions should be removed from Things to Track while editing'
-);
-
-state = createState();
-const pageWithStockActions = createPage();
-pageWithStockActions.refreshData();
 assert.deepStrictEqual(
-  pageWithStockActions.data.stockActionItems.map((item) => item.actionKey),
-  pageWithStockActions.data.trackActions.map((item) => item.actionKey),
-  'Stock Alert should include every visible Things to Track event'
+  todayLogs.combinedLogs.map(item => item.id),
+  ['today-weight', 'today-log'],
+  'today logs should include only records from the current day, newest first'
 );
-assert(
-  !pageWithStockActions.data.trackActions.some((item) => item.type === 'mood_photo'),
-  'Things to Track should not include mood photo as a daily action'
-);
-
-state = createState();
-const pageWithStockAlertTap = createPage();
-pageWithStockAlertTap.setData({ selectedDate: sameMonthDate().toISOString() });
-pageWithStockAlertTap.handleTrackAction(actionEvent({
-  kind: 'builtin',
-  type: 'deworming',
-  label: 'Deworming',
-  color: '#93C653'
-}));
-pageWithStockAlertTap.handleTrackAction(actionEvent({
-  kind: 'custom',
-  id: 'custom-1',
-  label: 'Bath',
-  color: '#5DADE2',
-  iconidx: 0
-}));
 assert.strictEqual(
-  state.logs.length,
-  0,
-  'tapping Stock Alert events should not create daily records'
+  todayLogs.listTitle,
+  '今日记录',
+  'dashboard record list should always be titled Today Logs'
 );
 
 state = createState();
 const pageWithTrackTap = createPage();
-pageWithTrackTap.setData({ selectedDate: sameMonthDate().toISOString() });
+pageWithTrackTap.setData({ selectedDate: new Date(2026, 3, 26, 0) });
 pageWithTrackTap.handleTrackAction(actionEvent({
   source: 'track',
   kind: 'builtin',
@@ -230,427 +172,121 @@ pageWithTrackTap.handleTrackAction(actionEvent({
   iconidx: 0
 }));
 assert.deepStrictEqual(
-  state.logs.map((log) => log.type).sort(),
+  state.logs.map(log => log.type).sort(),
   ['custom_custom-1', 'deworming'],
   'tapping Things to Track events should still create daily records'
 );
 
 state = createState();
+const posterDate = new Date(2026, 3, 27, 12);
 state.logs = [
-  { id: 'log-1', petId: 'pet-1', type: 'deworming', date: new Date().toISOString() },
-  { id: 'log-2', petId: 'pet-1', type: 'custom_custom-1', date: new Date().toISOString(), color: '#5DADE2', iconIdx: 0 }
-];
-const pageWithRecentStockActions = createPage();
-pageWithRecentStockActions.refreshData();
-assert.strictEqual(
-  pageWithRecentStockActions.data.stockActionItems.find((item) => item.type === 'deworming').lastActionText,
-  '刚刚',
-  'built-in Stock Alert event should show its latest log time'
-);
-assert.strictEqual(
-  pageWithRecentStockActions.data.stockActionItems.find((item) => item.id === 'custom-1').lastActionText,
-  '刚刚',
-  'custom Stock Alert event should show its latest log time'
-);
-
-state = createState();
-const badgeMonth = new Date(2026, 3, 1);
-const badgeDate = (day) => new Date(2026, 3, day, 12, 0, 0).toISOString();
-state.logs = [
-  ...Array.from({ length: 18 }, (_, i) => ({ id: `walk-${i + 1}`, petId: 'pet-1', type: 'walk_dog', date: badgeDate(i + 1) })),
-  ...Array.from({ length: 5 }, (_, i) => ({ id: `brush-${i + 1}`, petId: 'pet-1', type: 'brush_teeth', date: badgeDate(i + 1) }))
+  { id: 'brush-1', petId: 'pet-1', type: 'brush_teeth', date: at(1, 9) },
+  { id: 'brush-2', petId: 'pet-1', type: 'brush_teeth', date: at(2, 9) },
+  { id: 'brush-prev', petId: 'pet-1', type: 'brush_teeth', date: at(1, 9, 2) },
+  { id: 'walk-1', petId: 'pet-1', type: 'walk_dog', date: at(2, 18) },
+  { id: 'walk-2', petId: 'pet-1', type: 'walk_dog', date: at(3, 18) },
+  { id: 'walk-3', petId: 'pet-1', type: 'walk_dog', date: at(4, 18) },
+  { id: 'hidden-vaccine', petId: 'pet-1', type: 'vaccine', date: at(5, 12) },
+  { id: 'custom-live', petId: 'pet-1', type: 'custom_custom-1', date: at(6, 12), color: '#5DADE2', iconIdx: 6 },
+  { id: 'custom-deleted', petId: 'pet-1', type: 'custom_deleted', date: at(7, 12), color: '#000000', iconIdx: 0 }
 ];
 state.weightHistory = [
-  { id: 'weight-1', petId: 'pet-1', date: badgeDate(2), weight: 4.2 },
-  { id: 'weight-2', petId: 'pet-1', date: badgeDate(16), weight: 4.3 }
+  { id: 'weight-1', petId: 'pet-1', date: at(8, 20), weight: 4.1 },
+  { id: 'weight-2', petId: 'pet-1', date: at(20, 20), weight: 4.4 }
 ];
-const pageWithMonthlyBadges = createPage();
-const monthlyBadges = pageWithMonthlyBadges._buildMonthlyBadgeData(
-  state.logs,
-  state.weightHistory,
-  badgeMonth,
-  'dog'
+state.medicalRecords = [
+  { id: 'med-1', petId: 'pet-1', date: at(9, 11), tags: ['fever'] }
+];
+const pageWithPosterStats = createPage();
+const posterStats = pageWithPosterStats._buildPosterStats(state, state.pets[0], posterDate);
+assert.strictEqual(
+  posterStats.overview.find(item => item.key === 'companion_days').value,
+  27,
+  'poster companion days should be calculated from birthday while keeping the label'
+);
+assert.strictEqual(
+  posterStats.overview.find(item => item.key === 'monthly_records').value,
+  10,
+  'poster monthly records should include logs, weight records, and medical records'
+);
+assert.strictEqual(
+  posterStats.overview.find(item => item.key === 'active_days').value,
+  9,
+  'poster active days should count natural days with at least one effective record'
 );
 assert.deepStrictEqual(
-  monthlyBadges.recordBadges.map((badge) => [badge.id, badge.progress, badge.target, badge.unlocked]),
-  [
-    ['record_3', 18, 3, true],
-    ['record_7', 18, 7, true],
-    ['record_15', 18, 15, true],
-    ['record_25', 18, 25, false]
-  ],
-  'monthly record badges should expose clear progress and unlock state'
-);
-assert.deepStrictEqual(
-  monthlyBadges.habitBadges.map((badge) => [badge.id, badge.progress, badge.target, badge.unlocked]),
-  [
-    ['brush_teeth_8', 5, 8, false],
-    ['weight_4', 2, 4, false],
-    ['guardian_20', 18, 20, false]
-  ],
-  'monthly habit badges should expose clear progress and unlock state'
+  posterStats.careChanges.map(item => item.type),
+  ['walk_dog', 'brush_teeth', 'medical', 'custom_custom-1'],
+  'care changes should use dynamic top non-weight visible items only'
 );
 assert.strictEqual(
-  monthlyBadges.unlockedCount,
-  3,
-  'monthly badge data should count unlocked badges'
-);
-assert.strictEqual(
-  typeof pageWithMonthlyBadges._drawMonthlyBadgeSection,
-  'function',
-  'export report should define a monthly badge drawing section'
-);
-assert(
-  !fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxml'), 'utf8').includes('本月奖章'),
-  'dashboard page should not add monthly badge UI outside the export poster'
-);
-
-state = createState();
-const colorDate = sameMonthDate();
-state.logs = [
-  { id: 'log-color-1', petId: 'pet-1', type: 'deworming', date: colorDate.toISOString(), color: '#000000' },
-  { id: 'log-color-2', petId: 'pet-1', type: 'custom_custom-1', date: colorDate.toISOString(), color: '#000000', iconIdx: 0 }
-];
-state.weightHistory = [
-  { id: 'weight-color-1', petId: 'pet-1', date: colorDate.toISOString(), weight: 4.2 }
-];
-const pageWithUnifiedColors = createPage();
-pageWithUnifiedColors.setData({
-  i18n: { months: [] }
-});
-const calendarColors = pageWithUnifiedColors._buildCalendar(
-  state,
-  new Date(colorDate.getFullYear(), colorDate.getMonth(), 1),
-  colorDate,
-  true
-);
-const recordedDay = calendarColors.daysInMonth.find((item) => item.dateStr === `${colorDate.getFullYear()}-${String(colorDate.getMonth() + 1).padStart(2, '0')}-${String(colorDate.getDate()).padStart(2, '0')}`);
-assert.strictEqual(
-  recordedDay.icons.find((item) => item.name === 'deworming').color,
-  '#93C653',
-  'recorded calendar icons for built-in events should use Things to Track icon color'
-);
-assert.strictEqual(
-  recordedDay.icons.find((item) => item.name === 'Star').color,
-  '#5DADE2',
-  'recorded calendar icons for custom events should use Things to Track icon color'
-);
-assert.strictEqual(
-  recordedDay.icons.find((item) => item.name === 'scale').color,
-  '#6C8EBF',
-  'recorded calendar icons for weight should use Things to Track weight color'
-);
-assert.strictEqual(
-  calendarColors.monthlyStats.find((item) => item.type === 'deworming').color,
-  '#93C653',
-  'monthly stats for built-in events should use Things to Track icon color'
-);
-assert.strictEqual(
-  calendarColors.monthlyStats.find((item) => item.type === 'custom_custom-1').color,
-  '#5DADE2',
-  'monthly stats for custom events should use Things to Track icon color'
-);
-assert.strictEqual(
-  calendarColors.monthlyStats.find((item) => item.type === 'log_weight').color,
-  '#6C8EBF',
-  'monthly stats for weight should use Things to Track weight color'
-);
-assert.strictEqual(
-  calendarColors.combinedLogs.find((item) => item.type === 'deworming').iconColor,
-  '#93C653',
-  'daily records for built-in events should use Things to Track icon color'
-);
-assert.strictEqual(
-  calendarColors.combinedLogs.find((item) => item.type === 'custom_custom-1').iconColor,
-  '#5DADE2',
-  'daily records for custom events should use Things to Track icon color'
-);
-assert.strictEqual(
-  calendarColors.combinedLogs.find((item) => item.typeGroup === 'weight').iconColor,
-  '#6C8EBF',
-  'daily weight records should use Things to Track weight color'
-);
-
-state = createState();
-const pageWithFeedbackColor = createPage();
-pageWithFeedbackColor.setData({ selectedDate: sameMonthDate().toISOString() });
-pageWithFeedbackColor.handleAction(actionEvent({
-  type: 'deworming',
-  label: 'Deworming',
-  color: '#93C653'
-}));
-assert.strictEqual(
-  pageWithFeedbackColor.data.feedbackColor,
-  '#93C653',
-  'recorded built-in action feedback should use Things to Track icon color'
-);
-
-state = createState();
-const pageWithCustomFeedbackColor = createPage();
-pageWithCustomFeedbackColor.setData({ selectedDate: sameMonthDate().toISOString() });
-pageWithCustomFeedbackColor.handleCustomAction(actionEvent({
-  id: 'custom-1',
-  label: 'Bath',
-  color: '#5DADE2',
-  iconidx: 0
-}));
-assert.strictEqual(
-  pageWithCustomFeedbackColor.data.feedbackColor,
-  '#5DADE2',
-  'recorded custom action feedback should use Things to Track icon color'
-);
-
-state = createState();
-const customDeleteDate = sameMonthDate();
-state.logs = [
-  { id: 'custom-delete-log', petId: 'pet-1', type: 'custom_custom-1', date: customDeleteDate.toISOString(), color: '#5DADE2', iconIdx: 0 },
-  { id: 'custom-delete-built-in-log', petId: 'pet-1', type: 'deworming', date: customDeleteDate.toISOString() }
-];
-const pageWithCanceledCustomDelete = createPage();
-pageWithCanceledCustomDelete.setData({
-  i18n: { months: [] },
-  currentMonth: new Date(customDeleteDate.getFullYear(), customDeleteDate.getMonth(), 1),
-  selectedDate: customDeleteDate
-});
-const customDeleteMonth = new Date(customDeleteDate.getFullYear(), customDeleteDate.getMonth(), 1);
-const customCalendarBeforeDelete = pageWithCanceledCustomDelete._buildCalendar(state, customDeleteMonth, customDeleteDate, true);
-assert(
-  customCalendarBeforeDelete.monthlyStats.some((item) => item.type === 'custom_custom-1'),
-  'custom item should appear in monthly stats before deletion'
-);
-assert(
-  customCalendarBeforeDelete.combinedLogs.some((item) => item.type === 'custom_custom-1'),
-  'custom item should appear in selected-day records before deletion'
-);
-resetModal(false);
-pageWithCanceledCustomDelete.deleteCustomAction(actionEvent({ id: 'custom-1', label: 'Bath' }));
-assert.strictEqual(
-  showModalCalls.length,
+  posterStats.careChanges.find(item => item.type === 'brush_teeth').delta,
   1,
-  'deleting a custom Things to Track item should ask for confirmation'
+  'care changes should compare against the same range in the previous month'
 );
 assert(
-  showModalCalls[0].content.includes('历史记录'),
-  'custom delete confirmation should warn that historical records will be deleted'
+  !posterStats.careChanges.some(item => item.type === 'log_weight' || item.type === 'vaccine' || item.type === 'custom_deleted'),
+  'care changes should exclude weight, hidden built-ins, and deleted custom actions'
+);
+assert.deepStrictEqual(
+  [posterStats.weightTrend.status, posterStats.weightTrend.delta],
+  ['line', 0.3],
+  'weight trend should be the only place that exposes weight change'
+);
+assert.deepStrictEqual(
+  posterStats.badges.recordBadges.map(badge => badge.title),
+  ['小小开始', '稳定一周', '半月陪伴', '满满一月'],
+  'record badge names should be clear and meaningful'
 );
 assert.strictEqual(
-  state.customActions.length,
-  1,
-  'canceling custom Things to Track deletion should keep the item'
-);
-assert.strictEqual(
-  state.logs.length,
-  2,
-  'canceling custom Things to Track deletion should keep historical logs'
-);
-
-resetModal(true);
-pageWithCanceledCustomDelete.deleteCustomAction(actionEvent({ id: 'custom-1', label: 'Bath' }));
-assert(
-  !state.customActions.some((action) => action.id === 'custom-1'),
-  'confirming custom Things to Track deletion should remove the item'
-);
-assert(
-  !state.logs.some((log) => log.type === 'custom_custom-1'),
-  'confirming custom Things to Track deletion should remove all matching custom log history'
-);
-assert(
-  state.logs.some((log) => log.type === 'deworming'),
-  'confirming custom Things to Track deletion should keep unrelated logs'
-);
-const customCalendarAfterDelete = pageWithCanceledCustomDelete._buildCalendar(state, customDeleteMonth, customDeleteDate, true);
-assert(
-  !customCalendarAfterDelete.monthlyStats.some((item) => item.type === 'custom_custom-1'),
-  'custom Things to Track deletion should remove the item from monthly stats'
-);
-assert(
-  !customCalendarAfterDelete.combinedLogs.some((item) => item.type === 'custom_custom-1'),
-  'custom Things to Track deletion should remove the item from selected-day records'
+  posterStats.footerQuote,
+  '愿你与它，每天都是好日子。',
+  'poster footer should use fixed copy instead of note data'
 );
 
 state = createState();
-const builtinDeleteDate = sameMonthDate();
+delete state.pets[0].birthday;
 state.logs = [
-  { id: 'builtin-delete-log', petId: 'pet-1', type: 'deworming', date: builtinDeleteDate.toISOString() },
-  { id: 'builtin-delete-custom-log', petId: 'pet-1', type: 'custom_custom-1', date: builtinDeleteDate.toISOString(), color: '#5DADE2', iconIdx: 0 }
+  { id: 'no-birthday-log', petId: 'pet-1', type: 'brush_teeth', date: at(2, 9) }
 ];
-const pageWithBuiltinDelete = createPage();
-pageWithBuiltinDelete.setData({
-  i18n: { months: [] },
-  currentMonth: new Date(builtinDeleteDate.getFullYear(), builtinDeleteDate.getMonth(), 1),
-  selectedDate: builtinDeleteDate
-});
-const builtinDeleteMonth = new Date(builtinDeleteDate.getFullYear(), builtinDeleteDate.getMonth(), 1);
-const builtinCalendarBeforeDelete = pageWithBuiltinDelete._buildCalendar(state, builtinDeleteMonth, builtinDeleteDate, true);
-assert(
-  builtinCalendarBeforeDelete.monthlyStats.some((item) => item.type === 'deworming'),
-  'built-in item should appear in monthly stats before deletion'
-);
-assert(
-  builtinCalendarBeforeDelete.combinedLogs.some((item) => item.type === 'deworming'),
-  'built-in item should appear in selected-day records before deletion'
-);
-resetModal(true);
-pageWithBuiltinDelete.hideQuickAction(actionEvent({ type: 'deworming', label: 'Deworming' }));
-assert(
-  state.pets[0].hiddenActions.includes('deworming'),
-  'confirming built-in Things to Track deletion should hide the item'
-);
-assert(
-  !state.logs.some((log) => log.type === 'deworming'),
-  'confirming built-in Things to Track deletion should remove all matching log history'
-);
-assert(
-  state.logs.some((log) => log.type === 'custom_custom-1'),
-  'confirming built-in Things to Track deletion should keep unrelated custom logs'
-);
-const builtinCalendarAfterDelete = pageWithBuiltinDelete._buildCalendar(state, builtinDeleteMonth, builtinDeleteDate, true);
-assert(
-  !builtinCalendarAfterDelete.monthlyStats.some((item) => item.type === 'deworming'),
-  'built-in Things to Track deletion should remove the item from monthly stats'
-);
-assert(
-  !builtinCalendarAfterDelete.combinedLogs.some((item) => item.type === 'deworming'),
-  'built-in Things to Track deletion should remove the item from selected-day records'
+const noBirthdayStats = createPage()._buildPosterStats(state, state.pets[0], posterDate);
+assert.deepStrictEqual(
+  noBirthdayStats.overview.map(item => item.key),
+  ['monthly_records', 'active_days', 'top_record'],
+  'poster overview should replace companion days with top record when birthday is missing'
 );
 
 state = createState();
-const weightDeleteDate = sameMonthDate();
-state.weightHistory = [
-  { id: 'weight-delete-log', petId: 'pet-1', date: weightDeleteDate.toISOString(), weight: 4.2 }
-];
+state.pets[0].hiddenActions = ['vaccine', 'deworming', 'brush_teeth', 'walk_dog', 'log_weight'];
+state.customActions = [];
 state.logs = [
-  { id: 'weight-delete-built-in-log', petId: 'pet-1', type: 'deworming', date: weightDeleteDate.toISOString() }
+  { id: 'hidden-1', petId: 'pet-1', type: 'brush_teeth', date: at(1, 9) },
+  { id: 'hidden-2', petId: 'pet-1', type: 'walk_dog', date: at(2, 9) }
 ];
-const pageWithWeightDelete = createPage();
-pageWithWeightDelete.setData({
-  i18n: { months: [] },
-  currentMonth: new Date(weightDeleteDate.getFullYear(), weightDeleteDate.getMonth(), 1),
-  selectedDate: weightDeleteDate
-});
-const weightDeleteMonth = new Date(weightDeleteDate.getFullYear(), weightDeleteDate.getMonth(), 1);
-const weightCalendarBeforeDelete = pageWithWeightDelete._buildCalendar(state, weightDeleteMonth, weightDeleteDate, true);
-assert(
-  weightCalendarBeforeDelete.monthlyStats.some((item) => item.type === 'log_weight'),
-  'weight item should appear in monthly stats before deletion'
-);
-assert(
-  weightCalendarBeforeDelete.combinedLogs.some((item) => item.typeGroup === 'weight'),
-  'weight item should appear in selected-day records before deletion'
-);
-resetModal(true);
-pageWithWeightDelete.hideQuickAction(actionEvent({ type: 'log_weight', label: '记录体重' }));
-assert(
-  state.pets[0].hiddenActions.includes('log_weight'),
-  'confirming weight Things to Track deletion should hide the item'
-);
+const emptyCareStats = createPage()._buildPosterStats(state, state.pets[0], posterDate);
 assert.strictEqual(
-  state.weightHistory.length,
+  emptyCareStats.careChanges.length,
   0,
-  'confirming weight Things to Track deletion should remove all matching weight history'
-);
-assert(
-  state.logs.some((log) => log.type === 'deworming'),
-  'confirming weight Things to Track deletion should keep unrelated logs'
-);
-const weightCalendarAfterDelete = pageWithWeightDelete._buildCalendar(state, weightDeleteMonth, weightDeleteDate, true);
-assert(
-  !weightCalendarAfterDelete.monthlyStats.some((item) => item.type === 'log_weight'),
-  'weight Things to Track deletion should remove the item from monthly stats'
-);
-assert(
-  !weightCalendarAfterDelete.combinedLogs.some((item) => item.typeGroup === 'weight'),
-  'weight Things to Track deletion should remove the item from selected-day records'
-);
-
-state = createState();
-state.pets[0].species = 'cat';
-state.pets[0].hiddenActions = ['scoop_litter'];
-state.customActions = [
-  { id: 'custom-scoop-zh', petId: 'pet-1', label: '铲屎提醒', color: '#C49A6C', iconIdx: 0 }
-];
-const pageWithChineseScoopReplacement = createPage();
-pageWithChineseScoopReplacement.refreshData();
-assert.strictEqual(
-  pageWithChineseScoopReplacement.data.showLastAction,
-  true,
-  'custom actions containing 铲屎 should restore Last Scooped in Stock Alert'
-);
-
-state = createState();
-state.pets[0].species = 'cat';
-state.pets[0].hiddenActions = ['scoop_litter'];
-state.customActions = [
-  { id: 'custom-scoop-en', petId: 'pet-1', label: 'Evening Scoop', color: '#C49A6C', iconIdx: 0 }
-];
-const pageWithEnglishScoopReplacement = createPage();
-pageWithEnglishScoopReplacement.refreshData();
-assert.strictEqual(
-  pageWithEnglishScoopReplacement.data.showLastAction,
-  true,
-  'custom actions containing scoop should restore Last Scooped in Stock Alert'
-);
-
-state = createState();
-state.pets[0].actionOrder = ['custom:custom-1', 'builtin:deworming'];
-const pageWithCustomOrder = createPage();
-pageWithCustomOrder.refreshData();
-assert.deepStrictEqual(
-  pageWithCustomOrder.data.trackActions.slice(0, 2).map((item) => item.actionKey),
-  ['custom:custom-1', 'builtin:deworming'],
-  'saved Things to Track order should mix built-in and custom actions'
-);
-
-state = createState();
-const pageInEditMode = createPage();
-pageInEditMode.setData({
-  isEditingActions: true,
-  selectedDate: '2026-04-26T00:00:00.000Z'
-});
-
-pageInEditMode.handleAction(actionEvent({ type: 'deworming', label: 'Deworming' }));
-pageInEditMode.handleCustomAction(actionEvent({
-  id: 'custom-1',
-  label: 'Bath',
-  color: '#5DADE2',
-  iconidx: 0
-}));
-pageInEditMode.openCustomModal();
-
-assert.strictEqual(
-  state.logs.length,
-  0,
-  'editing Things to Track should not log built-in or custom actions'
+  'care changes should be empty if every recorded item has been hidden or deleted'
 );
 assert.strictEqual(
-  pageInEditMode.data.showCustomModal,
-  false,
-  'editing Things to Track should not open the custom action modal'
+  emptyCareStats.careChangesEmptyText,
+  '本月还没有足够记录',
+  'care changes should expose a friendly empty state'
 );
 
 state = createState();
-const pageWithDrag = createPage();
-pageWithDrag.refreshData();
-pageWithDrag.setData({ isEditingActions: true });
-pageWithDrag.onTrackActionTouchStart({
-  currentTarget: { dataset: { actionKey: 'builtin:deworming', index: 0 } },
-  touches: [{ clientX: 0 }]
-});
-pageWithDrag.onTrackActionTouchMove({
-  currentTarget: { dataset: { actionKey: 'builtin:deworming', index: 0 } },
-  touches: [{ clientX: 80 }]
-});
-pageWithDrag.onTrackActionTouchEnd();
+const noWeightStats = createPage()._buildPosterStats(state, state.pets[0], posterDate);
+assert.strictEqual(noWeightStats.weightTrend.status, 'hidden', 'weight trend should hide with no weight data');
+state.weightHistory = [{ id: 'one-weight', petId: 'pet-1', date: at(10, 20), weight: 4.2 }];
+const singleWeightStats = createPage()._buildPosterStats(state, state.pets[0], posterDate);
+assert.strictEqual(singleWeightStats.weightTrend.status, 'single', 'weight trend should show a single-point state for one weight');
 
-assert.deepStrictEqual(
-  state.pets[0].actionOrder.slice(0, 2),
-  ['builtin:brush_teeth', 'builtin:deworming'],
-  'dragging a track action should persist the reordered action keys'
-);
-assert.deepStrictEqual(
-  pageWithDrag.data.stockActionItems.slice(0, 2).map((item) => item.actionKey),
-  ['builtin:brush_teeth', 'builtin:deworming'],
-  'Stock Alert event order should follow dragged Things to Track order'
-);
+state = createState();
+const pageWithRules = createPage();
+pageWithRules.openStatsRules();
+assert.strictEqual(pageWithRules.data.showStatsRules, true, 'stats rule entry should open the explainer modal');
+pageWithRules.closeStatsRules();
+assert.strictEqual(pageWithRules.data.showStatsRules, false, 'stats rule modal should close');
 
 console.log('dashboard action tests passed');
