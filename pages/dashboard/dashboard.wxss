@@ -199,9 +199,9 @@
 }
 
 .cal-cell {
-  min-height: 96rpx;
-  padding: 8rpx;
-  border-radius: 24rpx;
+  min-height: 80rpx;
+  padding: 6rpx;
+  border-radius: 20rpx;
   border: 4rpx solid transparent;
   display: flex;
   flex-direction: column;
@@ -217,7 +217,7 @@
 }
 
 .cal-day-num {
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -229,19 +229,27 @@
 
 .cal-icons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4rpx;
+  flex-wrap: nowrap;
   justify-content: center;
-  margin-top: 8rpx;
+  margin-top: 4rpx;
+  min-height: 22rpx;
+  width: 100%;
+  overflow: hidden;
 }
 
 .cal-icon-dot {
-  width: 28rpx;
-  height: 28rpx;
-  border-radius: 8rpx;
+  width: 22rpx;
+  height: 22rpx;
+  border-radius: 7rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2rpx #fff;
+}
+
+.cal-icon-dot + .cal-icon-dot {
+  margin-left: -6rpx;
 }
 
 /* Stats */

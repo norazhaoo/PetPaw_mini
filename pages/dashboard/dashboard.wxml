@@ -14,6 +14,31 @@
     </view>
   </view>
 
+  <!-- Stock Alert -->
+  <view class="section-block">
+    <text class="section-title">{{i18n.stock_alert}}</text>
+    <scroll-view scroll-x="true" class="pill-scroll">
+      <view class="pill-row">
+        <view class="pill-item" wx:for="{{inventoryItems}}" wx:key="id">
+          <view class="pill-icon-wrap" style="background:{{item.isLow ? '#FDEBD0' : item.color + '22'}};">
+            <image class="icon-img" lazy-load style="width:56rpx;height:56rpx; opacity:0.65;" src="{{ic.src(item.iconName || 'Package')}}" mode="aspectFit" />
+          </view>
+          <text class="pill-value" style="color:{{item.isLow ? '#E74C3C' : 'var(--text-main)'}};">{{item.daysLeft}}{{i18n.d}}</text>
+          <text class="pill-label">{{item.shortLabel}}</text>
+        </view>
+        <view class="pill-item-wrap" wx:for="{{stockActionItems}}" wx:key="actionKey">
+          <view class="pill-item">
+            <view class="pill-icon-wrap" style="background:{{item.color}}22;">
+              <image class="icon-img" lazy-load style="width:56rpx;height:56rpx;" src="{{ic.src(item.iconName)}}" mode="aspectFit" />
+            </view>
+            <text class="pill-value">{{item.lastActionText}}</text>
+            <text class="pill-label">{{item.stockLabel}}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
   <!-- Quick daily record -->
   <view class="section-block">
     <view class="flex-row justify-between align-center" style="margin-bottom: 8rpx;">
@@ -80,11 +105,49 @@
     <text wx:if="{{feedback}}" class="feedback-text" style="margin-top:16rpx;color:{{feedbackColor || 'var(--success)'}};">{{feedback}}</text>
   </view>
 
-  <!-- Today's Logs -->
+  <!-- Calendar -->
+  <view class="card" wx:if="{{ready}}">
+    <view class="flex-between" style="margin-bottom:32rpx;">
+      <view bindtap="prevMonth" style="padding:16rpx;">
+        <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronLeft')}}" mode="aspectFit" />
+      </view>
+      <view class="flex-row gap-md align-center">
+        <text class="h3" style="margin:0;">{{currentMonthLabel}}</text>
+        <view class="today-btn" bindtap="goToday">{{i18n.today || 'Today'}}</view>
+      </view>
+      <view bindtap="nextMonth" style="padding:16rpx;">
+        <image class="icon-img" lazy-load style="width:48rpx;height:48rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
+      </view>
+    </view>
+
+    <view class="cal-grid cal-header">
+      <text wx:for="{{weekdays}}" wx:key="*this" class="cal-weekday">{{item}}</text>
+    </view>
+
+    <view class="cal-grid" style="margin-top:16rpx;">
+      <view wx:for="{{blanks}}" wx:key="*this" class="cal-cell"></view>
+      <view
+        wx:for="{{daysInMonth}}"
+        wx:key="dateStr"
+        class="cal-cell {{item.isSelected ? 'cal-selected' : ''}} {{item.isToday ? 'cal-today' : ''}}"
+        bindtap="selectDate"
+        data-date="{{item.dateStr}}"
+      >
+        <text class="cal-day-num {{item.isToday ? 'cal-today-num' : ''}}">{{item.dayNum}}</text>
+        <view class="cal-icons">
+          <view wx:for="{{item.icons}}" wx:for-item="ic2" wx:key="name" class="cal-icon-dot" style="background:{{ic2.color}}22;">
+            <image class="icon-img" lazy-load style="width:16rpx;height:16rpx;" src="{{ic.src(ic2.name)}}" mode="aspectFit" />
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Selected Day Logs -->
   <view class="card today-log-card" wx:if="{{ready}}">
     <text class="h2 today-log-title">{{listTitle}}</text>
     <view wx:if="{{combinedLogs.length === 0}}" class="today-empty">
-      <text class="text-muted">{{i18n.no_today_records}}</text>
+      <text class="text-muted">{{emptyLogText || i18n.no_today_records}}</text>
     </view>
     <view class="flex-col gap-md" wx:else>
       <view wx:for="{{combinedLogs}}" wx:key="id" class="log-item">

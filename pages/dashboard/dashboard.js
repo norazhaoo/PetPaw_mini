@@ -45,6 +45,7 @@ Page({
     // Logs
     listTitle: '',
     combinedLogs: [],
+    emptyLogText: '',
     feedback: '',
     feedbackColor: '',
     // Stats
@@ -172,8 +173,44 @@ Page({
       [...filteredQuickActions, ...customActions],
       activePet.actionOrder
     );
+    const stockActionItems = this._buildStockActionItems(trackActions, state);
 
-    // Dashboard now stays focused on quick recording and today's confirmation.
+    const petInventory = (state.inventoryItems || [])
+      .filter(item => item.petId === state.activePetId && !item.hidden);
+
+    const TIME_CONV = { 'day': 1, 'week': 7, 'month': 30, 'quarter': 91, 'year': 365 };
+    const UNIT_CONV = {
+      'g': { 'kg': 0.001, 'g': 1 },
+      'kg': { 'g': 1000, 'kg': 1 },
+      'ml': { 'L': 0.001, 'ml': 1 },
+      'L': { 'ml': 1000, 'L': 1 }
+    };
+
+    const inventoryItems = petInventory.map(item => {
+      const amount = item.consumptionAmount || item.dailyConsumption || 0;
+      const intervalVal = item.consumptionInterval || 1;
+      const timeUnit = item.consumptionTimeUnit || 'day';
+      const daysInCycle = intervalVal * (TIME_CONV[timeUnit] || 1);
+      const cUnit = item.consumptionUnit || item.unit || 'g';
+      const tUnit = item.unit || 'g';
+
+      let dailyInTotalUnit = amount / daysInCycle;
+      if (cUnit !== tUnit && UNIT_CONV[cUnit] && UNIT_CONV[cUnit][tUnit]) {
+        dailyInTotalUnit = (amount * UNIT_CONV[cUnit][tUnit]) / daysInCycle;
+      }
+
+      const daysLeft = Math.floor((item.current || 0) / (dailyInTotalUnit || 0.0001));
+      const fullLabel = item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label;
+      const shortLabel = fullLabel.replace(/ .*/, '');
+
+      let color = '#8F8377';
+      if (item.typeId === 'food') color = '#D35400';
+      if (item.typeId === 'litter' || item.typeId === 'litter_2') color = '#C49A6C';
+      if (item.typeId === 'treats') color = '#F39C12';
+
+      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel, color };
+    });
+
     this.setData({
       activePet,
       isDog,
@@ -182,41 +219,45 @@ Page({
       quickActions: trackActions.filter(item => item.actionKind === 'builtin'),
       customActions: trackActions.filter(item => item.actionKind === 'custom'),
       trackActions,
-      stockActionItems: [],
-      inventoryItems: [],
-      showWarning: false
+      stockActionItems,
+      inventoryItems,
+      showWarning: inventoryItems.some(item => item.isLow)
     });
 
     this._computeHeavyData(state, activePet, isDog);
   },
 
   /**
-   * Dashboard only needs today's records; longer-term analysis belongs to the poster.
+   * Dashboard keeps the lightweight quick-record surface, with the calendar driving
+   * which day new records are attached to.
    */
   _computeHeavyData(state, activePet, isDog) {
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
     const today = dateUtil.startOfDay(new Date());
-    const todayData = this._buildTodayLogs(petLogs, petWeights, customActions, today);
+    const selectedDate = this.data.selectedDate
+      ? dateUtil.startOfDay(this.data.selectedDate)
+      : today;
+    const currentMonth = this.data.currentMonth
+      ? dateUtil.startOfMonth(this.data.currentMonth)
+      : dateUtil.startOfMonth(selectedDate);
+    const calendarData = this._buildCalendar(state, currentMonth, selectedDate, isDog);
 
-    this.setData({
+    this.setData(Object.assign({
       ready: true,
-      selectedDate: today,
-      selectedDateStr: dateUtil.formatDate(today, 'YYYY-MM-DD'),
-      combinedLogs: todayData.combinedLogs,
-      listTitle: todayData.listTitle,
       chartData: [],
       hasWeightData: false,
       monthlyStats: []
-    });
+    }, calendarData));
   },
 
   _buildTodayLogs(petLogs, petWeights, customActions, today) {
     const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, today);
     return {
       combinedLogs: selectedDayData.combinedLogs,
-      listTitle: t('today_logs')
+      listTitle: t('today_logs'),
+      emptyLogText: selectedDayData.emptyLogText
     };
   },
 
@@ -317,7 +358,8 @@ Page({
       daysInMonth,
       monthlyStats,
       combinedLogs: selectedDayData.combinedLogs,
-      listTitle: selectedDayData.listTitle
+      listTitle: selectedDayData.listTitle,
+      emptyLogText: selectedDayData.emptyLogText
     };
   },
 
@@ -355,8 +397,23 @@ Page({
         isZH,
         monthsShort: this.data.i18n.months
       })}`;
+    const emptyLogText = dateUtil.isToday(selectedDate) ? t('no_today_records') : t('no_records_day');
 
-    return { combinedLogs, listTitle };
+    return { combinedLogs, listTitle, emptyLogText };
+  },
+
+  _parseDateOnly(dateStr) {
+    const parts = String(dateStr || '').split('-').map(n => parseInt(n, 10));
+    if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return dateUtil.startOfDay(new Date());
+    return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+  },
+
+  _getRecordTargetDate() {
+    const baseDate = this.data.selectedDate ? new Date(this.data.selectedDate) : new Date();
+    const targetDate = isNaN(baseDate) ? new Date() : baseDate;
+    const now = new Date();
+    targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    return targetDate;
   },
 
   // === Calendar Navigation ===
@@ -386,7 +443,7 @@ Page({
    */
   selectDate(e) {
     const dateStr = e.currentTarget.dataset.date;
-    const date = new Date(dateStr);
+    const date = this._parseDateOnly(dateStr);
     const state = app.getState();
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
@@ -404,7 +461,8 @@ Page({
       selectedDateStr: dateStr,
       daysInMonth,
       combinedLogs: selectedDayData.combinedLogs,
-      listTitle: selectedDayData.listTitle
+      listTitle: selectedDayData.listTitle,
+      emptyLogText: selectedDayData.emptyLogText
     });
   },
 
@@ -516,7 +574,7 @@ Page({
       trackActions,
       quickActions: trackActions.filter(item => item.actionKind === 'builtin'),
       customActions: trackActions.filter(item => item.actionKind === 'custom'),
-      stockActionItems: []
+      stockActionItems: this._buildStockActionItems(trackActions, app.getState())
     });
   },
 
@@ -662,10 +720,7 @@ Page({
     const color = e.currentTarget.dataset.color || COLOR_MAP[type] || null;
     const iconIdx = e.currentTarget.dataset.iconidx !== undefined ? parseInt(e.currentTarget.dataset.iconidx) : null;
 
-    // Apply current time to selected date
-    const now = new Date();
-    const targetDate = new Date();
-    targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    const targetDate = this._getRecordTargetDate();
 
     let state = app.getState();
     state = storage.addLog(state, type, targetDate.toISOString(), '', color, iconIdx);
@@ -681,9 +736,7 @@ Page({
     if (this.data.isEditingActions) return;
 
     const { id, label, color, iconidx } = e.currentTarget.dataset;
-    const now = new Date();
-    const targetDate = new Date();
-    targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    const targetDate = this._getRecordTargetDate();
 
     let state = app.getState();
     state = storage.addLog(state, `custom_${id}`, targetDate.toISOString(), '', color, parseInt(iconidx));
@@ -802,9 +855,7 @@ Page({
   onWeightSliderChange(e) { this.setData({ newWeight: (e.detail.value / 10).toFixed(1) }); },
   onWeightInput(e) { this.setData({ newWeight: e.detail.value }); },
   saveWeight() {
-    const now = new Date();
-    const targetDate = new Date();
-    targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    const targetDate = this._getRecordTargetDate();
 
     let state = app.getState();
     state = storage.addWeight(state, parseFloat(this.data.newWeight), targetDate.toISOString());

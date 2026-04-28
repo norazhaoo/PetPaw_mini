@@ -84,6 +84,11 @@ function at(day, hour = 12, month = 3, year = 2026) {
   return new Date(year, month, day, hour, 0, 0).toISOString();
 }
 
+function ymd(dateLike) {
+  const date = new Date(dateLike);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function resetModal(confirm = true) {
   showModalCalls = [];
   nextModalConfirm = confirm;
@@ -91,6 +96,10 @@ function resetModal(confirm = true) {
 
 function readDashboardWxml() {
   return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxml'), 'utf8');
+}
+
+function readDashboardWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxss'), 'utf8');
 }
 
 state = createState();
@@ -111,19 +120,98 @@ assert.strictEqual(
   '统计说明',
   'poster preview should load rule explainer copy'
 );
+assert.strictEqual(
+  pageWithI18n.data.i18n.stock_alert,
+  '库存警报',
+  'dashboard should load stock alert copy'
+);
 
 const dashboardWxml = readDashboardWxml();
 assert(
-  !dashboardWxml.includes('i18n.stock_alert'),
-  'dashboard should not render Stock Alert in the simplified UI'
+  dashboardWxml.includes('i18n.stock_alert'),
+  'dashboard should render Stock Alert above the daily record area'
 );
 assert(
-  !dashboardWxml.includes('cal-grid') && !dashboardWxml.includes('weightCanvas') && !dashboardWxml.includes('monthlyStats'),
-  'dashboard should not render calendar, weight chart, or monthly stats cards'
+  dashboardWxml.includes('cal-grid') &&
+    dashboardWxml.includes('prevMonth') &&
+    dashboardWxml.includes('nextMonth') &&
+    dashboardWxml.includes('selectDate') &&
+    dashboardWxml.includes('goToday'),
+  'dashboard should restore the calendar controls for backdated records'
+);
+assert(
+  !dashboardWxml.includes('weightCanvas') && !dashboardWxml.includes('monthlyStats'),
+  'dashboard should not render the old weight chart or monthly stats cards'
 );
 assert(
   dashboardWxml.includes('monthly-poster-card') && dashboardWxml.includes('openStatsRules'),
   'dashboard should render poster CTA and preview rule entry point'
+);
+const dashboardWxss = readDashboardWxss();
+assert(
+  dashboardWxss.includes('flex-wrap: nowrap') && dashboardWxss.includes('margin-left: -6rpx'),
+  'calendar record icons should use a compact single-row overlap instead of vertical stacking'
+);
+assert(
+  dashboardWxml.includes('width:16rpx;height:16rpx'),
+  'calendar record icon images should be small enough for compact calendar cells'
+);
+
+state = createState();
+state.inventoryItems = [
+  {
+    id: 'food-1',
+    petId: 'pet-1',
+    typeId: 'food',
+    label: 'Food',
+    current: 500,
+    consumptionAmount: 50,
+    consumptionInterval: 1,
+    consumptionTimeUnit: 'day',
+    consumptionUnit: 'g',
+    unit: 'g',
+    hidden: false,
+    iconName: 'FoodBowl'
+  },
+  {
+    id: 'hidden-food',
+    petId: 'pet-1',
+    typeId: 'food',
+    label: 'Hidden Food',
+    current: 10,
+    consumptionAmount: 10,
+    consumptionInterval: 1,
+    consumptionTimeUnit: 'day',
+    consumptionUnit: 'g',
+    unit: 'g',
+    hidden: true
+  },
+  {
+    id: 'other-pet-food',
+    petId: 'pet-2',
+    typeId: 'food',
+    label: 'Other Food',
+    current: 10,
+    consumptionAmount: 10,
+    consumptionInterval: 1,
+    consumptionTimeUnit: 'day',
+    consumptionUnit: 'g',
+    unit: 'g',
+    hidden: false
+  }
+];
+const pageWithStockAlert = createPage();
+pageWithStockAlert.onLoad();
+pageWithStockAlert.refreshData();
+assert.deepStrictEqual(
+  pageWithStockAlert.data.inventoryItems.map(item => [item.id, item.daysLeft, item.isLow, item.shortLabel]),
+  [['food-1', 10, false, '主粮']],
+  'stock alert should show visible active-pet inventory with computed days left'
+);
+assert.deepStrictEqual(
+  pageWithStockAlert.data.stockActionItems.map(item => item.actionKey),
+  pageWithStockAlert.data.trackActions.map(item => item.actionKey),
+  'stock alert should include every visible daily tracking action'
 );
 
 state = createState();
@@ -175,6 +263,109 @@ assert.deepStrictEqual(
   state.logs.map(log => log.type).sort(),
   ['custom_custom-1', 'deworming'],
   'tapping Things to Track events should still create daily records'
+);
+
+state = createState();
+const backfillDate = new Date(2026, 3, 25, 0);
+const pageWithBackfilledBuiltin = createPage();
+pageWithBackfilledBuiltin.onLoad();
+pageWithBackfilledBuiltin.setData({
+  selectedDate: backfillDate,
+  currentMonth: new Date(2026, 3, 1)
+});
+pageWithBackfilledBuiltin.handleTrackAction(actionEvent({
+  source: 'track',
+  kind: 'builtin',
+  type: 'deworming',
+  label: 'Deworming',
+  color: '#93C653'
+}));
+assert.strictEqual(
+  ymd(state.logs[0].date),
+  '2026-04-25',
+  'built-in daily records should use the selected calendar date'
+);
+assert.strictEqual(
+  ymd(pageWithBackfilledBuiltin.data.selectedDate),
+  '2026-04-25',
+  'refresh after logging should keep the selected calendar date'
+);
+assert(
+  pageWithBackfilledBuiltin.data.daysInMonth.find(item => item.dateStr === '2026-04-25').icons.some(item => item.name === 'deworming'),
+  'calendar day should show an icon after logging a selected-date record'
+);
+
+state = createState();
+const pageWithBackfilledCustom = createPage();
+pageWithBackfilledCustom.onLoad();
+pageWithBackfilledCustom.setData({
+  selectedDate: backfillDate,
+  currentMonth: new Date(2026, 3, 1)
+});
+pageWithBackfilledCustom.handleTrackAction(actionEvent({
+  source: 'track',
+  kind: 'custom',
+  id: 'custom-1',
+  label: 'Bath',
+  color: '#5DADE2',
+  iconidx: 6
+}));
+assert.strictEqual(
+  ymd(state.logs[0].date),
+  '2026-04-25',
+  'custom daily records should use the selected calendar date'
+);
+
+state = createState();
+const pageWithBackfilledWeight = createPage();
+pageWithBackfilledWeight.onLoad();
+pageWithBackfilledWeight.setData({
+  selectedDate: backfillDate,
+  currentMonth: new Date(2026, 3, 1),
+  newWeight: 4.6
+});
+pageWithBackfilledWeight.saveWeight();
+assert.strictEqual(
+  ymd(state.weightHistory[0].date),
+  '2026-04-25',
+  'weight records should use the selected calendar date'
+);
+
+state = createState();
+state.logs = [
+  { id: 'selected-log', petId: 'pet-1', type: 'deworming', date: at(25, 9) },
+  { id: 'today-log', petId: 'pet-1', type: 'brush_teeth', date: at(26, 9) }
+];
+const pageWithSelectedDateRefresh = createPage();
+pageWithSelectedDateRefresh.onLoad();
+pageWithSelectedDateRefresh.setData({
+  selectedDate: backfillDate,
+  currentMonth: new Date(2026, 3, 1)
+});
+pageWithSelectedDateRefresh._computeHeavyData(state, state.pets[0], true);
+assert.deepStrictEqual(
+  pageWithSelectedDateRefresh.data.combinedLogs.map(item => item.id),
+  ['selected-log'],
+  'heavy data refresh should keep showing records for the selected calendar date'
+);
+assert.strictEqual(
+  pageWithSelectedDateRefresh.data.listTitle,
+  '记录: 4月25日',
+  'selected-date record list should use the non-today title'
+);
+
+state = createState();
+const pageWithPastEmptyDate = createPage();
+pageWithPastEmptyDate.onLoad();
+pageWithPastEmptyDate.setData({
+  selectedDate: backfillDate,
+  currentMonth: new Date(2026, 3, 1)
+});
+pageWithPastEmptyDate._computeHeavyData(state, state.pets[0], true);
+assert.strictEqual(
+  pageWithPastEmptyDate.data.emptyLogText,
+  '当日无记录。',
+  'empty selected-date records should use the non-today empty text'
 );
 
 state = createState();
