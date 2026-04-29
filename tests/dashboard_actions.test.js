@@ -479,31 +479,49 @@ assert.strictEqual(
   'poster footer should use the updated companionship copy'
 );
 
-const badgeStickerConfigs = pageWithPosterStats._getPosterBadgeStickerConfig();
-assert.strictEqual(badgeStickerConfigs.record.length, 4, 'poster should define four distinct record badge stickers');
-assert.strictEqual(badgeStickerConfigs.habit.length, 3, 'poster should define three distinct habit badge stickers');
+const badgeMedalConfigs = pageWithPosterStats._getPosterBadgeMedalConfig();
+assert.strictEqual(badgeMedalConfigs.record.length, 4, 'poster should define four distinct record badge medals');
+assert.strictEqual(badgeMedalConfigs.habit.length, 3, 'poster should define three distinct habit badge medals');
+
+const allBadgeMedals = badgeMedalConfigs.record.concat(badgeMedalConfigs.habit);
 assert.strictEqual(
-  new Set(badgeStickerConfigs.record.concat(badgeStickerConfigs.habit).map(config => config.shape)).size,
+  typeof pageWithPosterStats._drawPosterMedalBadge,
+  'function',
+  'poster should expose the medal badge drawing helper used by monthly badge export'
+);
+assert.strictEqual(
+  new Set(allBadgeMedals.map(config => config.tagShape)).size,
   7,
-  'each poster badge should use a distinct sticker silhouette'
+  'each poster badge should use a distinct pet-tag medal silhouette'
+);
+assert.strictEqual(
+  new Set(allBadgeMedals.map(config => config.mark)).size,
+  7,
+  'each poster badge should use a distinct medal center mark'
 );
 assert(
-  badgeStickerConfigs.record.concat(badgeStickerConfigs.habit).every(config => !config.eventIconName),
-  'poster badge stickers should not reuse daily event icons'
+  allBadgeMedals.every(config => !config.eventIconName),
+  'poster badge medals should not reuse daily event icons'
 );
 assert(
-  badgeStickerConfigs.record.concat(badgeStickerConfigs.habit).every(config =>
-    config.innerFill && config.iconBg && config.labelFill && Array.isArray(config.decorations)
+  allBadgeMedals.every(config =>
+    config.tagFill &&
+    config.innerFill &&
+    config.ringFill &&
+    config.labelFill &&
+    Array.isArray(config.ribbonColors) &&
+    config.ribbonColors.length === 2 &&
+    config.mark
   ),
-  'poster badge stickers should define finished layers instead of sketch-like single-shape placeholders'
+  'poster badge medals should define finished tag, ribbon, inner plate, ring, label, and center mark layers'
 );
-const stickerDrawingSource = dashboardJs.slice(
-  dashboardJs.indexOf('_drawPosterStickerBadge'),
+const medalDrawingSource = dashboardJs.slice(
+  dashboardJs.indexOf('_drawPosterMedalBadge'),
   dashboardJs.indexOf('// ─── Section 4: Supply Snapshot')
 );
 assert(
-  !/shadowColor|shadowBlur|shadowOffsetY|globalAlpha|bezierCurveTo/.test(stickerDrawingSource),
-  'poster badge drawing should avoid Mini Program canvas APIs that can fail in the rendering layer'
+  !/shadowColor|shadowBlur|shadowOffsetY|globalAlpha|bezierCurveTo/.test(medalDrawingSource),
+  'poster badge medal drawing should avoid Mini Program canvas APIs that can fail in the rendering layer'
 );
 
 state = createState();

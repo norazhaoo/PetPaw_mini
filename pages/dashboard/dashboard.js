@@ -1948,7 +1948,7 @@ Page({
 
   _drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, startY, isZH, badgeDataOverride) {
     const badgeData = badgeDataOverride || this._buildMonthlyBadgeData(petLogs, petWeights, currentMonth, pet && pet.species);
-    const configs = this._getPosterBadgeStickerConfig();
+    const configs = this._getPosterBadgeMedalConfig();
     const cardH = 430;
     const cardY = startY;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
@@ -1964,86 +1964,93 @@ Page({
     const colW = CARD_W / 4;
     badgeData.recordBadges.forEach((badge, i) => {
       const cx = MARGIN + colW * i + colW / 2;
-      this._drawPosterStickerBadge(ctx, cx, recordY, badge, configs.record[i], INK, MUTED);
+      this._drawPosterMedalBadge(ctx, cx, recordY, badge, configs.record[i], INK, MUTED);
     });
 
     const habitY = cardY + 306;
     const habitColW = CARD_W / 3;
     badgeData.habitBadges.forEach((badge, i) => {
       const cx = MARGIN + habitColW * i + habitColW / 2;
-      this._drawPosterStickerBadge(ctx, cx, habitY, badge, configs.habit[i], INK, MUTED);
+      this._drawPosterMedalBadge(ctx, cx, habitY, badge, configs.habit[i], INK, MUTED);
     });
 
     return cardY + cardH + 30;
   },
 
-  _getPosterBadgeStickerConfig() {
+  _getPosterBadgeMedalConfig() {
     return {
       record: [
-        { shape: 'paw-sticker', symbol: 'paw', fill: '#FFE6A7', stroke: '#D99320', accent: '#F6C54E', innerFill: '#FFF8DE', iconBg: '#FFF1B8', labelFill: '#FFF6CE', decorations: [[-30, -25, 4], [29, 23, 3], [22, -29, 2.5]] },
-        { shape: 'bone-sticker', symbol: 'bone', fill: '#FFE1D6', stroke: '#DB7658', accent: '#FFAD8E', innerFill: '#FFF4EE', iconBg: '#FFD0BE', labelFill: '#FFF0E8', decorations: [[-32, 22, 3.5], [30, -24, 4], [0, -33, 2.5]] },
-        { shape: 'fish-sticker', symbol: 'fish', fill: '#D8F2F0', stroke: '#3F9E98', accent: '#8ED8D3', innerFill: '#F3FFFD', iconBg: '#BDEAE6', labelFill: '#EFFFFC', decorations: [[-34, -20, 3], [28, 24, 3.5], [16, -30, 2.5]] },
-        { shape: 'star-sticker', symbol: 'star', fill: '#E9E0FF', stroke: '#8067D7', accent: '#B9A6F4', innerFill: '#FAF7FF', iconBg: '#D6C9FF', labelFill: '#F4EEFF', decorations: [[-26, 25, 3], [29, -23, 3], [0, 33, 2.5]] }
+        { tagShape: 'soft-tag', mark: '3', tagFill: '#FFE6A7', stroke: '#D99320', innerFill: '#FFF8DE', ringFill: '#FFF1B8', labelFill: '#FFF6CE', markFill: '#8E5A0D', ribbonColors: ['#E96C62', '#4A96B8'], shine: [[-18, -30, 5], [-8, -35, 3]] },
+        { tagShape: 'round-tag', mark: '7', tagFill: '#FFE1D6', stroke: '#DB7658', innerFill: '#FFF4EE', ringFill: '#FFD0BE', labelFill: '#FFF0E8', markFill: '#9F4D34', ribbonColors: ['#F48C64', '#6DA6D8'], shine: [[-20, -28, 4], [13, -35, 2.5]] },
+        { tagShape: 'shield-tag', mark: '15', tagFill: '#D8F2F0', stroke: '#3F9E98', innerFill: '#F3FFFD', ringFill: '#BDEAE6', labelFill: '#EFFFFC', markFill: '#2E7772', ribbonColors: ['#43A79E', '#F2B84B'], shine: [[-17, -31, 4], [19, -25, 3]] },
+        { tagShape: 'crest-tag', mark: '25', tagFill: '#E9E0FF', stroke: '#8067D7', innerFill: '#FAF7FF', ringFill: '#D6C9FF', labelFill: '#F4EEFF', markFill: '#5942AA', ribbonColors: ['#8B74E8', '#F08AA9'], shine: [[-19, -27, 4.5], [11, -36, 2.5]] }
       ],
       habit: [
-        { shape: 'collar-sticker', symbol: 'charm', fill: '#FFDDE9', stroke: '#CF5F8D', accent: '#F5A5C0', innerFill: '#FFF5F9', iconBg: '#FFC9DC', labelFill: '#FFF0F6', decorations: [[-28, -24, 3], [31, 14, 3.5], [15, -31, 2.5]] },
-        { shape: 'bowl-sticker', symbol: 'bowl', fill: '#DCF1FF', stroke: '#4E9CCA', accent: '#9AD2F2', innerFill: '#F5FBFF', iconBg: '#BEE5FA', labelFill: '#ECF8FF', decorations: [[-31, 20, 3], [29, -25, 3], [2, -32, 2.5]] },
-        { shape: 'tag-sticker', symbol: 'sparkle', fill: '#E2F4D7', stroke: '#5B9F50', accent: '#A7D998', innerFill: '#F8FFF4', iconBg: '#C8EDB8', labelFill: '#F0FAEA', decorations: [[-29, -18, 3], [30, 22, 3], [18, -31, 2.5]] }
+        { tagShape: 'collar-tag', mark: 'tooth', tagFill: '#FFDDE9', stroke: '#CF5F8D', innerFill: '#FFF5F9', ringFill: '#FFC9DC', labelFill: '#FFF0F6', markFill: '#A4426F', ribbonColors: ['#E96F9A', '#66A7B8'], shine: [[-18, -29, 4], [17, -28, 3]] },
+        { tagShape: 'drop-tag', mark: 'kg', tagFill: '#DCF1FF', stroke: '#4E9CCA', innerFill: '#F5FBFF', ringFill: '#BEE5FA', labelFill: '#ECF8FF', markFill: '#2F749B', ribbonColors: ['#59A6D0', '#8FC97A'], shine: [[-15, -32, 4], [20, -24, 2.5]] },
+        { tagShape: 'home-tag', mark: 'guard', tagFill: '#E2F4D7', stroke: '#5B9F50', innerFill: '#F8FFF4', ringFill: '#C8EDB8', labelFill: '#F0FAEA', markFill: '#437D39', ribbonColors: ['#7DBF68', '#F2A65A'], shine: [[-19, -26, 4], [14, -34, 2.5]] }
       ]
     };
   },
 
-  _drawPosterStickerBadge(ctx, cx, cy, badge, config, INK, MUTED) {
+  _drawPosterMedalBadge(ctx, cx, cy, badge, config, INK, MUTED) {
     const unlocked = badge.unlocked;
-    const w = 98;
-    const h = 86;
-    const fill = unlocked ? config.fill : '#F3F0EA';
+    const tagFill = unlocked ? config.tagFill : '#F3F0EA';
     const stroke = unlocked ? config.stroke : '#CFC8BD';
-    const accent = unlocked ? config.accent : '#D9D2C8';
+    const innerFill = unlocked ? config.innerFill : '#FBFAF7';
+    const ringFill = unlocked ? config.ringFill : '#ECE7DF';
+    const labelFill = unlocked ? config.labelFill : '#F6F3EF';
+    const markFill = unlocked ? config.markFill : '#9C9388';
+    const ribbonColors = unlocked ? config.ribbonColors : ['#D6CEC3', '#C5BCB1'];
+    const tagW = 82;
+    const tagH = 92;
     ctx.save();
 
     ctx.fillStyle = 'rgba(80,60,30,0.08)';
-    this._drawPosterStickerShape(ctx, config.shape, cx + 3, cy + 5, w + 10, h + 10);
+    this._drawPosterMedalTagPath(ctx, config.tagShape, cx + 3, cy + 7, tagW + 8, tagH + 6);
     ctx.fill();
+
+    this._drawPosterMedalRibbon(ctx, cx - 14, cy + 32, 26, 64, ribbonColors[0], -8);
+    this._drawPosterMedalRibbon(ctx, cx + 14, cy + 32, 26, 64, ribbonColors[1], 8);
 
     ctx.fillStyle = '#FFFFFF';
-    this._drawPosterStickerShape(ctx, config.shape, cx, cy, w + 12, h + 12);
+    this._drawPosterMedalTagPath(ctx, config.tagShape, cx, cy, tagW + 12, tagH + 12);
     ctx.fill();
 
-    ctx.fillStyle = fill;
+    ctx.fillStyle = tagFill;
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 2.2;
-    this._drawPosterStickerShape(ctx, config.shape, cx, cy, w, h);
+    this._drawPosterMedalTagPath(ctx, config.tagShape, cx, cy, tagW, tagH);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = unlocked ? this._colorWithAlpha(accent, 0.42) : 'rgba(198,190,178,0.32)';
-    (config.decorations || []).forEach(([dx, dy, r]) => {
-      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2); ctx.fill();
-    });
-
-    ctx.fillStyle = unlocked ? config.innerFill : '#FBFAF7';
-    ctx.beginPath(); ctx.arc(cx, cy - 4, 31, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = unlocked ? this._colorWithAlpha(stroke, 0.32) : '#DDD7CE';
+    ctx.fillStyle = ringFill;
+    ctx.beginPath(); ctx.arc(cx, cy - 6, 29, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = unlocked ? this._colorWithAlpha(stroke, 0.38) : '#DDD7CE';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.fillStyle = unlocked ? config.iconBg : '#ECE7DF';
-    ctx.beginPath(); ctx.arc(cx, cy - 4, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = innerFill;
+    ctx.beginPath(); ctx.arc(cx, cy - 6, 21, 0, Math.PI * 2); ctx.fill();
 
-    this._drawPosterStickerSymbol(ctx, config.symbol, cx, cy - 4, unlocked ? stroke : '#A69D91', unlocked);
+    ctx.fillStyle = unlocked ? this._colorWithAlpha(stroke, 0.8) : '#A69D91';
+    ctx.beginPath(); ctx.arc(cx, cy - 43, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = unlocked ? '#FFF7DC' : '#F7F3ED';
+    ctx.beginPath(); ctx.arc(cx, cy - 43, 2.3, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.42)';
-    ctx.beginPath(); ctx.arc(cx - 18, cy - 30, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx - 10, cy - 34, 3, 0, Math.PI * 2); ctx.fill();
+    (config.shine || []).forEach(([dx, dy, r]) => {
+      ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.46)';
+      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2); ctx.fill();
+    });
+
+    this._drawPosterMedalMark(ctx, config.mark, cx, cy - 1, markFill);
     ctx.restore();
 
-    ctx.fillStyle = unlocked ? INK : MUTED;
     ctx.font = 'bold 19px -apple-system,sans-serif';
     ctx.textAlign = 'center';
     const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
     const labelW = 92;
-    ctx.fillStyle = unlocked ? config.labelFill : '#F6F3EF';
+    ctx.fillStyle = labelFill;
     this.drawRoundedRectPath(ctx, cx - labelW / 2, cy + 48, labelW, 28, 14);
     ctx.fill();
     ctx.fillStyle = unlocked ? INK : MUTED;
@@ -2053,116 +2060,140 @@ Page({
     ctx.fillText(unlocked ? badge.shortLabel : badge.progressText, cx, cy + 94);
   },
 
-  _drawPosterStickerShape(ctx, shape, cx, cy, w, h) {
-    if (shape === 'paw-sticker') {
-      this.drawRoundedRectPath(ctx, cx - w * 0.43, cy - h * 0.43, w * 0.86, h * 0.86, 30);
-      return;
-    }
-    if (shape === 'bone-sticker') {
+  _drawPosterMedalRibbon(ctx, cx, y, w, h, fill, tilt) {
+    const topY = y;
+    const bottomY = y + h;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(cx - w / 2 + tilt, topY);
+    ctx.lineTo(cx + w / 2 + tilt, topY);
+    ctx.lineTo(cx + w / 2, bottomY);
+    ctx.lineTo(cx, bottomY - 14);
+    ctx.lineTo(cx - w / 2, bottomY);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4 + tilt * 0.5, topY + 6);
+    ctx.lineTo(cx + 3 + tilt * 0.5, topY + 6);
+    ctx.lineTo(cx, bottomY - 20);
+    ctx.lineTo(cx - 6, bottomY - 6);
+    ctx.closePath();
+    ctx.fill();
+  },
+
+  _drawPosterMedalTagPath(ctx, shape, cx, cy, w, h) {
+    if (shape === 'soft-tag') {
       ctx.beginPath();
-      ctx.moveTo(cx - w * 0.32, cy - h * 0.22);
-      ctx.quadraticCurveTo(cx - w * 0.50, cy - h * 0.34, cx - w * 0.52, cy - h * 0.10);
-      ctx.quadraticCurveTo(cx - w * 0.62, cy + h * 0.12, cx - w * 0.36, cy + h * 0.24);
-      ctx.lineTo(cx + w * 0.36, cy + h * 0.24);
-      ctx.quadraticCurveTo(cx + w * 0.62, cy + h * 0.12, cx + w * 0.52, cy - h * 0.10);
-      ctx.quadraticCurveTo(cx + w * 0.50, cy - h * 0.34, cx + w * 0.32, cy - h * 0.22);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'fish-sticker') {
-      ctx.beginPath();
-      ctx.moveTo(cx - w * 0.42, cy);
-      ctx.quadraticCurveTo(cx - w * 0.12, cy - h * 0.46, cx + w * 0.32, cy - h * 0.18);
-      ctx.lineTo(cx + w * 0.45, cy - h * 0.36);
-      ctx.lineTo(cx + w * 0.45, cy + h * 0.36);
-      ctx.lineTo(cx + w * 0.32, cy + h * 0.18);
-      ctx.quadraticCurveTo(cx - w * 0.12, cy + h * 0.46, cx - w * 0.42, cy);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'star-sticker') {
-      this._drawStarPath(ctx, cx, cy, h * 0.48, h * 0.24, 5);
-      return;
-    }
-    if (shape === 'collar-sticker') {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - h * 0.48);
-      ctx.lineTo(cx + w * 0.42, cy - h * 0.16);
-      ctx.lineTo(cx + w * 0.28, cy + h * 0.42);
+      ctx.moveTo(cx - w * 0.42, cy - h * 0.20);
+      ctx.quadraticCurveTo(cx - w * 0.42, cy - h * 0.48, cx - w * 0.14, cy - h * 0.48);
+      ctx.lineTo(cx + w * 0.14, cy - h * 0.48);
+      ctx.quadraticCurveTo(cx + w * 0.42, cy - h * 0.48, cx + w * 0.42, cy - h * 0.20);
+      ctx.lineTo(cx + w * 0.36, cy + h * 0.28);
       ctx.lineTo(cx, cy + h * 0.52);
-      ctx.lineTo(cx - w * 0.28, cy + h * 0.42);
-      ctx.lineTo(cx - w * 0.42, cy - h * 0.16);
+      ctx.lineTo(cx - w * 0.36, cy + h * 0.28);
       ctx.closePath();
       return;
     }
-    if (shape === 'bowl-sticker') {
-      this.drawRoundedRectPath(ctx, cx - w * 0.44, cy - h * 0.38, w * 0.88, h * 0.76, 26);
+    if (shape === 'round-tag') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h * 0.50);
+      ctx.quadraticCurveTo(cx + w * 0.44, cy - h * 0.45, cx + w * 0.44, cy - h * 0.06);
+      ctx.quadraticCurveTo(cx + w * 0.42, cy + h * 0.30, cx, cy + h * 0.52);
+      ctx.quadraticCurveTo(cx - w * 0.42, cy + h * 0.30, cx - w * 0.44, cy - h * 0.06);
+      ctx.quadraticCurveTo(cx - w * 0.44, cy - h * 0.45, cx, cy - h * 0.50);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'shield-tag') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h * 0.50);
+      ctx.lineTo(cx + w * 0.42, cy - h * 0.22);
+      ctx.lineTo(cx + w * 0.30, cy + h * 0.34);
+      ctx.lineTo(cx, cy + h * 0.54);
+      ctx.lineTo(cx - w * 0.30, cy + h * 0.34);
+      ctx.lineTo(cx - w * 0.42, cy - h * 0.22);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'crest-tag') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h * 0.50);
+      ctx.lineTo(cx + w * 0.38, cy - h * 0.32);
+      ctx.lineTo(cx + w * 0.44, cy + h * 0.16);
+      ctx.quadraticCurveTo(cx + w * 0.22, cy + h * 0.42, cx, cy + h * 0.54);
+      ctx.quadraticCurveTo(cx - w * 0.22, cy + h * 0.42, cx - w * 0.44, cy + h * 0.16);
+      ctx.lineTo(cx - w * 0.38, cy - h * 0.32);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'collar-tag') {
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.34, cy - h * 0.48);
+      ctx.lineTo(cx + w * 0.34, cy - h * 0.48);
+      ctx.quadraticCurveTo(cx + w * 0.46, cy - h * 0.20, cx + w * 0.34, cy + h * 0.28);
+      ctx.lineTo(cx, cy + h * 0.54);
+      ctx.lineTo(cx - w * 0.34, cy + h * 0.28);
+      ctx.quadraticCurveTo(cx - w * 0.46, cy - h * 0.20, cx - w * 0.34, cy - h * 0.48);
+      ctx.closePath();
+      return;
+    }
+    if (shape === 'drop-tag') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h * 0.52);
+      ctx.quadraticCurveTo(cx + w * 0.50, cy - h * 0.08, cx, cy + h * 0.54);
+      ctx.quadraticCurveTo(cx - w * 0.50, cy - h * 0.08, cx, cy - h * 0.52);
+      ctx.closePath();
       return;
     }
     ctx.beginPath();
-    ctx.moveTo(cx, cy - h * 0.5);
-    ctx.lineTo(cx + w * 0.42, cy - h * 0.08);
-    ctx.lineTo(cx + w * 0.26, cy + h * 0.48);
-    ctx.lineTo(cx - w * 0.26, cy + h * 0.48);
-    ctx.lineTo(cx - w * 0.42, cy - h * 0.08);
+    ctx.moveTo(cx - w * 0.40, cy - h * 0.34);
+    ctx.lineTo(cx, cy - h * 0.52);
+    ctx.lineTo(cx + w * 0.40, cy - h * 0.34);
+    ctx.lineTo(cx + w * 0.36, cy + h * 0.32);
+    ctx.lineTo(cx, cy + h * 0.54);
+    ctx.lineTo(cx - w * 0.36, cy + h * 0.32);
     ctx.closePath();
   },
 
-  _drawPosterStickerSymbol(ctx, symbol, cx, cy, color) {
+  _drawPosterMedalMark(ctx, mark, cx, cy, color) {
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3.2;
     ctx.lineCap = 'round';
-    if (symbol === 'paw') {
-      ctx.beginPath(); ctx.arc(cx, cy + 8, 12, 0, Math.PI * 2); ctx.fill();
-      [[-16, -8], [-5, -14], [6, -14], [17, -8]].forEach(([dx, dy]) => {
-        ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 5, 0, Math.PI * 2); ctx.fill();
-      });
-      return;
-    }
-    if (symbol === 'bone') {
+    if (mark === 'tooth') {
       ctx.beginPath();
-      ctx.moveTo(cx - 18, cy); ctx.lineTo(cx + 18, cy); ctx.stroke();
-      [[-22, -7], [-22, 7], [22, -7], [22, 7]].forEach(([dx, dy]) => {
-        ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 7, 0, Math.PI * 2); ctx.fill();
-      });
-      return;
-    }
-    if (symbol === 'fish') {
-      ctx.beginPath();
-      ctx.moveTo(cx - 22, cy);
-      ctx.quadraticCurveTo(cx, cy - 17, cx + 22, cy);
-      ctx.quadraticCurveTo(cx, cy + 17, cx - 22, cy);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(cx + 20, cy); ctx.lineTo(cx + 34, cy - 12); ctx.lineTo(cx + 34, cy + 12); ctx.closePath(); ctx.fill();
-      return;
-    }
-    if (symbol === 'star') {
-      this._drawStarPath(ctx, cx, cy, 24, 11, 5);
+      ctx.moveTo(cx - 10, cy - 15);
+      ctx.quadraticCurveTo(cx - 20, cy + 5, cx - 8, cy + 18);
+      ctx.quadraticCurveTo(cx - 2, cy + 9, cx + 3, cy + 18);
+      ctx.quadraticCurveTo(cx + 15, cy + 4, cx + 9, cy - 15);
+      ctx.quadraticCurveTo(cx, cy - 9, cx - 10, cy - 15);
       ctx.fill();
       return;
     }
-    if (symbol === 'charm') {
-      ctx.beginPath(); ctx.arc(cx, cy + 4, 18, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(cx, cy - 18, 5, 0, Math.PI * 2); ctx.fill();
+    if (mark === 'kg') {
+      ctx.font = 'bold 16px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(mark, cx, cy + 6);
       return;
     }
-    if (symbol === 'bowl') {
+    if (mark === 'guard') {
       ctx.beginPath();
-      ctx.moveTo(cx - 26, cy - 5);
-      ctx.quadraticCurveTo(cx, cy + 28, cx + 26, cy - 5);
+      ctx.moveTo(cx, cy - 18);
+      ctx.lineTo(cx + 17, cy - 8);
+      ctx.lineTo(cx + 13, cy + 14);
+      ctx.lineTo(cx, cy + 21);
+      ctx.lineTo(cx - 13, cy + 14);
+      ctx.lineTo(cx - 17, cy - 8);
       ctx.closePath();
-      ctx.fill();
-      ctx.beginPath(); ctx.moveTo(cx - 22, cy - 8); ctx.lineTo(cx + 22, cy - 8); ctx.stroke();
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy + 1, 5, 0, Math.PI * 2); ctx.fill();
       return;
     }
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 26); ctx.lineTo(cx, cy + 26);
-    ctx.moveTo(cx - 26, cy); ctx.lineTo(cx + 26, cy);
-    ctx.moveTo(cx - 16, cy - 16); ctx.lineTo(cx + 16, cy + 16);
-    ctx.moveTo(cx + 16, cy - 16); ctx.lineTo(cx - 16, cy + 16);
-    ctx.stroke();
+    ctx.font = mark.length > 1 ? 'bold 17px -apple-system,sans-serif' : 'bold 27px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(mark, cx, cy + 8);
   },
 
   _drawScallopPath(ctx, cx, cy, outerR, innerR, lobes) {
