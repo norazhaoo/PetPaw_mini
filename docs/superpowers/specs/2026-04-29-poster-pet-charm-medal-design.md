@@ -1,4 +1,4 @@
-# Poster Pet Charm Medal Design
+# Poster Round Gold Medal Design
 
 ## Context
 
@@ -6,12 +6,12 @@ The monthly care poster currently draws the badge area with sticker-like shapes.
 
 ## Approved Direction
 
-Use the "pet charm medal" direction:
+Use the simplified round gold medal direction:
 
-- Each badge becomes a small medal built from a pet ID tag body, metal-style inner plate, and two ribbon tails.
-- The tag body keeps the pet-product personality, while the ribbons make the object read as a medal.
+- Each badge becomes a small medal built from a round gold coin, inner award plate, and two short ribbon tails.
+- The round coin keeps the object clearly recognizable as a medal at small poster size.
 - Unlocked badges use warm metal colors and per-badge accent palettes.
-- Locked badges keep the same silhouette and layers, but shift to muted warm gray tones.
+- Locked badges keep the same round silhouette and layers, but shift to muted warm gray tones.
 
 ## Goals
 
@@ -33,10 +33,10 @@ Use the "pet charm medal" direction:
 Each badge uses these layers:
 
 1. Soft contact shadow drawn with translucent filled paths.
-2. Two ribbon tails below the tag, using two accent colors.
-3. Outer pet-tag body with a rounded top and pointed lower contour.
-4. Inner metal plate for the award mark.
-5. Small top ring or rivet detail to reinforce the tag shape.
+2. Two short ribbon tails behind the coin, using two accent colors.
+3. White outer rim to separate the medal from the poster card.
+4. Gold ring and coin body.
+5. Inner metal plate for the award mark.
 6. Center symbol or numeral that varies by badge.
 7. Rounded label capsule below the medal.
 8. Short unlocked label or locked progress text below the capsule.
@@ -58,9 +58,10 @@ Update the poster badge drawing code in `pages/dashboard/dashboard.js` around th
 Update `tests/dashboard_actions.test.js` to verify the new medal contract:
 
 - Four record medal configs and three habit medal configs exist.
-- Each medal keeps a distinct silhouette or center mark.
+- All medals use the same clean round-gold silhouette.
+- Each medal keeps a distinct center mark.
 - Medal configs do not reuse daily event icon names.
-- Configs define finished medal layers such as tag fill, inner fill, ribbon colors, label fill, and center mark.
+- Configs define finished medal layers such as coin fill, ring fill, inner fill, ribbon colors, label fill, and center mark.
 - Drawing source still avoids risky canvas APIs covered by the existing poster test.
 
 Run the dashboard action test after implementation.

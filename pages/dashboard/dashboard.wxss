@@ -315,16 +315,6 @@
   border-color: var(--text-main);
 }
 
-.export-sheet-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 28rpx;
-  font-size: 30rpx;
-  font-weight: 900;
-  color: var(--text-main);
-}
-
 .stats-rule-btn {
   width: 56rpx;
   height: 56rpx;

@@ -159,6 +159,12 @@ assert(
   'dashboard should render poster CTA and preview rule entry point'
 );
 assert(
+  !dashboardWxml.includes('export-sheet-heading') &&
+    !dashboardWxml.includes('class="safe-bottom"') &&
+    !dashboardWxml.includes('<text>{{i18n.monthly_care_poster}}</text>'),
+  'poster export preview should not show a blocking bottom sheet with the poster title'
+);
+assert(
   dashboardWxml.includes('wx:if="{{exportCanvasVisible}}"') &&
     dashboardWxml.includes('width:1px;height:1px;') &&
     !dashboardWxml.includes('left:-99999px') &&
@@ -490,9 +496,9 @@ assert.strictEqual(
   'poster should expose the medal badge drawing helper used by monthly badge export'
 );
 assert.strictEqual(
-  new Set(allBadgeMedals.map(config => config.tagShape)).size,
-  7,
-  'each poster badge should use a distinct pet-tag medal silhouette'
+  new Set(allBadgeMedals.map(config => config.medalShape)).size,
+  1,
+  'poster badges should use one clean round gold medal silhouette'
 );
 assert.strictEqual(
   new Set(allBadgeMedals.map(config => config.mark)).size,
@@ -505,15 +511,16 @@ assert(
 );
 assert(
   allBadgeMedals.every(config =>
-    config.tagFill &&
-    config.innerFill &&
+    config.medalShape === 'round-gold' &&
+    config.coinFill &&
     config.ringFill &&
+    config.innerFill &&
     config.labelFill &&
     Array.isArray(config.ribbonColors) &&
     config.ribbonColors.length === 2 &&
     config.mark
   ),
-  'poster badge medals should define finished tag, ribbon, inner plate, ring, label, and center mark layers'
+  'poster badge medals should define finished coin, ribbon, inner plate, ring, label, and center mark layers'
 );
 const medalDrawingSource = dashboardJs.slice(
   dashboardJs.indexOf('_drawPosterMedalBadge'),

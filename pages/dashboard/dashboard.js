@@ -1980,84 +1980,76 @@ Page({
   _getPosterBadgeMedalConfig() {
     return {
       record: [
-        { tagShape: 'soft-tag', mark: '3', tagFill: '#FFE6A7', stroke: '#D99320', innerFill: '#FFF8DE', ringFill: '#FFF1B8', labelFill: '#FFF6CE', markFill: '#8E5A0D', ribbonColors: ['#E96C62', '#4A96B8'], shine: [[-18, -30, 5], [-8, -35, 3]] },
-        { tagShape: 'round-tag', mark: '7', tagFill: '#FFE1D6', stroke: '#DB7658', innerFill: '#FFF4EE', ringFill: '#FFD0BE', labelFill: '#FFF0E8', markFill: '#9F4D34', ribbonColors: ['#F48C64', '#6DA6D8'], shine: [[-20, -28, 4], [13, -35, 2.5]] },
-        { tagShape: 'shield-tag', mark: '15', tagFill: '#D8F2F0', stroke: '#3F9E98', innerFill: '#F3FFFD', ringFill: '#BDEAE6', labelFill: '#EFFFFC', markFill: '#2E7772', ribbonColors: ['#43A79E', '#F2B84B'], shine: [[-17, -31, 4], [19, -25, 3]] },
-        { tagShape: 'crest-tag', mark: '25', tagFill: '#E9E0FF', stroke: '#8067D7', innerFill: '#FAF7FF', ringFill: '#D6C9FF', labelFill: '#F4EEFF', markFill: '#5942AA', ribbonColors: ['#8B74E8', '#F08AA9'], shine: [[-19, -27, 4.5], [11, -36, 2.5]] }
+        { medalShape: 'round-gold', mark: '3', coinFill: '#F8C84E', stroke: '#D99320', innerFill: '#FFF4B8', ringFill: '#FFE08A', labelFill: '#FFF2BF', markFill: '#87540B', ribbonColors: ['#E66A5E', '#3D91B5'] },
+        { medalShape: 'round-gold', mark: '7', coinFill: '#F3BE45', stroke: '#C9841C', innerFill: '#FFF0AE', ringFill: '#FFD773', labelFill: '#FFF1C6', markFill: '#7C4E11', ribbonColors: ['#E58A4E', '#5C9CCB'] },
+        { medalShape: 'round-gold', mark: '15', coinFill: '#EFB44A', stroke: '#B97818', innerFill: '#FFF1BC', ringFill: '#FFD987', labelFill: '#FFF0C8', markFill: '#71470D', ribbonColors: ['#3F9E98', '#E8B34A'] },
+        { medalShape: 'round-gold', mark: '25', coinFill: '#F5C45A', stroke: '#C88925', innerFill: '#FFF5C7', ringFill: '#FFE19A', labelFill: '#FFF3CE', markFill: '#75500F', ribbonColors: ['#8067D7', '#E784A2'] }
       ],
       habit: [
-        { tagShape: 'collar-tag', mark: 'tooth', tagFill: '#FFDDE9', stroke: '#CF5F8D', innerFill: '#FFF5F9', ringFill: '#FFC9DC', labelFill: '#FFF0F6', markFill: '#A4426F', ribbonColors: ['#E96F9A', '#66A7B8'], shine: [[-18, -29, 4], [17, -28, 3]] },
-        { tagShape: 'drop-tag', mark: 'kg', tagFill: '#DCF1FF', stroke: '#4E9CCA', innerFill: '#F5FBFF', ringFill: '#BEE5FA', labelFill: '#ECF8FF', markFill: '#2F749B', ribbonColors: ['#59A6D0', '#8FC97A'], shine: [[-15, -32, 4], [20, -24, 2.5]] },
-        { tagShape: 'home-tag', mark: 'guard', tagFill: '#E2F4D7', stroke: '#5B9F50', innerFill: '#F8FFF4', ringFill: '#C8EDB8', labelFill: '#F0FAEA', markFill: '#437D39', ribbonColors: ['#7DBF68', '#F2A65A'], shine: [[-19, -26, 4], [14, -34, 2.5]] }
+        { medalShape: 'round-gold', mark: 'tooth', coinFill: '#F2BC5D', stroke: '#C5802A', innerFill: '#FFF2C5', ringFill: '#FFD987', labelFill: '#FFF0D0', markFill: '#8B5B16', ribbonColors: ['#D86693', '#5D9EB0'] },
+        { medalShape: 'round-gold', mark: 'kg', coinFill: '#F5C860', stroke: '#C48B28', innerFill: '#FFF4C8', ringFill: '#FFE09A', labelFill: '#FFF3D2', markFill: '#805B18', ribbonColors: ['#4E9CCA', '#87B96B'] },
+        { medalShape: 'round-gold', mark: 'guard', coinFill: '#EFC052', stroke: '#B98220', innerFill: '#FFF3BC', ringFill: '#FFDC82', labelFill: '#FFF0C8', markFill: '#755411', ribbonColors: ['#66A85B', '#E89B4C'] }
       ]
     };
   },
 
   _drawPosterMedalBadge(ctx, cx, cy, badge, config, INK, MUTED) {
     const unlocked = badge.unlocked;
-    const tagFill = unlocked ? config.tagFill : '#F3F0EA';
     const stroke = unlocked ? config.stroke : '#CFC8BD';
     const innerFill = unlocked ? config.innerFill : '#FBFAF7';
     const ringFill = unlocked ? config.ringFill : '#ECE7DF';
+    const coinFill = unlocked ? config.coinFill : '#DED8CF';
     const labelFill = unlocked ? config.labelFill : '#F6F3EF';
     const markFill = unlocked ? config.markFill : '#9C9388';
     const ribbonColors = unlocked ? config.ribbonColors : ['#D6CEC3', '#C5BCB1'];
-    const tagW = 82;
-    const tagH = 92;
+    const coinY = cy - 14;
     ctx.save();
 
     ctx.fillStyle = 'rgba(80,60,30,0.08)';
-    this._drawPosterMedalTagPath(ctx, config.tagShape, cx + 3, cy + 7, tagW + 8, tagH + 6);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 2, coinY + 4, 36, 0, Math.PI * 2); ctx.fill();
 
-    this._drawPosterMedalRibbon(ctx, cx - 14, cy + 32, 26, 64, ribbonColors[0], -8);
-    this._drawPosterMedalRibbon(ctx, cx + 14, cy + 32, 26, 64, ribbonColors[1], 8);
+    this._drawPosterMedalRibbon(ctx, cx - 11, cy + 12, 20, 44, ribbonColors[0], -4);
+    this._drawPosterMedalRibbon(ctx, cx + 11, cy + 12, 20, 44, ribbonColors[1], 4);
 
     ctx.fillStyle = '#FFFFFF';
-    this._drawPosterMedalTagPath(ctx, config.tagShape, cx, cy, tagW + 12, tagH + 12);
-    ctx.fill();
-
-    ctx.fillStyle = tagFill;
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2.2;
-    this._drawPosterMedalTagPath(ctx, config.tagShape, cx, cy, tagW, tagH);
-    ctx.fill();
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, coinY, 38, 0, Math.PI * 2); ctx.fill();
 
     ctx.fillStyle = ringFill;
-    ctx.beginPath(); ctx.arc(cx, cy - 6, 29, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = unlocked ? this._colorWithAlpha(stroke, 0.38) : '#DDD7CE';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(cx, coinY, 34, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
 
+    ctx.fillStyle = coinFill;
+    ctx.beginPath(); ctx.arc(cx, coinY, 28, 0, Math.PI * 2); ctx.fill();
+
     ctx.fillStyle = innerFill;
-    ctx.beginPath(); ctx.arc(cx, cy - 6, 21, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, coinY, 20, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = unlocked ? this._colorWithAlpha(stroke, 0.8) : '#A69D91';
-    ctx.beginPath(); ctx.arc(cx, cy - 43, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = unlocked ? '#FFF7DC' : '#F7F3ED';
-    ctx.beginPath(); ctx.arc(cx, cy - 43, 2.3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = unlocked ? this._colorWithAlpha(stroke, 0.28) : '#D3CCC2';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(cx, coinY, 24, 0, Math.PI * 2); ctx.stroke();
 
-    (config.shine || []).forEach(([dx, dy, r]) => {
-      ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.46)';
-      ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2); ctx.fill();
-    });
+    ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.52)';
+    ctx.beginPath(); ctx.arc(cx - 13, coinY - 13, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - 4, coinY - 18, 3, 0, Math.PI * 2); ctx.fill();
 
-    this._drawPosterMedalMark(ctx, config.mark, cx, cy - 1, markFill);
+    this._drawPosterMedalMark(ctx, config.mark, cx, coinY + 5, markFill);
     ctx.restore();
 
-    ctx.font = 'bold 19px -apple-system,sans-serif';
+    ctx.font = 'bold 18px -apple-system,sans-serif';
     ctx.textAlign = 'center';
     const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
-    const labelW = 92;
+    const labelW = 88;
     ctx.fillStyle = labelFill;
-    this.drawRoundedRectPath(ctx, cx - labelW / 2, cy + 48, labelW, 28, 14);
+    this.drawRoundedRectPath(ctx, cx - labelW / 2, cy + 40, labelW, 26, 13);
     ctx.fill();
     ctx.fillStyle = unlocked ? INK : MUTED;
-    ctx.fillText(title, cx, cy + 69);
+    ctx.fillText(title, cx, cy + 59);
     ctx.fillStyle = unlocked ? stroke : MUTED;
-    ctx.font = 'bold 17px -apple-system,sans-serif';
-    ctx.fillText(unlocked ? badge.shortLabel : badge.progressText, cx, cy + 94);
+    ctx.font = 'bold 16px -apple-system,sans-serif';
+    ctx.fillText(unlocked ? badge.shortLabel : badge.progressText, cx, cy + 80);
   },
 
   _drawPosterMedalRibbon(ctx, cx, y, w, h, fill, tilt) {
@@ -2081,80 +2073,6 @@ Page({
     ctx.lineTo(cx - 6, bottomY - 6);
     ctx.closePath();
     ctx.fill();
-  },
-
-  _drawPosterMedalTagPath(ctx, shape, cx, cy, w, h) {
-    if (shape === 'soft-tag') {
-      ctx.beginPath();
-      ctx.moveTo(cx - w * 0.42, cy - h * 0.20);
-      ctx.quadraticCurveTo(cx - w * 0.42, cy - h * 0.48, cx - w * 0.14, cy - h * 0.48);
-      ctx.lineTo(cx + w * 0.14, cy - h * 0.48);
-      ctx.quadraticCurveTo(cx + w * 0.42, cy - h * 0.48, cx + w * 0.42, cy - h * 0.20);
-      ctx.lineTo(cx + w * 0.36, cy + h * 0.28);
-      ctx.lineTo(cx, cy + h * 0.52);
-      ctx.lineTo(cx - w * 0.36, cy + h * 0.28);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'round-tag') {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - h * 0.50);
-      ctx.quadraticCurveTo(cx + w * 0.44, cy - h * 0.45, cx + w * 0.44, cy - h * 0.06);
-      ctx.quadraticCurveTo(cx + w * 0.42, cy + h * 0.30, cx, cy + h * 0.52);
-      ctx.quadraticCurveTo(cx - w * 0.42, cy + h * 0.30, cx - w * 0.44, cy - h * 0.06);
-      ctx.quadraticCurveTo(cx - w * 0.44, cy - h * 0.45, cx, cy - h * 0.50);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'shield-tag') {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - h * 0.50);
-      ctx.lineTo(cx + w * 0.42, cy - h * 0.22);
-      ctx.lineTo(cx + w * 0.30, cy + h * 0.34);
-      ctx.lineTo(cx, cy + h * 0.54);
-      ctx.lineTo(cx - w * 0.30, cy + h * 0.34);
-      ctx.lineTo(cx - w * 0.42, cy - h * 0.22);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'crest-tag') {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - h * 0.50);
-      ctx.lineTo(cx + w * 0.38, cy - h * 0.32);
-      ctx.lineTo(cx + w * 0.44, cy + h * 0.16);
-      ctx.quadraticCurveTo(cx + w * 0.22, cy + h * 0.42, cx, cy + h * 0.54);
-      ctx.quadraticCurveTo(cx - w * 0.22, cy + h * 0.42, cx - w * 0.44, cy + h * 0.16);
-      ctx.lineTo(cx - w * 0.38, cy - h * 0.32);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'collar-tag') {
-      ctx.beginPath();
-      ctx.moveTo(cx - w * 0.34, cy - h * 0.48);
-      ctx.lineTo(cx + w * 0.34, cy - h * 0.48);
-      ctx.quadraticCurveTo(cx + w * 0.46, cy - h * 0.20, cx + w * 0.34, cy + h * 0.28);
-      ctx.lineTo(cx, cy + h * 0.54);
-      ctx.lineTo(cx - w * 0.34, cy + h * 0.28);
-      ctx.quadraticCurveTo(cx - w * 0.46, cy - h * 0.20, cx - w * 0.34, cy - h * 0.48);
-      ctx.closePath();
-      return;
-    }
-    if (shape === 'drop-tag') {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - h * 0.52);
-      ctx.quadraticCurveTo(cx + w * 0.50, cy - h * 0.08, cx, cy + h * 0.54);
-      ctx.quadraticCurveTo(cx - w * 0.50, cy - h * 0.08, cx, cy - h * 0.52);
-      ctx.closePath();
-      return;
-    }
-    ctx.beginPath();
-    ctx.moveTo(cx - w * 0.40, cy - h * 0.34);
-    ctx.lineTo(cx, cy - h * 0.52);
-    ctx.lineTo(cx + w * 0.40, cy - h * 0.34);
-    ctx.lineTo(cx + w * 0.36, cy + h * 0.32);
-    ctx.lineTo(cx, cy + h * 0.54);
-    ctx.lineTo(cx - w * 0.36, cy + h * 0.32);
-    ctx.closePath();
   },
 
   _drawPosterMedalMark(ctx, mark, cx, cy, color) {
