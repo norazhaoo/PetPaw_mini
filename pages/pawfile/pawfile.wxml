@@ -175,25 +175,4 @@
     </view>
   </view>
 
-  <!-- Birthday Modal -->
-  <view wx:if="{{showBirthdayModal}}" class="modal-overlay" bindtap="closeBirthdayModal">
-    <view class="modal-container date-modal" catchtap="stopBubble">
-      <view class="modal-header">
-        <text class="modal-title">{{i18n.birthday_optional}}</text>
-        <view class="confirm-btn" bindtap="confirmBirthday">确定</view>
-      </view>
-      
-      <picker-view indicator-style="height: 50px;" style="width: 100%; height: 300px;" value="{{dateValues}}" bindchange="onDateChange">
-        <picker-view-column>
-          <view wx:for="{{years}}" wx:key="*this" style="line-height: 50px; text-align: center;">{{item}}年</view>
-        </picker-view-column>
-        <picker-view-column>
-          <view wx:for="{{months}}" wx:key="*this" style="line-height: 50px; text-align: center;">{{item}}月</view>
-        </picker-view-column>
-        <picker-view-column>
-          <view wx:for="{{days}}" wx:key="*this" style="line-height: 50px; text-align: center;">{{item}}日</view>
-        </picker-view-column>
-      </picker-view>
-    </view>
-  </view>
 </view>

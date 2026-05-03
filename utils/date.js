@@ -183,13 +183,6 @@ function formatDistanceToNow(date) {
   return diffDay === 1 ? '1 day' : `${diffDay} days`;
 }
 
-/**
- * 判断 d1 是否在 d2 之前
- */
-function isBefore(d1, d2) {
-  return new Date(d1) < new Date(d2);
-}
-
 module.exports = {
   formatDate,
   parseISO,
@@ -204,6 +197,5 @@ module.exports = {
   addMonths,
   subMonths,
   differenceInDays,
-  formatDistanceToNow,
-  isBefore
+  formatDistanceToNow
 };

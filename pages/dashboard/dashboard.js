@@ -252,15 +252,6 @@ Page({
     }, calendarData));
   },
 
-  _buildTodayLogs(petLogs, petWeights, customActions, today) {
-    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, today);
-    return {
-      combinedLogs: selectedDayData.combinedLogs,
-      listTitle: t('today_logs'),
-      emptyLogText: selectedDayData.emptyLogText
-    };
-  },
-
   /**
    * 使用 Map 索引优化的日历构建 — O(n) 而非 O(n²)
    * 返回 setData 所需的数据对象（不直接调用 setData）
