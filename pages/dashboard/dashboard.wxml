@@ -245,18 +245,18 @@
   </view>
 
   <!-- Export Preview Modal -->
-  <view wx:if="{{showExportModal}}" class="modal-overlay" style="flex-direction:column;background:rgba(0,0,0,0.85);z-index:2000;" catchtap="closeExportModal">
+  <view wx:if="{{showExportModal}}" class="modal-overlay export-preview-overlay" catchtap="closeExportModal">
     <!-- Scrollable Image Area -->
-    <scroll-view scroll-y="true" style="width:100%; flex:1; height: 0;" catchtap="closeExportModal">
-      <view style="padding:60rpx 40rpx 96rpx; display:flex; flex-direction:column; align-items:center;">
+    <scroll-view scroll-y="true" class="export-preview-scroll" catchtap="closeExportModal">
+      <view class="export-preview-content">
         <image
           wx:if="{{exportImageUrl}}"
           src="{{exportImageUrl}}"
-          style="width:100%; border-radius:32rpx; box-shadow:0 40rpx 100rpx rgba(0,0,0,0.6);"
+          class="export-preview-image"
           mode="widthFix"
           catchtap="previewExportImage"
         />
-        <text style="color:#FFF; font-size:24rpx; margin-top:32rpx; opacity:0.6;">{{i18n.export_success || '此图已保存至临时预览，点击可全屏查看'}}</text>
+        <text class="export-preview-tip">{{i18n.export_success || '此图已保存至临时预览，点击可全屏查看'}}</text>
       </view>
     </scroll-view>
   </view>

@@ -171,6 +171,38 @@
   flex-shrink: 0;
 }
 
+.export-preview-overlay {
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 2000;
+}
+
+.export-preview-scroll {
+  width: 100%;
+  flex: 1;
+  height: 0;
+}
+
+.export-preview-content {
+  padding: 60rpx 40rpx calc(160rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.export-preview-image {
+  width: 100%;
+  border-radius: 32rpx;
+  box-shadow: 0 40rpx 100rpx rgba(0, 0, 0, 0.6);
+}
+
+.export-preview-tip {
+  color: #FFFFFF;
+  font-size: 24rpx;
+  margin-top: 32rpx;
+  opacity: 0.6;
+}
+
 /* Calendar */
 .today-btn {
   padding: 4rpx 16rpx;

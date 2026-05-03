@@ -106,6 +106,20 @@ function readDashboardJs() {
   return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.js'), 'utf8');
 }
 
+function readAppWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'app.wxss'), 'utf8');
+}
+
+function readTabBarWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'custom-tab-bar/index.wxss'), 'utf8');
+}
+
+function readZIndex(css, selector) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = css.match(new RegExp(`${escapedSelector}\\s*\\{[\\s\\S]*?z-index:\\s*(\\d+)`));
+  return match ? Number(match[1]) : NaN;
+}
+
 state = createState();
 const pageWithI18n = createPage();
 pageWithI18n.onLoad();
@@ -138,6 +152,9 @@ assert.strictEqual(
 const dashboardWxml = readDashboardWxml();
 const dashboardJs = readDashboardJs();
 const dashboardWxss = readDashboardWxss();
+const appWxss = readAppWxss();
+const tabBarWxss = readTabBarWxss();
+const heroOverviewCardY = Number((dashboardJs.match(/async _drawPosterHeroSection[\s\S]*?const cardY = (\d+);/) || [])[1]);
 assert(
   dashboardWxml.includes('i18n.stock_alert'),
   'dashboard should render Stock Alert above the daily record area'
@@ -157,6 +174,23 @@ assert(
 assert(
   dashboardWxml.includes('monthly-poster-card') && dashboardWxml.includes('openStatsRules'),
   'dashboard should render poster CTA and preview rule entry point'
+);
+assert(
+  heroOverviewCardY >= 328,
+  'poster overview card should leave clear breathing room below the yellow hero curve'
+);
+assert(
+  appWxss.includes('padding-bottom: calc(260rpx + env(safe-area-inset-bottom));'),
+  'tab pages should reserve enough bottom scroll space for the custom tab bar and safe area'
+);
+assert(
+  readZIndex(tabBarWxss, '.tab-bar-container') < readZIndex(appWxss, '.modal-overlay'),
+  'custom tab bar should sit below page modals so poster preview is not covered'
+);
+assert(
+  dashboardWxml.includes('export-preview-content') &&
+    dashboardWxss.includes('padding: 60rpx 40rpx calc(160rpx + env(safe-area-inset-bottom));'),
+  'poster preview should keep scrollable safe-area padding below the exported image'
 );
 assert(
   !dashboardWxml.includes('export-sheet-heading') &&
@@ -189,6 +223,14 @@ assert(
 assert(
   !dashboardJs.includes("cursorY = this._drawPosterHeatmapSection(ctx"),
   'poster should merge check-in distribution into the highlights card instead of drawing a standalone heatmap section'
+);
+assert(
+  dashboardJs.includes('_drawPosterDateStrip') &&
+    dashboardJs.includes('this._drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210)') &&
+    dashboardJs.includes('const tickDays = [1, 5, 10, 15, 20, 25, 30]') &&
+    dashboardJs.includes("'3+'") &&
+    !dashboardJs.includes('this._drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210)'),
+  'poster check-in distribution should draw a readable date strip with key day ticks and a 3+ intensity legend'
 );
 assert(
   !dashboardJs.includes("${posterStats.monthLabel} ${t('monthly_care_poster')}"),
@@ -454,6 +496,11 @@ assert.strictEqual(
   posterStats.overview.find(item => item.key === 'active_days').value,
   9,
   'poster active days should count natural days with at least one effective record'
+);
+assert.match(
+  posterStats.highlights.regularDay.label,
+  /^周[日一二三四五六]$/,
+  'poster regular day should show a complete Chinese weekday label'
 );
 assert.deepStrictEqual(
   posterStats.careChanges.map(item => item.type),

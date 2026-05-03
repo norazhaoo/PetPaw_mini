@@ -1164,7 +1164,6 @@ Page({
       const weekday = dateUtil.getDay(key);
       weekdayCounts[weekday] = (weekdayCounts[weekday] || 0) + 1;
     });
-    const weekdayNames = t('weekdays') || WEEKDAYS;
     const regularWeekday = Object.keys(weekdayCounts)
       .sort((a, b) => weekdayCounts[b] - weekdayCounts[a])[0];
     const topRecord = careChanges[0] || null;
@@ -1189,7 +1188,7 @@ Page({
       activeDays: activeDateKeys.length,
       highlights: {
         topRecord,
-        regularDay: regularWeekday !== undefined ? { label: weekdayNames[regularWeekday], count: weekdayCounts[regularWeekday] } : null,
+        regularDay: regularWeekday !== undefined ? { label: this._formatPosterWeekdayLabel(regularWeekday), count: weekdayCounts[regularWeekday] } : null,
         streakDays: this._longestStreak(activeDateKeys)
       },
       careChanges,
@@ -1396,6 +1395,16 @@ Page({
     return Array.isArray(months) ? months[month] : '';
   },
 
+  _formatPosterWeekdayLabel(weekday) {
+    const index = Number(weekday);
+    if (Number.isNaN(index) || index < 0 || index > 6) return '';
+    if (getLanguage() === 'zh') {
+      return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][index];
+    }
+    const weekdayNames = t('weekdays') || WEEKDAYS;
+    return weekdayNames[index] || '';
+  },
+
   async _drawPosterHeroSection(canvas, ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, pet, posterStats) {
     const avatarR = 72;
     const avatarCX = W / 2;
@@ -1426,7 +1435,7 @@ Page({
     ctx.fillStyle = MUTED; ctx.font = '26px -apple-system,sans-serif';
     ctx.fillText(this._formatPosterMonthLabel(posterStats.ranges.currentStart), W / 2, 246);
 
-    const cardY = 286;
+    const cardY = 330;
     const cardH = 142;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const itemW = CARD_W / Math.max(posterStats.overview.length, 1);
@@ -1473,7 +1482,7 @@ Page({
 
     ctx.fillStyle = INK; ctx.font = 'bold 24px -apple-system,sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(t('checkin_distribution') || 'Check-in Map', W / 2, cardY + 188);
-    this._drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210);
+    this._drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210);
     return cardY + cardH + 30;
   },
 
@@ -1557,21 +1566,62 @@ Page({
     return cardY + cardH + 30;
   },
 
-  _drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, startY) {
+  _drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, startY) {
     const colors = ['#F0EFEA', 'rgba(254,225,64,0.35)', 'rgba(254,225,64,0.65)', 'rgba(254,225,64,1)'];
-    const cols = 16;
-    const heatmapW = CARD_W - 120;
-    const dotGapX = heatmapW / cols;
-    const dotGapY = 48;
-    const startX = W / 2 - heatmapW / 2;
-    posterStats.heatmap.forEach((item, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const cx = startX + col * dotGapX + dotGapX / 2;
-      const cy = startY + row * dotGapY;
-      ctx.fillStyle = item.isFuture ? '#F8F6F1' : colors[item.level];
-      this.drawRoundedRectPath(ctx, cx - 12, cy - 12, 24, 24, 8);
+    const days = posterStats.heatmap || [];
+    if (days.length === 0) return;
+
+    const legendItems = [
+      { label: '0', color: colors[0] },
+      { label: '1', color: colors[1] },
+      { label: '2', color: colors[2] },
+      { label: '3+', color: colors[3] }
+    ];
+    const legendX = MARGIN + CARD_W - 148;
+    const legendY = startY - 42;
+    legendItems.forEach((item, index) => {
+      const x = legendX + index * 36;
+      ctx.fillStyle = item.color;
+      this.drawRoundedRectPath(ctx, x, legendY, 16, 16, 5);
       ctx.fill();
+      ctx.fillStyle = '#6E6E73';
+      ctx.font = '16px -apple-system,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(item.label, x + 20, legendY + 14);
+    });
+
+    const stripX = MARGIN + 36;
+    const stripY = startY + 8;
+    const stripW = CARD_W - 72;
+    const stripH = 34;
+    const gap = 2;
+    const cellW = (stripW - gap * (days.length - 1)) / days.length;
+    days.forEach((item, index) => {
+      const x = stripX + index * (cellW + gap);
+      ctx.fillStyle = item.isFuture ? '#F8F6F1' : colors[item.level];
+      this.drawRoundedRectPath(ctx, x, stripY, cellW, stripH, 7);
+      ctx.fill();
+    });
+
+    const tickDays = [1, 5, 10, 15, 20, 25, 30];
+    const lastDay = days.length;
+    const visibleTickDays = tickDays.filter(day => day <= lastDay);
+    if (!visibleTickDays.includes(lastDay)) visibleTickDays.push(lastDay);
+    visibleTickDays.forEach(day => {
+      const index = day - 1;
+      const x = stripX + index * (cellW + gap) + cellW / 2;
+      const isMonthEnd = day === lastDay && !tickDays.includes(lastDay);
+      ctx.strokeStyle = '#D9D4C9';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, stripY + stripH + 6);
+      ctx.lineTo(x, stripY + stripH + 14);
+      ctx.stroke();
+      ctx.fillStyle = '#8F8377';
+      ctx.font = '18px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      const label = isMonthEnd ? (getLanguage() === 'zh' ? '月末' : 'End') : String(day);
+      ctx.fillText(label, x, stripY + stripH + (isMonthEnd ? 58 : 36));
     });
   },
 
