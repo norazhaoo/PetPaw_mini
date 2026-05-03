@@ -26,6 +26,7 @@ Page({
       i18nData: {
         settings: i18n.t('settings'), language: i18n.t('language'),
         help: i18n.t('help'), about: i18n.t('about'),
+        contact_service: i18n.t('contact_service'),
         clear_data: i18n.t('clear_data'), clear_confirm: i18n.t('clear_confirm'),
         data_cleared: i18n.t('data_cleared')
       }

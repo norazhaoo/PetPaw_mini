@@ -24,6 +24,21 @@
   box-sizing: border-box;
 }
 
+.contact-service-button {
+  background: transparent;
+  border-radius: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  line-height: normal;
+  margin: 0;
+  text-align: left;
+}
+
+.contact-service-button::after {
+  border: 0;
+}
+
 /* For labels and icons on the left */
 .menu-item-left {
   display: flex;

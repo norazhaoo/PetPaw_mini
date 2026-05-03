@@ -42,6 +42,15 @@
         <image class="menu-arrow" lazy-load src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
       </view>
 
+      <!-- Customer Service -->
+      <button class="menu-item contact-service-button" open-type="contact" session-from="settings_help" hover-class="none">
+        <view class="menu-item-left">
+          <image class="menu-icon" lazy-load src="{{ic.src('HelpCircle')}}" mode="aspectFit" />
+          <text class="menu-label">{{i18nData.contact_service}}</text>
+        </view>
+        <image class="menu-arrow" lazy-load src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
+      </button>
+
       <!-- About -->
       <view class="menu-item" bindtap="showAbout">
         <view class="menu-item-left">

@@ -22,7 +22,7 @@ module.exports = {
   scoop_litter: 'Scoop', walk_dog: 'Walk', medical: 'Vet', custom: 'Custom',
   delete: 'Delete', stock: 'Stock', species: 'Species',
   cat: 'Cat', dog: 'Dog', other: 'Other',
-  help: 'Help & Support', about: 'About PetPaw', today: 'Today',
+  help: 'Help & Support', contact_service: 'Contact Support', about: 'About PetPaw', today: 'Today',
   months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
   weekdays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
   clear_data: 'Clear All Data', data_cleared: 'Data cleared!',
