@@ -24,15 +24,40 @@
   box-sizing: border-box;
 }
 
+.help-submenu {
+  background: #FAF9F5;
+  border-bottom: 2rpx solid #F0EDE6;
+  padding: 40rpx;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16rpx;
+}
+
+.help-submenu-item {
+  background: var(--card-bg);
+  color: var(--text-main);
+  border: 4rpx solid #E0DACA;
+  padding: 24rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.help-submenu-label {
+  font-weight: 700;
+  font-size: 28rpx;
+  color: var(--text-main);
+}
+
 .contact-service-button {
-  background: transparent;
-  border-radius: 0;
-  border: 0;
   color: inherit;
   font: inherit;
   line-height: normal;
   margin: 0;
-  text-align: left;
+  text-align: center;
 }
 
 .contact-service-button::after {

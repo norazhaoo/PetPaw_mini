@@ -34,7 +34,7 @@
       </view>
 
       <!-- Help -->
-      <view class="menu-item" bindtap="showHelp">
+      <view class="menu-item" bindtap="toggleHelpMenu">
         <view class="menu-item-left">
           <image class="menu-icon" lazy-load src="{{ic.src('HelpCircle')}}" mode="aspectFit" />
           <text class="menu-label">{{i18nData.help}}</text>
@@ -42,14 +42,12 @@
         <image class="menu-arrow" lazy-load src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
       </view>
 
-      <!-- Customer Service -->
-      <button class="menu-item contact-service-button" open-type="contact" session-from="settings_help" hover-class="none">
-        <view class="menu-item-left">
-          <image class="menu-icon" lazy-load src="{{ic.src('HelpCircle')}}" mode="aspectFit" />
-          <text class="menu-label">{{i18nData.contact_service}}</text>
-        </view>
-        <image class="menu-arrow" lazy-load src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
-      </button>
+      <!-- Help Submenu -->
+      <view wx:if="{{showHelpMenu}}" class="help-submenu">
+        <button class="help-submenu-item contact-service-button" open-type="contact" session-from="settings_help" hover-class="none">
+          <text class="help-submenu-label">{{i18nData.contact_service}}</text>
+        </button>
+      </view>
 
       <!-- About -->
       <view class="menu-item" bindtap="showAbout">
