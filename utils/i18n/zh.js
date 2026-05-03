@@ -63,7 +63,7 @@ module.exports = {
   take_photo: '拍照', choose_from_album: '从相册选择',
   export_report: '导出报告', exporting: '生成中...', export_success: '长按保存或分享', export_fail: '生成失败',
   export_drawing_hint: '正在绘制您的专属报告',
-  export_preview_hint: '此图已保存至临时预览，点击可全屏查看',
+  export_preview_hint: '长按图片可直接保存到相册',
   close: '关闭',
   save_to_album: '保存到相册',
   save_image_success: '已保存到相册',

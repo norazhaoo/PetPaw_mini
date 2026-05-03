@@ -63,7 +63,7 @@ module.exports = {
   take_photo: 'Take Photo', choose_from_album: 'Choose from Album',
   export_report: 'Export Report', exporting: 'Generating...', export_success: 'Long press to save', export_fail: 'Generation failed',
   export_drawing_hint: 'Drawing your monthly report',
-  export_preview_hint: 'Preview ready. Tap the image to open it full screen',
+  export_preview_hint: 'Long press the image to save it to Photos',
   close: 'Close',
   save_to_album: 'Save to Photos',
   save_image_success: 'Saved to Photos',

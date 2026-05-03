@@ -254,7 +254,7 @@
           src="{{exportImageUrl}}"
           class="export-preview-image"
           mode="widthFix"
-          catchtap="previewExportImage"
+          bindlongpress="saveExportImage"
         />
         <text class="export-preview-tip">{{i18n.export_preview_hint}}</text>
       </view>

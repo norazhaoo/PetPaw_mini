@@ -206,6 +206,21 @@ assert(
   'poster preview should keep scrollable safe-area padding below the exported image'
 );
 assert(
+  dashboardWxml.includes('bindlongpress="saveExportImage"') &&
+    !dashboardWxml.includes('catchtap="previewExportImage"'),
+  'poster preview image should save directly on long press instead of opening full-screen preview first'
+);
+assert(
+  pageWithI18n.data.i18n.export_preview_hint === '长按图片可直接保存到相册',
+  'Chinese poster preview hint should describe direct long-press saving'
+);
+const enI18n = require('../utils/i18n/en');
+assert.strictEqual(
+  enI18n.export_preview_hint,
+  'Long press the image to save it to Photos',
+  'English poster preview hint should describe direct long-press saving'
+);
+assert(
   !dashboardWxml.includes('export-sheet-heading') &&
     !dashboardWxml.includes('class="safe-bottom"') &&
     !dashboardWxml.includes('<text>{{i18n.monthly_care_poster}}</text>'),
@@ -224,6 +239,30 @@ assert(
     dashboardJs.includes('getFileSystemManager') &&
     dashboardJs.includes('toDataURL'),
   'poster export should prefer offscreen canvas so normal generation does not touch the render-layer canvas'
+);
+assert(
+  !dashboardJs.includes('const H = 2260'),
+  'poster export height should be computed from poster content instead of fixed at 2260'
+);
+const offscreenExportSource = dashboardJs.slice(
+  dashboardJs.indexOf('async _exportReportWithOffscreenCanvas'),
+  dashboardJs.indexOf('_saveOffscreenCanvasToTempFile')
+);
+assert(
+  offscreenExportSource.includes('this._getPosterExportContext()') &&
+    offscreenExportSource.includes('this._getAppleReportHeight(reportContext.posterStats)') &&
+    offscreenExportSource.includes('this._drawAppleReport(canvas, ctx, W, H, reportContext)'),
+  'offscreen poster export should compute dynamic height from a shared poster context'
+);
+const nodeExportSource = dashboardJs.slice(
+  dashboardJs.indexOf('_exportReportWithNodeCanvas'),
+  dashboardJs.indexOf('closeExportModal()')
+);
+assert(
+  nodeExportSource.includes('this._getPosterExportContext()') &&
+    nodeExportSource.includes('this._getAppleReportHeight(reportContext.posterStats)') &&
+    nodeExportSource.includes('this._drawAppleReport(canvas, ctx, W, H, reportContext)'),
+  'node canvas poster export should compute dynamic height from the same poster context'
 );
 assert(
   dashboardWxss.includes('flex-wrap: nowrap') && dashboardWxss.includes('margin-left: -6rpx'),
@@ -545,6 +584,26 @@ assert.strictEqual(
   '谢谢你陪我度过的每一天。',
   'poster footer should use the updated companionship copy'
 );
+assert.strictEqual(
+  typeof pageWithPosterStats._getAppleReportHeight,
+  'function',
+  'poster should expose a dynamic height calculator for export sizing'
+);
+assert.strictEqual(
+  typeof pageWithPosterStats._getPosterCareChangesCardHeight,
+  'function',
+  'poster should expose the care-changes height helper used by dynamic sizing'
+);
+assert.strictEqual(
+  typeof pageWithPosterStats._getPosterWeightTrendSectionHeight,
+  'function',
+  'poster should expose the weight-trend height helper used by dynamic sizing'
+);
+const fullPosterHeight = pageWithPosterStats._getAppleReportHeight(posterStats);
+assert(
+  fullPosterHeight >= 2100 && fullPosterHeight <= 2160,
+  'full-content poster height should keep bottom whitespace visually symmetric with the top'
+);
 
 const badgeMedalConfigs = pageWithPosterStats._getPosterBadgeMedalConfig();
 assert.strictEqual(badgeMedalConfigs.record.length, 4, 'poster should define four distinct record badge medals');
@@ -591,6 +650,17 @@ assert(
   !/shadowColor|shadowBlur|shadowOffsetY|globalAlpha|bezierCurveTo/.test(medalDrawingSource),
   'poster badge medal drawing should avoid Mini Program canvas APIs that can fail in the rendering layer'
 );
+const footerDrawingSource = dashboardJs.slice(
+  dashboardJs.indexOf('_drawPosterFooterSection'),
+  dashboardJs.indexOf('// ─── Section 1: Profile')
+);
+assert(
+  !footerDrawingSource.includes('if (startY + cardH < H - 150)') &&
+    !footerDrawingSource.includes('H - 86') &&
+    footerDrawingSource.includes('const footerBottomMargin = 24') &&
+    footerDrawingSource.includes('this.drawCardSection(ctx, MARGIN, startY, CARD_W, cardH, 32'),
+  'poster footer should always draw after content instead of skipping the quote card based on fixed canvas height'
+);
 
 state = createState();
 delete state.pets[0].birthday;
@@ -621,6 +691,10 @@ assert.strictEqual(
   emptyCareStats.careChangesEmptyText,
   '本月还没有足够记录',
   'care changes should expose a friendly empty state'
+);
+assert(
+  createPage()._getAppleReportHeight(emptyCareStats) < fullPosterHeight,
+  'poster with empty care changes and no weight trend should export shorter than a full-content poster'
 );
 
 state = createState();
