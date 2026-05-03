@@ -62,5 +62,18 @@ module.exports = {
   search_breed: 'Search breed...', customize: 'Custom input', no_results: 'No results found',
   take_photo: 'Take Photo', choose_from_album: 'Choose from Album',
   export_report: 'Export Report', exporting: 'Generating...', export_success: 'Long press to save', export_fail: 'Generation failed',
+  export_drawing_hint: 'Drawing your monthly report',
+  export_preview_hint: 'Preview ready. Tap the image to open it full screen',
+  close: 'Close',
+  save_to_album: 'Save to Photos',
+  save_image_success: 'Saved to Photos',
+  save_image_fail: 'Save failed',
+  photo_permission_title: 'Permission needed',
+  photo_permission_content: 'Please allow photo access in Settings',
+  open_settings: 'Open Settings',
+  supply_snapshot_title: 'Supply Snapshot',
+  brand_tagline: 'A record of pet life, day by day',
+  reminder_prefix: '📅 Next ',
+  footer_heart: '❤',
   report_period: 'Report Period', total_records: 'Total Records: '
 };

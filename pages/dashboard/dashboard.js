@@ -31,8 +31,6 @@ Page({
     trackActions: [],
     stockActionItems: [],
     inventoryItems: [],
-    showWarning: false,
-    lastActionText: 'Never',
     dragActionKey: null,
     // Calendar
     currentMonth: null,
@@ -48,8 +46,6 @@ Page({
     emptyLogText: '',
     feedback: '',
     feedbackColor: '',
-    // Stats
-    monthlyStats: [],
     // Weight
     chartData: [],
     hasWeightData: false,
@@ -99,7 +95,20 @@ Page({
         stats_rules_period: t('stats_rules_period'), stats_rules_compare: t('stats_rules_compare'),
         stats_rules_care: t('stats_rules_care'), stats_rules_active: t('stats_rules_active'),
         stats_rules_hidden: t('stats_rules_hidden'), got_it: t('got_it'),
-        no_today_records: t('no_today_records')
+        no_today_records: t('no_today_records'),
+        export_drawing_hint: t('export_drawing_hint'),
+        export_preview_hint: t('export_preview_hint'),
+        close: t('close'),
+        save_to_album: t('save_to_album'),
+        save_image_success: t('save_image_success'),
+        save_image_fail: t('save_image_fail'),
+        photo_permission_title: t('photo_permission_title'),
+        photo_permission_content: t('photo_permission_content'),
+        open_settings: t('open_settings'),
+        supply_snapshot_title: t('supply_snapshot_title'),
+        brand_tagline: t('brand_tagline'),
+        reminder_prefix: t('reminder_prefix'),
+        footer_heart: t('footer_heart')
       },
       weekdays: t('weekdays') || WEEKDAYS
     });
@@ -175,41 +184,9 @@ Page({
     );
     const stockActionItems = this._buildStockActionItems(trackActions, state);
 
-    const petInventory = (state.inventoryItems || [])
-      .filter(item => item.petId === state.activePetId && !item.hidden);
-
-    const TIME_CONV = { 'day': 1, 'week': 7, 'month': 30, 'quarter': 91, 'year': 365 };
-    const UNIT_CONV = {
-      'g': { 'kg': 0.001, 'g': 1 },
-      'kg': { 'g': 1000, 'kg': 1 },
-      'ml': { 'L': 0.001, 'ml': 1 },
-      'L': { 'ml': 1000, 'L': 1 }
-    };
-
-    const inventoryItems = petInventory.map(item => {
-      const amount = item.consumptionAmount || item.dailyConsumption || 0;
-      const intervalVal = item.consumptionInterval || 1;
-      const timeUnit = item.consumptionTimeUnit || 'day';
-      const daysInCycle = intervalVal * (TIME_CONV[timeUnit] || 1);
-      const cUnit = item.consumptionUnit || item.unit || 'g';
-      const tUnit = item.unit || 'g';
-
-      let dailyInTotalUnit = amount / daysInCycle;
-      if (cUnit !== tUnit && UNIT_CONV[cUnit] && UNIT_CONV[cUnit][tUnit]) {
-        dailyInTotalUnit = (amount * UNIT_CONV[cUnit][tUnit]) / daysInCycle;
-      }
-
-      const daysLeft = Math.floor((item.current || 0) / (dailyInTotalUnit || 0.0001));
-      const fullLabel = item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label;
-      const shortLabel = fullLabel.replace(/ .*/, '');
-
-      let color = '#8F8377';
-      if (item.typeId === 'food') color = '#D35400';
-      if (item.typeId === 'litter' || item.typeId === 'litter_2') color = '#C49A6C';
-      if (item.typeId === 'treats') color = '#F39C12';
-
-      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel, color };
-    });
+    const inventoryItems = (state.inventoryItems || [])
+      .filter(item => item.petId === state.activePetId && !item.hidden)
+      .map(item => this._buildInventoryItemViewModel(item));
 
     this.setData({
       activePet,
@@ -220,8 +197,7 @@ Page({
       customActions: trackActions.filter(item => item.actionKind === 'custom'),
       trackActions,
       stockActionItems,
-      inventoryItems,
-      showWarning: inventoryItems.some(item => item.isLow)
+      inventoryItems
     });
 
     this._computeHeavyData(state, activePet, isDog);
@@ -247,18 +223,8 @@ Page({
     this.setData(Object.assign({
       ready: true,
       chartData: [],
-      hasWeightData: false,
-      monthlyStats: []
+      hasWeightData: false
     }, calendarData));
-  },
-
-  _buildTodayLogs(petLogs, petWeights, customActions, today) {
-    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, today);
-    return {
-      combinedLogs: selectedDayData.combinedLogs,
-      listTitle: t('today_logs'),
-      emptyLogText: selectedDayData.emptyLogText
-    };
   },
 
   /**
@@ -312,37 +278,6 @@ Page({
       };
     });
 
-    // ====== Monthly stats — 利用已有 petLogs，按类型聚合 ======
-    const currentMonthLogs = petLogs.filter(l => dateUtil.isSameMonth(dateUtil.parseISO(l.date), currentMonth));
-    const statsMap = {};
-    currentMonthLogs.forEach(log => {
-      const key = log.type;
-      if (!statsMap[key]) {
-        const presentation = this._getActionPresentation(key, customActions, log);
-        statsMap[key] = {
-          count: 0,
-          label: presentation.label,
-          color: presentation.color,
-          iconIdx: presentation.iconIdx,
-          iconName: presentation.iconName,
-          type: key
-        };
-      }
-      statsMap[key].count += 1;
-    });
-    const monthlyStats = Object.values(statsMap);
-    // Add weight stats
-    const monthWeights = petWeights.filter(w => dateUtil.isSameMonth(dateUtil.parseISO(w.date), currentMonth));
-    if (monthWeights.length > 0) {
-      monthlyStats.push({
-        type: 'log_weight',
-        label: t('log_weight') || 'Weight',
-        iconName: 'scale',
-        color: COLOR_MAP.log_weight,
-        count: monthWeights.length
-      });
-    }
-
     // ====== Selected day logs ======
     const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate);
 
@@ -356,7 +291,6 @@ Page({
       selectedDateStr: dateUtil.formatDate(selectedDate, 'YYYY-MM-DD'),
       blanks,
       daysInMonth,
-      monthlyStats,
       combinedLogs: selectedDayData.combinedLogs,
       listTitle: selectedDayData.listTitle,
       emptyLogText: selectedDayData.emptyLogText
@@ -540,6 +474,32 @@ Page({
       .filter(log => log.petId === state.activePetId && log.type === logType)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
     return logs[0] && logs[0].date;
+  },
+
+  _buildInventoryItemViewModel(item) {
+    const daysLeft = storage.getInventoryDaysLeft(item);
+    const fullLabel = item.typeId ? (t('stock_' + item.typeId) || item.label) : item.label;
+    const shortLabel = fullLabel.replace(/ .*/, '');
+
+    let color = '#8F8377';
+    if (item.typeId === 'food') color = '#D35400';
+    if (item.typeId === 'litter' || item.typeId === 'litter_2') color = '#C49A6C';
+    if (item.typeId === 'treats') color = '#F39C12';
+
+    return {
+      ...item,
+      daysLeft,
+      isLow: daysLeft <= 7,
+      shortLabel,
+      color
+    };
+  },
+
+  _formatSupplyDaysLeftText(daysLeft, isLow) {
+    if (getLanguage() === 'zh') {
+      return isLow ? `仅剩 ${daysLeft} 天` : `${daysLeft} 天`;
+    }
+    return isLow ? `${daysLeft} days left` : `${daysLeft} days`;
   },
 
   _buildStockActionItems(trackActions, state) {
@@ -1266,14 +1226,17 @@ Page({
     if (!this.data.exportImageUrl) return;
     wx.saveImageToPhotosAlbum({
       filePath: this.data.exportImageUrl,
-      success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
+      success: () => wx.showToast({ title: this.data.i18n.save_image_success || '已保存到相册', icon: 'success' }),
       fail: (err) => {
         if (err.errMsg && err.errMsg.includes('auth')) {
-          wx.showModal({ title: '需要权限', content: '请在设置中允许访问相册', confirmText: '去设置',
+          wx.showModal({
+            title: this.data.i18n.photo_permission_title || '需要权限',
+            content: this.data.i18n.photo_permission_content || '请在设置中允许访问相册',
+            confirmText: this.data.i18n.open_settings || '去设置',
             success: (res) => { if (res.confirm) wx.openSetting(); }
           });
         } else {
-          wx.showToast({ title: '保存失败', icon: 'none' });
+          wx.showToast({ title: this.data.i18n.save_image_fail || '保存失败', icon: 'none' });
         }
       }
     });
@@ -1962,11 +1925,10 @@ Page({
       .slice(0, 3);
     if (items.length === 0) return startY;  // skip if no supply data
 
-    const TIME_CONV = { 'day': 1, 'week': 7, 'month': 30, 'quarter': 91, 'year': 365 };
     const cardH = 60 + items.length * 80 + 20;
 
     ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('物资守护'.toUpperCase(), MARGIN, startY);
+    ctx.fillText((this.data.i18n.supply_snapshot_title || '物资守护').toUpperCase(), MARGIN, startY);
 
     const cardY = startY + 22;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
@@ -1974,10 +1936,7 @@ Page({
     items.forEach((item, i) => {
       const rowY = cardY + 48 + i * 80;
       // Compute daysLeft
-      const amount = item.consumptionAmount || item.dailyConsumption || 0;
-      const intervalDays = (item.consumptionInterval || 1) * (TIME_CONV[item.consumptionTimeUnit || 'day'] || 1);
-      const daily = amount / (intervalDays || 1);
-      const daysLeft = daily > 0 ? Math.floor((item.current || 0) / daily) : 999;
+      const daysLeft = storage.getInventoryDaysLeft(item);
 
       const barW = CARD_W - 48 - 120;
       const fill = Math.max(0, Math.min(1, daysLeft / 30));
@@ -1993,7 +1952,7 @@ Page({
       ctx.fillStyle = isLow ? '#FF3B30' : MUTED;
       ctx.font = isLow ? 'bold 22px sans-serif' : '22px sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(isLow ? `仅剩 ${daysLeft} 天 ⚠️` : `${daysLeft} 天`, MARGIN + CARD_W - 24, rowY);
+      ctx.fillText(this._formatSupplyDaysLeftText(daysLeft, isLow), MARGIN + CARD_W - 24, rowY);
 
       // Progress bar background
       const barX = MARGIN + 24; const barY = rowY + 14; const barH = 8;
@@ -2019,7 +1978,7 @@ Page({
       const dueStr = dateUtil.formatDate(dateUtil.parseISO(nextReminder.dueDate), 'YYYY-MM-DD');
       const reminderLabel = t(nextReminder.type) || nextReminder.type;
       ctx.fillStyle = INK; ctx.font = 'bold 28px -apple-system,sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(`📅 下次${reminderLabel}：${dueStr}`, MARGIN + 24, startY + 54);
+      ctx.fillText(`${this.data.i18n.reminder_prefix || '📅 下次'}${reminderLabel}：${dueStr}`, MARGIN + 24, startY + 54);
     }
 
     // Random quote from logs
@@ -2037,13 +1996,13 @@ Page({
     
     // Tiny heart deco
     ctx.fillStyle = '#FF7B54'; ctx.font = '24px sans-serif';
-    ctx.fillText('❤', W / 2, footerY - 45);
+    ctx.fillText(this.data.i18n.footer_heart || '❤', W / 2, footerY - 45);
 
     ctx.fillStyle = '#B0ADA6'; ctx.font = 'bold 22px -apple-system,sans-serif';
     ctx.fillText('PetPaw', W / 2, footerY);
     
     ctx.font = '20px -apple-system,sans-serif';
-    ctx.fillText('记录宠物生活的每一天', W / 2, footerY + 32);
+    ctx.fillText(this.data.i18n.brand_tagline || '记录宠物生活的每一天', W / 2, footerY + 32);
 
     // Date stamp
     ctx.fillStyle = '#C7C4BC'; ctx.font = '18px sans-serif';

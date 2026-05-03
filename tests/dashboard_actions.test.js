@@ -102,6 +102,10 @@ function readDashboardWxss() {
   return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxss'), 'utf8');
 }
 
+function expectContainsTokens(source, tokens, message) {
+  assert(tokens.every(token => source.includes(token)), message);
+}
+
 state = createState();
 const pageWithI18n = createPage();
 pageWithI18n.onLoad();
@@ -125,36 +129,46 @@ assert.strictEqual(
   '库存警报',
   'dashboard should load stock alert copy'
 );
+assert.strictEqual(
+  pageWithI18n.data.i18n.export_drawing_hint,
+  '正在绘制您的专属报告',
+  'dashboard should load export loading copy from i18n'
+);
+assert.strictEqual(
+  pageWithI18n.data.i18n.save_to_album,
+  '保存到相册',
+  'dashboard should load export action copy from i18n'
+);
 
 const dashboardWxml = readDashboardWxml();
-assert(
-  dashboardWxml.includes('i18n.stock_alert'),
+expectContainsTokens(
+  dashboardWxml,
+  ['i18n.stock_alert', 'inventoryItems', 'stockActionItems'],
   'dashboard should render Stock Alert above the daily record area'
 );
-assert(
-  dashboardWxml.includes('cal-grid') &&
-    dashboardWxml.includes('prevMonth') &&
-    dashboardWxml.includes('nextMonth') &&
-    dashboardWxml.includes('selectDate') &&
-    dashboardWxml.includes('goToday'),
+expectContainsTokens(
+  dashboardWxml,
+  ['cal-grid', 'prevMonth', 'nextMonth', 'selectDate', 'goToday'],
   'dashboard should restore the calendar controls for backdated records'
 );
 assert(
   !dashboardWxml.includes('weightCanvas') && !dashboardWxml.includes('monthlyStats'),
   'dashboard should not render the old weight chart or monthly stats cards'
 );
-assert(
-  dashboardWxml.includes('monthly-poster-card') && dashboardWxml.includes('openStatsRules'),
+expectContainsTokens(
+  dashboardWxml,
+  ['monthly-poster-card', 'openStatsRules', 'i18n.export_drawing_hint', 'i18n.save_to_album'],
   'dashboard should render poster CTA and preview rule entry point'
 );
 const dashboardWxss = readDashboardWxss();
-assert(
-  dashboardWxss.includes('flex-wrap: nowrap') && dashboardWxss.includes('margin-left: -6rpx'),
+expectContainsTokens(
+  dashboardWxss,
+  ['.cal-icons', 'flex-wrap: nowrap', '.cal-icon-dot + .cal-icon-dot'],
   'calendar record icons should use a compact single-row overlap instead of vertical stacking'
 );
 assert(
-  dashboardWxml.includes('width:16rpx;height:16rpx'),
-  'calendar record icon images should be small enough for compact calendar cells'
+  dashboardWxml.includes('class="cal-icon-dot"'),
+  'calendar should render compact icon containers for day records'
 );
 
 state = createState();
@@ -224,7 +238,8 @@ state.weightHistory = [
   { id: 'old-weight', petId: 'pet-1', date: at(24, 20), weight: 4.1 }
 ];
 const pageWithTodayLogs = createPage();
-const todayLogs = pageWithTodayLogs._buildTodayLogs(
+pageWithTodayLogs.onLoad();
+const todayLogs = pageWithTodayLogs._buildSelectedDayLogs(
   state.logs.filter(log => log.petId === 'pet-1'),
   state.weightHistory.filter(weight => weight.petId === 'pet-1'),
   state.customActions,
@@ -237,8 +252,8 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   todayLogs.listTitle,
-  '今日记录',
-  'dashboard record list should always be titled Today Logs'
+  '记录: 4月26日',
+  'selected-day logs should use the selected-date title path'
 );
 
 state = createState();

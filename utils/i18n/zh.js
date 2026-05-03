@@ -62,5 +62,18 @@ module.exports = {
   search_breed: '搜索品种...', customize: '自定义输入', no_results: '未找到相关品种',
   take_photo: '拍照', choose_from_album: '从相册选择',
   export_report: '导出报告', exporting: '生成中...', export_success: '长按保存或分享', export_fail: '生成失败',
+  export_drawing_hint: '正在绘制您的专属报告',
+  export_preview_hint: '此图已保存至临时预览，点击可全屏查看',
+  close: '关闭',
+  save_to_album: '保存到相册',
+  save_image_success: '已保存到相册',
+  save_image_fail: '保存失败',
+  photo_permission_title: '需要权限',
+  photo_permission_content: '请在设置中允许访问相册',
+  open_settings: '去设置',
+  supply_snapshot_title: '物资守护',
+  brand_tagline: '记录宠物生活的每一天',
+  reminder_prefix: '📅 下次',
+  footer_heart: '❤',
   report_period: '统计周期', total_records: '总记录数：'
 };
