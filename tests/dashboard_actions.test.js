@@ -106,6 +106,24 @@ function expectContainsTokens(source, tokens, message) {
   assert(tokens.every(token => source.includes(token)), message);
 }
 
+function readDashboardJs() {
+  return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.js'), 'utf8');
+}
+
+function readAppWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'app.wxss'), 'utf8');
+}
+
+function readTabBarWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'custom-tab-bar/index.wxss'), 'utf8');
+}
+
+function readZIndex(css, selector) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = css.match(new RegExp(`${escapedSelector}\\s*\\{[\\s\\S]*?z-index:\\s*(\\d+)`));
+  return match ? Number(match[1]) : NaN;
+}
+
 state = createState();
 const pageWithI18n = createPage();
 pageWithI18n.onLoad();
@@ -139,8 +157,18 @@ assert.strictEqual(
   '保存到相册',
   'dashboard should load export action copy from i18n'
 );
+assert.strictEqual(
+  pageWithI18n.data.exportCanvasVisible,
+  false,
+  'export canvas should not be mounted before poster generation starts'
+);
 
 const dashboardWxml = readDashboardWxml();
+const dashboardJs = readDashboardJs();
+const dashboardWxss = readDashboardWxss();
+const appWxss = readAppWxss();
+const tabBarWxss = readTabBarWxss();
+const heroOverviewCardY = Number((dashboardJs.match(/async _drawPosterHeroSection[\s\S]*?const cardY = (\d+);/) || [])[1]);
 expectContainsTokens(
   dashboardWxml,
   ['i18n.stock_alert', 'inventoryItems', 'stockActionItems'],
@@ -157,18 +185,76 @@ assert(
 );
 expectContainsTokens(
   dashboardWxml,
-  ['monthly-poster-card', 'openStatsRules', 'i18n.export_drawing_hint', 'i18n.save_to_album'],
+  ['monthly-poster-card', 'openStatsRules', 'i18n.export_drawing_hint', 'i18n.export_preview_hint'],
   'dashboard should render poster CTA and preview rule entry point'
 );
-const dashboardWxss = readDashboardWxss();
-expectContainsTokens(
-  dashboardWxss,
-  ['.cal-icons', 'flex-wrap: nowrap', '.cal-icon-dot + .cal-icon-dot'],
+assert(
+  heroOverviewCardY >= 328,
+  'poster overview card should leave clear breathing room below the yellow hero curve'
+);
+assert(
+  appWxss.includes('padding-bottom: calc(260rpx + env(safe-area-inset-bottom));'),
+  'tab pages should reserve enough bottom scroll space for the custom tab bar and safe area'
+);
+assert(
+  readZIndex(tabBarWxss, '.tab-bar-container') < readZIndex(appWxss, '.modal-overlay'),
+  'custom tab bar should sit below page modals so poster preview is not covered'
+);
+assert(
+  dashboardWxml.includes('export-preview-content') &&
+    dashboardWxss.includes('padding: 60rpx 40rpx calc(160rpx + env(safe-area-inset-bottom));'),
+  'poster preview should keep scrollable safe-area padding below the exported image'
+);
+assert(
+  !dashboardWxml.includes('export-sheet-heading') &&
+    !dashboardWxml.includes('class="safe-bottom"') &&
+    !dashboardWxml.includes('<text>{{i18n.monthly_care_poster}}</text>'),
+  'poster export preview should not show a blocking bottom sheet with the poster title'
+);
+assert(
+  dashboardWxml.includes('wx:if="{{exportCanvasVisible}}"') &&
+    dashboardWxml.includes('width:1px;height:1px;') &&
+    !dashboardWxml.includes('left:-99999px') &&
+    dashboardJs.includes('exportCanvasVisible: true') &&
+    dashboardJs.includes('exportCanvasVisible: false'),
+  'poster export canvas should mount as a tiny temporary node to avoid render-layer canvas updates'
+);
+assert(
+  dashboardJs.includes('wx.createOffscreenCanvas') &&
+    dashboardJs.includes('getFileSystemManager') &&
+    dashboardJs.includes('toDataURL'),
+  'poster export should prefer offscreen canvas so normal generation does not touch the render-layer canvas'
+);
+assert(
+  dashboardWxss.includes('flex-wrap: nowrap') && dashboardWxss.includes('margin-left: -6rpx'),
   'calendar record icons should use a compact single-row overlap instead of vertical stacking'
 );
 assert(
   dashboardWxml.includes('class="cal-icon-dot"'),
   'calendar should render compact icon containers for day records'
+);
+assert(
+  !dashboardJs.includes("cursorY = this._drawPosterHeatmapSection(ctx"),
+  'poster should merge check-in distribution into the highlights card instead of drawing a standalone heatmap section'
+);
+assert(
+  dashboardJs.includes('_drawPosterDateStrip') &&
+    dashboardJs.includes('this._drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210)') &&
+    dashboardJs.includes('const tickDays = [1, 5, 10, 15, 20, 25, 30]') &&
+    dashboardJs.includes("'3+'") &&
+    !dashboardJs.includes('this._drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210)'),
+  'poster check-in distribution should draw a readable date strip with key day ticks and a 3+ intensity legend'
+);
+assert(
+  !dashboardJs.includes("${posterStats.monthLabel} ${t('monthly_care_poster')}"),
+  'poster hero should show only the month instead of repeating the poster CTA title'
+);
+assert(
+  !dashboardJs.includes("getLanguage() === 'zh' ? '本月亮点'") &&
+    !dashboardJs.includes("t('care_changes') || 'Care Changes'") &&
+    !dashboardJs.includes("t('weight_trend') || 'Weight Trend'") &&
+    !dashboardJs.includes('Monthly Badges'),
+  'poster should not draw external section headings above cards'
 );
 
 state = createState();
@@ -406,6 +492,11 @@ state.medicalRecords = [
 const pageWithPosterStats = createPage();
 const posterStats = pageWithPosterStats._buildPosterStats(state, state.pets[0], posterDate);
 assert.strictEqual(
+  pageWithPosterStats._formatPosterMonthLabel(posterDate),
+  '四月',
+  'poster hero month should use the lightweight Chinese month label'
+);
+assert.strictEqual(
   posterStats.overview.find(item => item.key === 'companion_days').value,
   27,
   'poster companion days should be calculated from birthday while keeping the label'
@@ -419,6 +510,11 @@ assert.strictEqual(
   posterStats.overview.find(item => item.key === 'active_days').value,
   9,
   'poster active days should count natural days with at least one effective record'
+);
+assert.match(
+  posterStats.highlights.regularDay.label,
+  /^周[日一二三四五六]$/,
+  'poster regular day should show a complete Chinese weekday label'
 );
 assert.deepStrictEqual(
   posterStats.careChanges.map(item => item.type),
@@ -446,8 +542,54 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   posterStats.footerQuote,
-  '愿你与它，每天都是好日子。',
-  'poster footer should use fixed copy instead of note data'
+  '谢谢你陪我度过的每一天。',
+  'poster footer should use the updated companionship copy'
+);
+
+const badgeMedalConfigs = pageWithPosterStats._getPosterBadgeMedalConfig();
+assert.strictEqual(badgeMedalConfigs.record.length, 4, 'poster should define four distinct record badge medals');
+assert.strictEqual(badgeMedalConfigs.habit.length, 3, 'poster should define three distinct habit badge medals');
+
+const allBadgeMedals = badgeMedalConfigs.record.concat(badgeMedalConfigs.habit);
+assert.strictEqual(
+  typeof pageWithPosterStats._drawPosterMedalBadge,
+  'function',
+  'poster should expose the medal badge drawing helper used by monthly badge export'
+);
+assert.strictEqual(
+  new Set(allBadgeMedals.map(config => config.medalShape)).size,
+  1,
+  'poster badges should use one clean round gold medal silhouette'
+);
+assert.strictEqual(
+  new Set(allBadgeMedals.map(config => config.mark)).size,
+  7,
+  'each poster badge should use a distinct medal center mark'
+);
+assert(
+  allBadgeMedals.every(config => !config.eventIconName),
+  'poster badge medals should not reuse daily event icons'
+);
+assert(
+  allBadgeMedals.every(config =>
+    config.medalShape === 'round-gold' &&
+    config.coinFill &&
+    config.ringFill &&
+    config.innerFill &&
+    config.labelFill &&
+    Array.isArray(config.ribbonColors) &&
+    config.ribbonColors.length === 2 &&
+    config.mark
+  ),
+  'poster badge medals should define finished coin, ribbon, inner plate, ring, label, and center mark layers'
+);
+const medalDrawingSource = dashboardJs.slice(
+  dashboardJs.indexOf('_drawPosterMedalBadge'),
+  dashboardJs.indexOf('// ─── Section 4: Supply Snapshot')
+);
+assert(
+  !/shadowColor|shadowBlur|shadowOffsetY|globalAlpha|bezierCurveTo/.test(medalDrawingSource),
+  'poster badge medal drawing should avoid Mini Program canvas APIs that can fail in the rendering layer'
 );
 
 state = createState();

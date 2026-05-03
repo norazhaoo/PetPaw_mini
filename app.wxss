@@ -29,7 +29,7 @@ page {
   display: flex;
   flex-direction: column;
   gap: 48rpx;
-  padding-bottom: 200rpx;
+  padding-bottom: calc(260rpx + env(safe-area-inset-bottom));
 }
 
 /* ===== Typography ===== */

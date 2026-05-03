@@ -47,7 +47,7 @@ module.exports = {
   little_start: 'Small Start', steady_week: 'Steady Week',
   half_month_care: 'Half-Month Care', full_month_care: 'Full Month',
   bright_teeth: 'Bright Teeth', steady_growth: 'Steady Growth',
-  daily_guardian: 'Daily Guardian', poster_footer_quote: 'Every day with them is a good day.',
+  daily_guardian: 'Daily Guardian', poster_footer_quote: 'Thank you for sharing every day with me.',
   monthly_stats: 'Monthly Stats', no_activity: 'No activity.',
   no_weight_history: 'No weight history.', no_records_day: 'No records for this day.',
   new_custom_event: 'New Custom Event', custom_event_placeholder: 'e.g. Bath Time', select_color: 'Select Color',

@@ -5,7 +5,7 @@
   right: 0;
   padding: 24rpx 40rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  z-index: 9999;
+  z-index: 900;
   background-color: #FFF3E0; /* Matches app background */
   pointer-events: auto; /* Blocks touches from going through to the page */
 }

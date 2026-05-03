@@ -62,6 +62,7 @@ Page({
     exportGenerating: false,
     showExportModal: false,
     exportImageUrl: '',
+    exportCanvasVisible: false,
     showStatsRules: false,
     // i18n
     i18n: {},
@@ -1123,7 +1124,6 @@ Page({
       const weekday = dateUtil.getDay(key);
       weekdayCounts[weekday] = (weekdayCounts[weekday] || 0) + 1;
     });
-    const weekdayNames = t('weekdays') || WEEKDAYS;
     const regularWeekday = Object.keys(weekdayCounts)
       .sort((a, b) => weekdayCounts[b] - weekdayCounts[a])[0];
     const topRecord = careChanges[0] || null;
@@ -1148,7 +1148,7 @@ Page({
       activeDays: activeDateKeys.length,
       highlights: {
         topRecord,
-        regularDay: regularWeekday !== undefined ? { label: weekdayNames[regularWeekday], count: weekdayCounts[regularWeekday] } : null,
+        regularDay: regularWeekday !== undefined ? { label: this._formatPosterWeekdayLabel(regularWeekday), count: weekdayCounts[regularWeekday] } : null,
         streakDays: this._longestStreak(activeDateKeys)
       },
       careChanges,
@@ -1166,50 +1166,118 @@ Page({
   // ============================================================
 
   exportReport() {
-    this.setData({ exportGenerating: true, showExportModal: false });
-    // Give the loading overlay time to render before heavy canvas work
-    setTimeout(() => {
-      const query = wx.createSelectorQuery().in(this);
-      query.select('#exportCanvas').fields({ node: true, size: true }).exec(async (res) => {
-        if (!res || !res[0] || !res[0].node) {
-          this.setData({ exportGenerating: false });
+    this.setData({ exportGenerating: true, showExportModal: false, exportCanvasVisible: false }, async () => {
+      if (typeof wx.createOffscreenCanvas === 'function') {
+        try {
+          await this._exportReportWithOffscreenCanvas();
+          return;
+        } catch (err) {
+          console.error('offscreen export fail', err);
+          this.setData({ exportGenerating: false, exportCanvasVisible: false });
           wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
           return;
         }
-        const canvas = res[0].node;
-        const W = 750;  // logical pixels
-        const H = 2260;
-        const info = wx.getSystemInfoSync();
-        const dpr = info.pixelRatio || 2;
-        canvas.width  = W * dpr;
-        canvas.height = H * dpr;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
+      }
+      this._exportReportWithNodeCanvas();
+    });
+  },
 
-        try {
-          await this._drawAppleReport(canvas, ctx, W, H);
+  async _exportReportWithOffscreenCanvas() {
+    const W = 750;
+    const H = 2260;
+    const info = wx.getSystemInfoSync();
+    const dpr = info.pixelRatio || 2;
+    const canvas = wx.createOffscreenCanvas({ type: '2d', width: W * dpr, height: H * dpr });
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
 
-          wx.canvasToTempFilePath({
-            canvas,
-            destWidth:  W * 3,
-            destHeight: H * 3,
-            fileType: 'png',
-            success: (r) => {
-              this.setData({ exportGenerating: false, exportImageUrl: r.tempFilePath, showExportModal: true });
-            },
-            fail: (err) => {
-              this.setData({ exportGenerating: false });
-              console.error('canvasToTempFilePath fail', err);
-              wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
-            }
-          }, this);
-        } catch (err) {
-          this.setData({ exportGenerating: false });
-          console.error('draw error', err);
-          wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
-        }
+    await this._drawAppleReport(canvas, ctx, W, H);
+    const tempFilePath = await this._saveOffscreenCanvasToTempFile(canvas, W, H);
+    this.setData({ exportGenerating: false, exportCanvasVisible: false, exportImageUrl: tempFilePath, showExportModal: true });
+  },
+
+  _saveOffscreenCanvasToTempFile(canvas, W, H) {
+    return this._canvasToTempFilePath(canvas, W, H).catch(() => new Promise((resolve, reject) => {
+      if (typeof canvas.toDataURL !== 'function' || typeof wx.getFileSystemManager !== 'function') {
+        reject(new Error('Offscreen canvas export is not available'));
+        return;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const filePath = `${wx.env.USER_DATA_PATH}/petpaw-poster-${Date.now()}.png`;
+      wx.getFileSystemManager().writeFile({
+        filePath,
+        data: base64,
+        encoding: 'base64',
+        success: () => resolve(filePath),
+        fail: reject
       });
-    }, 100);
+    }));
+  },
+
+  _canvasToTempFilePath(canvas, W, H) {
+    return new Promise((resolve, reject) => {
+      if (typeof wx.canvasToTempFilePath !== 'function') {
+        reject(new Error('canvasToTempFilePath is not available'));
+        return;
+      }
+      wx.canvasToTempFilePath({
+        canvas,
+        destWidth: W * 3,
+        destHeight: H * 3,
+        fileType: 'png',
+        success: (r) => resolve(r.tempFilePath),
+        fail: reject
+      }, this);
+    });
+  },
+
+  _exportReportWithNodeCanvas() {
+    this.setData({ exportCanvasVisible: true }, () => {
+      // Give the loading overlay and on-demand canvas node time to render before heavy canvas work.
+      setTimeout(() => {
+        const query = wx.createSelectorQuery().in(this);
+        query.select('#exportCanvas').fields({ node: true, size: true }).exec(async (res) => {
+          if (!res || !res[0] || !res[0].node) {
+            this.setData({ exportGenerating: false, exportCanvasVisible: false });
+            wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
+            return;
+          }
+          const canvas = res[0].node;
+          const W = 750;  // logical pixels
+          const H = 2260;
+          const info = wx.getSystemInfoSync();
+          const dpr = info.pixelRatio || 2;
+          canvas.width  = W * dpr;
+          canvas.height = H * dpr;
+          const ctx = canvas.getContext('2d');
+          ctx.scale(dpr, dpr);
+
+          try {
+            await this._drawAppleReport(canvas, ctx, W, H);
+
+            wx.canvasToTempFilePath({
+              canvas,
+              destWidth:  W * 3,
+              destHeight: H * 3,
+              fileType: 'png',
+              success: (r) => {
+                this.setData({ exportGenerating: false, exportCanvasVisible: false, exportImageUrl: r.tempFilePath, showExportModal: true });
+              },
+              fail: (err) => {
+                this.setData({ exportGenerating: false, exportCanvasVisible: false });
+                console.error('canvasToTempFilePath fail', err);
+                wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
+              }
+            }, this);
+          } catch (err) {
+            this.setData({ exportGenerating: false, exportCanvasVisible: false });
+            console.error('draw error', err);
+            wx.showToast({ title: t('export_fail') || '生成失败', icon: 'none' });
+          }
+        });
+      }, 50);
+    });
   },
 
   closeExportModal() { this.setData({ showExportModal: false }); },
@@ -1276,9 +1344,28 @@ Page({
     cursorY = this._drawPosterHighlightsSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
     cursorY = this._drawPosterCareChangesSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
     cursorY = this._drawPosterWeightTrendSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, posterStats, cursorY);
-    cursorY = this._drawPosterHeatmapSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, cursorY);
     cursorY = this._drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, [], [], posterStats.ranges.currentStart, pet, cursorY, getLanguage() === 'zh', posterStats.badges);
     this._drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, cursorY);
+  },
+
+  _formatPosterMonthLabel(date) {
+    const month = new Date(date).getMonth();
+    if (getLanguage() === 'zh') {
+      const zhMonths = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+      return zhMonths[month] || '';
+    }
+    const months = t('months');
+    return Array.isArray(months) ? months[month] : '';
+  },
+
+  _formatPosterWeekdayLabel(weekday) {
+    const index = Number(weekday);
+    if (Number.isNaN(index) || index < 0 || index > 6) return '';
+    if (getLanguage() === 'zh') {
+      return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][index];
+    }
+    const weekdayNames = t('weekdays') || WEEKDAYS;
+    return weekdayNames[index] || '';
   },
 
   async _drawPosterHeroSection(canvas, ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, pet, posterStats) {
@@ -1309,10 +1396,10 @@ Page({
     ctx.fillStyle = INK; ctx.font = 'bold 52px -apple-system,sans-serif';
     ctx.textAlign = 'center'; ctx.fillText(pet.name || '', W / 2, 210);
     ctx.fillStyle = MUTED; ctx.font = '26px -apple-system,sans-serif';
-    ctx.fillText(`${posterStats.monthLabel} ${t('monthly_care_poster')}`, W / 2, 246);
+    ctx.fillText(this._formatPosterMonthLabel(posterStats.ranges.currentStart), W / 2, 246);
 
-    const cardY = 286;
-    const cardH = 172;
+    const cardY = 330;
+    const cardH = 142;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const itemW = CARD_W / Math.max(posterStats.overview.length, 1);
     posterStats.overview.forEach((item, index) => {
@@ -1322,21 +1409,17 @@ Page({
         ctx.beginPath(); ctx.moveTo(MARGIN + itemW * index, cardY + 32); ctx.lineTo(MARGIN + itemW * index, cardY + cardH - 32); ctx.stroke();
       }
       ctx.fillStyle = INK; ctx.font = 'bold 42px -apple-system,sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(String(item.value), cx, cardY + 76);
+      ctx.fillText(String(item.value), cx, cardY + 68);
       ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif';
-      ctx.fillText(item.label, cx, cardY + 112);
-      ctx.font = '18px -apple-system,sans-serif';
-      ctx.fillText(item.helper, cx, cardY + 140);
+      ctx.fillText(item.label, cx, cardY + 106);
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
   _drawPosterHighlightsSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((getLanguage() === 'zh' ? '本月亮点' : 'Highlights').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
-    const cardH = 170;
+    const cardY = startY;
+    const cardH = 330;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const highlights = [
       { label: t('top_record'), value: posterStats.highlights.topRecord ? `${posterStats.highlights.topRecord.label} ${posterStats.highlights.topRecord.count}` : t('no_activity') },
@@ -1345,26 +1428,31 @@ Page({
     ];
     const colW = CARD_W / 3;
     highlights.forEach((item, index) => {
-      const x = MARGIN + colW * index + 24;
+      const cx = MARGIN + colW * index + colW / 2;
       if (index > 0) {
         ctx.strokeStyle = '#F0EFEA'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(MARGIN + colW * index, cardY + 32); ctx.lineTo(MARGIN + colW * index, cardY + cardH - 32); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(MARGIN + colW * index, cardY + 32); ctx.lineTo(MARGIN + colW * index, cardY + 128); ctx.stroke();
       }
-      ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(item.label, x, cardY + 58);
+      ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(item.label, cx, cardY + 54);
       ctx.fillStyle = INK; ctx.font = 'bold 30px -apple-system,sans-serif';
       const value = String(item.value).length > 8 ? String(item.value).slice(0, 7) + '…' : item.value;
-      ctx.fillText(value, x, cardY + 104);
+      ctx.fillText(value, cx, cardY + 100);
     });
-    return cardY + cardH + 36;
+
+    ctx.strokeStyle = '#F0EFEA'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(MARGIN + 28, cardY + 146); ctx.lineTo(MARGIN + CARD_W - 28, cardY + 146); ctx.stroke();
+
+    ctx.fillStyle = INK; ctx.font = 'bold 24px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(t('checkin_distribution') || 'Check-in Map', W / 2, cardY + 188);
+    this._drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210);
+    return cardY + cardH + 30;
   },
 
   _drawPosterCareChangesSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((t('care_changes') || 'Care Changes').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
+    const cardY = startY;
     const rows = Math.max(1, Math.ceil(posterStats.careChanges.length / 2));
-    const cardH = posterStats.careChanges.length === 0 ? 150 : 54 + rows * 104;
+    const cardH = posterStats.careChanges.length === 0 ? 150 : 50 + rows * 104;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
 
     if (posterStats.careChanges.length === 0) {
@@ -1372,7 +1460,7 @@ Page({
       ctx.fillText(posterStats.careChangesEmptyText, W / 2, cardY + 64);
       ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif';
       ctx.fillText(posterStats.careChangesEmptyHint, W / 2, cardY + 100);
-      return cardY + cardH + 36;
+      return cardY + cardH + 30;
     }
 
     const cellW = (CARD_W - 72) / 2;
@@ -1393,14 +1481,12 @@ Page({
       ctx.fillText(`${sign}${item.delta}`, x + cellW - 18, y + 50);
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
   _drawPosterWeightTrendSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, posterStats, startY) {
     if (posterStats.weightTrend.status === 'hidden') return startY;
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((t('weight_trend') || 'Weight Trend').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
+    const cardY = startY;
     const cardH = 230;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
     const trend = posterStats.weightTrend;
@@ -1415,7 +1501,7 @@ Page({
     if (trend.status === 'single') {
       ctx.fillStyle = ACCENT;
       ctx.beginPath(); ctx.arc(W * 0.67, cardY + 120, 18, 0, Math.PI * 2); ctx.fill();
-      return cardY + cardH + 36;
+      return cardY + cardH + 30;
     }
 
     const chartX = MARGIN + 240;
@@ -1440,31 +1526,66 @@ Page({
       ctx.beginPath(); ctx.arc(toX(index), toY(record.weight), 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
-  _drawPosterHeatmapSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, posterStats, startY) {
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((t('checkin_distribution') || 'Check-in Map').toUpperCase(), MARGIN, startY);
-    const cardY = startY + 22;
-    const cardH = 220;
-    this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
+  _drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, startY) {
     const colors = ['#F0EFEA', 'rgba(254,225,64,0.35)', 'rgba(254,225,64,0.65)', 'rgba(254,225,64,1)'];
-    const cols = 16;
-    const dotGapX = (CARD_W - 64) / cols;
-    const dotGapY = 48;
-    posterStats.heatmap.forEach((item, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const cx = MARGIN + 32 + col * dotGapX + dotGapX / 2;
-      const cy = cardY + 58 + row * dotGapY;
+    const days = posterStats.heatmap || [];
+    if (days.length === 0) return;
+
+    const legendItems = [
+      { label: '0', color: colors[0] },
+      { label: '1', color: colors[1] },
+      { label: '2', color: colors[2] },
+      { label: '3+', color: colors[3] }
+    ];
+    const legendX = MARGIN + CARD_W - 148;
+    const legendY = startY - 42;
+    legendItems.forEach((item, index) => {
+      const x = legendX + index * 36;
+      ctx.fillStyle = item.color;
+      this.drawRoundedRectPath(ctx, x, legendY, 16, 16, 5);
+      ctx.fill();
+      ctx.fillStyle = '#6E6E73';
+      ctx.font = '16px -apple-system,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(item.label, x + 20, legendY + 14);
+    });
+
+    const stripX = MARGIN + 36;
+    const stripY = startY + 8;
+    const stripW = CARD_W - 72;
+    const stripH = 34;
+    const gap = 2;
+    const cellW = (stripW - gap * (days.length - 1)) / days.length;
+    days.forEach((item, index) => {
+      const x = stripX + index * (cellW + gap);
       ctx.fillStyle = item.isFuture ? '#F8F6F1' : colors[item.level];
-      this.drawRoundedRectPath(ctx, cx - 12, cy - 12, 24, 24, 8);
+      this.drawRoundedRectPath(ctx, x, stripY, cellW, stripH, 7);
       ctx.fill();
     });
-    ctx.fillStyle = MUTED; ctx.font = '20px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(t('active_days_helper'), MARGIN + 24, cardY + cardH - 28);
-    return cardY + cardH + 36;
+
+    const tickDays = [1, 5, 10, 15, 20, 25, 30];
+    const lastDay = days.length;
+    const visibleTickDays = tickDays.filter(day => day <= lastDay);
+    if (!visibleTickDays.includes(lastDay)) visibleTickDays.push(lastDay);
+    visibleTickDays.forEach(day => {
+      const index = day - 1;
+      const x = stripX + index * (cellW + gap) + cellW / 2;
+      const isMonthEnd = day === lastDay && !tickDays.includes(lastDay);
+      ctx.strokeStyle = '#D9D4C9';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, stripY + stripH + 6);
+      ctx.lineTo(x, stripY + stripH + 14);
+      ctx.stroke();
+      ctx.fillStyle = '#8F8377';
+      ctx.font = '18px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      const label = isMonthEnd ? (getLanguage() === 'zh' ? '月末' : 'End') : String(day);
+      ctx.fillText(label, x, stripY + stripH + (isMonthEnd ? 58 : 36));
+    });
   },
 
   _drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, startY) {
@@ -1478,10 +1599,8 @@ Page({
     ctx.textAlign = 'center';
     ctx.fillStyle = '#B0ADA6'; ctx.font = 'bold 22px -apple-system,sans-serif';
     ctx.fillText('PetPaw', W / 2, footerY);
-    ctx.font = '20px -apple-system,sans-serif';
-    ctx.fillText('记录宠物生活的每一天', W / 2, footerY + 32);
     ctx.fillStyle = '#C7C4BC'; ctx.font = '18px sans-serif';
-    ctx.fillText(dateUtil.formatDate(new Date(), 'YYYY-MM-DD'), W / 2, footerY + 60);
+    ctx.fillText(dateUtil.formatDate(new Date(), 'YYYY-MM-DD'), W / 2, footerY + 34);
   },
 
   // ─── Section 1: Profile ─────────────────────────────────────
@@ -1842,79 +1961,201 @@ Page({
 
   _drawMonthlyBadgeSection(ctx, W, MARGIN, CARD_W, CARD, INK, MUTED, ACCENT, petLogs, petWeights, currentMonth, pet, startY, isZH, badgeDataOverride) {
     const badgeData = badgeDataOverride || this._buildMonthlyBadgeData(petLogs, petWeights, currentMonth, pet && pet.species);
-    const cardH = 310;
-
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText((isZH ? `本月奖章 (${badgeData.unlockedCount}/${badgeData.totalCount})` : `Monthly Badges (${badgeData.unlockedCount}/${badgeData.totalCount})`).toUpperCase(), MARGIN, startY);
-
-    const cardY = startY + 22;
+    const configs = this._getPosterBadgeMedalConfig();
+    const cardH = 430;
+    const cardY = startY;
     this.drawCardSection(ctx, MARGIN, cardY, CARD_W, cardH, 32, CARD);
 
-    const medalY = cardY + 72;
+    const pillW = 104;
+    ctx.fillStyle = 'rgba(254,225,64,0.32)';
+    this.drawRoundedRectPath(ctx, W / 2 - pillW / 2, cardY + 28, pillW, 38, 19);
+    ctx.fill();
+    ctx.fillStyle = '#A56A00'; ctx.font = 'bold 20px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${badgeData.unlockedCount}/${badgeData.totalCount}`, W / 2, cardY + 54);
+
+    const recordY = cardY + 120;
     const colW = CARD_W / 4;
     badgeData.recordBadges.forEach((badge, i) => {
       const cx = MARGIN + colW * i + colW / 2;
-      this._drawReportBadgeMedal(ctx, cx, medalY, badge, ACCENT, INK, MUTED);
+      this._drawPosterMedalBadge(ctx, cx, recordY, badge, configs.record[i], INK, MUTED);
     });
 
-    ctx.fillStyle = MUTED; ctx.font = '22px -apple-system,sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(isZH ? '习惯奖章' : 'Habit Badges', MARGIN + 24, cardY + 188);
-
-    const chipY = cardY + 218;
-    const chipW = (CARD_W - 72) / 3;
+    const habitY = cardY + 306;
+    const habitColW = CARD_W / 3;
     badgeData.habitBadges.forEach((badge, i) => {
-      const x = MARGIN + 24 + i * (chipW + 12);
-      const fill = badge.unlocked ? 'rgba(254,225,64,0.78)' : '#F0EFEA';
-      const stroke = badge.unlocked ? '#E8BC00' : '#D7D2C8';
-      ctx.fillStyle = fill;
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1.5;
-      this.drawRoundedRectPath(ctx, x, chipY, chipW, 58, 22);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = badge.unlocked ? INK : MUTED;
-      ctx.font = 'bold 22px -apple-system,sans-serif';
-      ctx.textAlign = 'center';
-      const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
-      ctx.fillText(title, x + chipW / 2, chipY + 24);
-      ctx.font = '18px -apple-system,sans-serif';
-      ctx.fillText(badge.unlocked ? '✓' : badge.progressText, x + chipW / 2, chipY + 46);
+      const cx = MARGIN + habitColW * i + habitColW / 2;
+      this._drawPosterMedalBadge(ctx, cx, habitY, badge, configs.habit[i], INK, MUTED);
     });
 
-    return cardY + cardH + 36;
+    return cardY + cardH + 30;
   },
 
-  _drawReportBadgeMedal(ctx, cx, cy, badge, ACCENT, INK, MUTED) {
+  _getPosterBadgeMedalConfig() {
+    return {
+      record: [
+        { medalShape: 'round-gold', mark: '3', coinFill: '#F8C84E', stroke: '#D99320', innerFill: '#FFF4B8', ringFill: '#FFE08A', labelFill: '#FFF2BF', markFill: '#87540B', ribbonColors: ['#E66A5E', '#3D91B5'] },
+        { medalShape: 'round-gold', mark: '7', coinFill: '#F3BE45', stroke: '#C9841C', innerFill: '#FFF0AE', ringFill: '#FFD773', labelFill: '#FFF1C6', markFill: '#7C4E11', ribbonColors: ['#E58A4E', '#5C9CCB'] },
+        { medalShape: 'round-gold', mark: '15', coinFill: '#EFB44A', stroke: '#B97818', innerFill: '#FFF1BC', ringFill: '#FFD987', labelFill: '#FFF0C8', markFill: '#71470D', ribbonColors: ['#3F9E98', '#E8B34A'] },
+        { medalShape: 'round-gold', mark: '25', coinFill: '#F5C45A', stroke: '#C88925', innerFill: '#FFF5C7', ringFill: '#FFE19A', labelFill: '#FFF3CE', markFill: '#75500F', ribbonColors: ['#8067D7', '#E784A2'] }
+      ],
+      habit: [
+        { medalShape: 'round-gold', mark: 'tooth', coinFill: '#F2BC5D', stroke: '#C5802A', innerFill: '#FFF2C5', ringFill: '#FFD987', labelFill: '#FFF0D0', markFill: '#8B5B16', ribbonColors: ['#D86693', '#5D9EB0'] },
+        { medalShape: 'round-gold', mark: 'kg', coinFill: '#F5C860', stroke: '#C48B28', innerFill: '#FFF4C8', ringFill: '#FFE09A', labelFill: '#FFF3D2', markFill: '#805B18', ribbonColors: ['#4E9CCA', '#87B96B'] },
+        { medalShape: 'round-gold', mark: 'guard', coinFill: '#EFC052', stroke: '#B98220', innerFill: '#FFF3BC', ringFill: '#FFDC82', labelFill: '#FFF0C8', markFill: '#755411', ribbonColors: ['#66A85B', '#E89B4C'] }
+      ]
+    };
+  },
+
+  _drawPosterMedalBadge(ctx, cx, cy, badge, config, INK, MUTED) {
     const unlocked = badge.unlocked;
-    const r = 36;
-    const outer = unlocked ? ACCENT : '#F4F1EA';
-    const inner = unlocked ? '#FFF4A3' : '#FFFFFF';
-    const stroke = unlocked ? '#D9A900' : '#D7D2C8';
+    const stroke = unlocked ? config.stroke : '#CFC8BD';
+    const innerFill = unlocked ? config.innerFill : '#FBFAF7';
+    const ringFill = unlocked ? config.ringFill : '#ECE7DF';
+    const coinFill = unlocked ? config.coinFill : '#DED8CF';
+    const labelFill = unlocked ? config.labelFill : '#F6F3EF';
+    const markFill = unlocked ? config.markFill : '#9C9388';
+    const ribbonColors = unlocked ? config.ribbonColors : ['#D6CEC3', '#C5BCB1'];
+    const coinY = cy - 14;
+    ctx.save();
 
-    ctx.fillStyle = outer;
+    ctx.fillStyle = 'rgba(80,60,30,0.08)';
+    ctx.beginPath(); ctx.arc(cx + 2, coinY + 4, 36, 0, Math.PI * 2); ctx.fill();
+
+    this._drawPosterMedalRibbon(ctx, cx - 11, cy + 12, 20, 44, ribbonColors[0], -4);
+    this._drawPosterMedalRibbon(ctx, cx + 11, cy + 12, 20, 44, ribbonColors[1], 4);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath(); ctx.arc(cx, coinY, 38, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = ringFill;
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = inner;
-    ctx.beginPath(); ctx.arc(cx, cy, r - 12, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(cx, coinY, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
 
-    ctx.fillStyle = unlocked ? '#A56A00' : '#B4ADA0';
-    ctx.font = 'bold 20px -apple-system,sans-serif';
+    ctx.fillStyle = coinFill;
+    ctx.beginPath(); ctx.arc(cx, coinY, 28, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = innerFill;
+    ctx.beginPath(); ctx.arc(cx, coinY, 20, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = unlocked ? this._colorWithAlpha(stroke, 0.28) : '#D3CCC2';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(cx, coinY, 24, 0, Math.PI * 2); ctx.stroke();
+
+    ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.52)';
+    ctx.beginPath(); ctx.arc(cx - 13, coinY - 13, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - 4, coinY - 18, 3, 0, Math.PI * 2); ctx.fill();
+
+    this._drawPosterMedalMark(ctx, config.mark, cx, coinY + 5, markFill);
+    ctx.restore();
+
+    ctx.font = 'bold 18px -apple-system,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(unlocked ? '✓' : badge.shortLabel.replace('天', ''), cx, cy + 7);
-
-    if (unlocked) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath(); ctx.arc(cx - 17, cy - 18, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx + 20, cy - 8, 2, 0, Math.PI * 2); ctx.fill();
-    }
-
-    ctx.fillStyle = INK; ctx.font = 'bold 20px -apple-system,sans-serif';
     const title = badge.title.length > 5 ? badge.title.slice(0, 4) + '…' : badge.title;
-    ctx.fillText(title, cx, cy + 58);
-    ctx.fillStyle = MUTED; ctx.font = '18px -apple-system,sans-serif';
-    ctx.fillText(unlocked ? badge.shortLabel + ' ✓' : badge.progressText, cx, cy + 82);
+    const labelW = 88;
+    ctx.fillStyle = labelFill;
+    this.drawRoundedRectPath(ctx, cx - labelW / 2, cy + 40, labelW, 26, 13);
+    ctx.fill();
+    ctx.fillStyle = unlocked ? INK : MUTED;
+    ctx.fillText(title, cx, cy + 59);
+    ctx.fillStyle = unlocked ? stroke : MUTED;
+    ctx.font = 'bold 16px -apple-system,sans-serif';
+    ctx.fillText(unlocked ? badge.shortLabel : badge.progressText, cx, cy + 80);
+  },
+
+  _drawPosterMedalRibbon(ctx, cx, y, w, h, fill, tilt) {
+    const topY = y;
+    const bottomY = y + h;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(cx - w / 2 + tilt, topY);
+    ctx.lineTo(cx + w / 2 + tilt, topY);
+    ctx.lineTo(cx + w / 2, bottomY);
+    ctx.lineTo(cx, bottomY - 14);
+    ctx.lineTo(cx - w / 2, bottomY);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4 + tilt * 0.5, topY + 6);
+    ctx.lineTo(cx + 3 + tilt * 0.5, topY + 6);
+    ctx.lineTo(cx, bottomY - 20);
+    ctx.lineTo(cx - 6, bottomY - 6);
+    ctx.closePath();
+    ctx.fill();
+  },
+
+  _drawPosterMedalMark(ctx, mark, cx, cy, color) {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = 'round';
+    if (mark === 'tooth') {
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, cy - 15);
+      ctx.quadraticCurveTo(cx - 20, cy + 5, cx - 8, cy + 18);
+      ctx.quadraticCurveTo(cx - 2, cy + 9, cx + 3, cy + 18);
+      ctx.quadraticCurveTo(cx + 15, cy + 4, cx + 9, cy - 15);
+      ctx.quadraticCurveTo(cx, cy - 9, cx - 10, cy - 15);
+      ctx.fill();
+      return;
+    }
+    if (mark === 'kg') {
+      ctx.font = 'bold 16px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(mark, cx, cy + 6);
+      return;
+    }
+    if (mark === 'guard') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 18);
+      ctx.lineTo(cx + 17, cy - 8);
+      ctx.lineTo(cx + 13, cy + 14);
+      ctx.lineTo(cx, cy + 21);
+      ctx.lineTo(cx - 13, cy + 14);
+      ctx.lineTo(cx - 17, cy - 8);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy + 1, 5, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+    ctx.font = mark.length > 1 ? 'bold 17px -apple-system,sans-serif' : 'bold 27px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(mark, cx, cy + 8);
+  },
+
+  _drawScallopPath(ctx, cx, cy, outerR, innerR, lobes) {
+    const step = (Math.PI * 2) / lobes;
+    ctx.beginPath();
+    for (let i = 0; i < lobes; i++) {
+      const angle = -Math.PI / 2 + i * step;
+      const nextAngle = angle + step;
+      const midAngle = angle + step / 2;
+      const x = cx + Math.cos(angle) * outerR;
+      const y = cy + Math.sin(angle) * outerR;
+      const mx = cx + Math.cos(midAngle) * innerR;
+      const my = cy + Math.sin(midAngle) * innerR;
+      const nx = cx + Math.cos(nextAngle) * outerR;
+      const ny = cy + Math.sin(nextAngle) * outerR;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      ctx.quadraticCurveTo(mx, my, nx, ny);
+    }
+    ctx.closePath();
+  },
+
+  _drawStarPath(ctx, cx, cy, outerR, innerR, points) {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const angle = -Math.PI / 2 + (i * Math.PI) / points;
+      const r = i % 2 === 0 ? outerR : innerR;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
   },
 
   // ─── Section 4: Supply Snapshot ─────────────────────────────

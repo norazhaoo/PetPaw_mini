@@ -47,7 +47,7 @@ module.exports = {
   little_start: '小小开始', steady_week: '稳定一周',
   half_month_care: '半月陪伴', full_month_care: '满满一月',
   bright_teeth: '亮亮牙', steady_growth: '稳稳长大',
-  daily_guardian: '日常守护', poster_footer_quote: '愿你与它，每天都是好日子。',
+  daily_guardian: '日常守护', poster_footer_quote: '谢谢你陪我度过的每一天。',
   monthly_stats: '月度统计', no_activity: '暂无记录。',
   no_weight_history: '暂无体重记录。', no_records_day: '当日无记录。',
   new_custom_event: '新建自定义事件', custom_event_placeholder: '例如：洗澡时间', select_color: '选择颜色',
