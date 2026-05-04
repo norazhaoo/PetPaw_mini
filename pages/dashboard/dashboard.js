@@ -489,6 +489,7 @@ Page({
 
     return {
       ...item,
+      iconName: item.iconName || item.icon || 'Package',
       daysLeft,
       isLow: daysLeft <= 7,
       shortLabel,
@@ -1184,14 +1185,16 @@ Page({
 
   async _exportReportWithOffscreenCanvas() {
     const W = 750;
-    const H = 2260;
+    const reportContext = this._getPosterExportContext();
+    if (!reportContext) throw new Error('No active pet for poster export');
+    const H = this._getAppleReportHeight(reportContext.posterStats);
     const info = wx.getSystemInfoSync();
     const dpr = info.pixelRatio || 2;
     const canvas = wx.createOffscreenCanvas({ type: '2d', width: W * dpr, height: H * dpr });
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    await this._drawAppleReport(canvas, ctx, W, H);
+    await this._drawAppleReport(canvas, ctx, W, H, reportContext);
     const tempFilePath = await this._saveOffscreenCanvasToTempFile(canvas, W, H);
     this.setData({ exportGenerating: false, exportCanvasVisible: false, exportImageUrl: tempFilePath, showExportModal: true });
   },
@@ -1245,16 +1248,19 @@ Page({
           }
           const canvas = res[0].node;
           const W = 750;  // logical pixels
-          const H = 2260;
-          const info = wx.getSystemInfoSync();
-          const dpr = info.pixelRatio || 2;
-          canvas.width  = W * dpr;
-          canvas.height = H * dpr;
-          const ctx = canvas.getContext('2d');
-          ctx.scale(dpr, dpr);
 
           try {
-            await this._drawAppleReport(canvas, ctx, W, H);
+            const reportContext = this._getPosterExportContext();
+            if (!reportContext) throw new Error('No active pet for poster export');
+            const H = this._getAppleReportHeight(reportContext.posterStats);
+            const info = wx.getSystemInfoSync();
+            const dpr = info.pixelRatio || 2;
+            canvas.width  = W * dpr;
+            canvas.height = H * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            await this._drawAppleReport(canvas, ctx, W, H, reportContext);
 
             wx.canvasToTempFilePath({
               canvas,
@@ -1278,6 +1284,42 @@ Page({
         });
       }, 50);
     });
+  },
+
+  _getPosterExportContext(reportAt) {
+    const state = app.getState();
+    const pet = this.data.activePet;
+    if (!pet) return null;
+    const posterStats = this._buildPosterStats(state, pet, reportAt || new Date());
+    return { pet, posterStats };
+  },
+
+  _getPosterCareChangesCardHeight(posterStats) {
+    const count = posterStats && Array.isArray(posterStats.careChanges) ? posterStats.careChanges.length : 0;
+    if (count === 0) return 150;
+    return 50 + Math.max(1, Math.ceil(count / 2)) * 104;
+  },
+
+  _getPosterWeightTrendSectionHeight(posterStats) {
+    const trend = posterStats && posterStats.weightTrend;
+    return trend && trend.status !== 'hidden' ? 260 : 0;
+  },
+
+  _getAppleReportHeight(posterStats) {
+    const heroSectionEndY = 502;
+    const highlightsSectionHeight = 330 + 30;
+    const careChangesSectionHeight = this._getPosterCareChangesCardHeight(posterStats) + 30;
+    const monthlyBadgeSectionHeight = 430 + 30;
+    const footerReservedHeight = 258;
+
+    return Math.ceil(
+      heroSectionEndY +
+      highlightsSectionHeight +
+      careChangesSectionHeight +
+      this._getPosterWeightTrendSectionHeight(posterStats) +
+      monthlyBadgeSectionHeight +
+      footerReservedHeight
+    );
   },
 
   closeExportModal() { this.setData({ showExportModal: false }); },
@@ -1311,10 +1353,10 @@ Page({
   },
 
   // ─── Master drawing orchestrator ───────────────────────────
-  async _drawAppleReport(canvas, ctx, W, H) {
-    const state = app.getState();
-    const pet   = this.data.activePet;
-    if (!pet) return;
+  async _drawAppleReport(canvas, ctx, W, H, reportContext) {
+    const context = reportContext || this._getPosterExportContext();
+    if (!context) return;
+    const pet = context.pet;
 
     const MARGIN = 40;
     const CARD_W = W - MARGIN * 2;
@@ -1323,7 +1365,7 @@ Page({
     const INK   = '#1C1C1E';   // near-black
     const MUTED = '#6E6E73';   // Apple gray
     const ACCENT= '#FEE140';   // PetPaw yellow
-    const posterStats = this._buildPosterStats(state, pet, new Date());
+    const posterStats = context.posterStats;
 
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
@@ -1590,12 +1632,13 @@ Page({
 
   _drawPosterFooterSection(ctx, W, H, MARGIN, CARD_W, INK, MUTED, posterStats, startY) {
     const cardH = 128;
-    if (startY + cardH < H - 150) {
-      this.drawCardSection(ctx, MARGIN, startY, CARD_W, cardH, 32, '#FFFFFF');
-      ctx.fillStyle = MUTED; ctx.font = 'italic 24px -apple-system,sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(`"${posterStats.footerQuote}"`, W / 2, startY + 72);
-    }
-    const footerY = H - 86;
+    this.drawCardSection(ctx, MARGIN, startY, CARD_W, cardH, 32, '#FFFFFF');
+    ctx.fillStyle = MUTED; ctx.font = 'italic 24px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`"${posterStats.footerQuote}"`, W / 2, startY + 72);
+
+    const footerBottomMargin = 24;
+    const brandToDateGap = 34;
+    const footerY = H - footerBottomMargin - brandToDateGap;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#B0ADA6'; ctx.font = 'bold 22px -apple-system,sans-serif';
     ctx.fillText('PetPaw', W / 2, footerY);
