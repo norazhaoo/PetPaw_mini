@@ -11,6 +11,7 @@ const LANGUAGES = [
 Page({
   data: {
     showLangMenu: false,
+    showHelpMenu: false,
     languages: LANGUAGES,
     currentLang: 'en',
     currentLangLabel: 'English',
@@ -26,6 +27,7 @@ Page({
       i18nData: {
         settings: i18n.t('settings'), language: i18n.t('language'),
         help: i18n.t('help'), about: i18n.t('about'),
+        contact_service: i18n.t('contact_service'),
         clear_data: i18n.t('clear_data'), clear_confirm: i18n.t('clear_confirm'),
         data_cleared: i18n.t('data_cleared')
       }
@@ -63,6 +65,10 @@ Page({
     this.setData({ showLangMenu: !this.data.showLangMenu });
   },
 
+  toggleHelpMenu() {
+    this.setData({ showHelpMenu: !this.data.showHelpMenu });
+  },
+
   selectLanguage(e) {
     const code = e.currentTarget.dataset.code;
     const oldCode = i18n.getLanguage();
@@ -75,18 +81,10 @@ Page({
     wx.reLaunch({ url: '/pages/settings/settings' });
   },
 
-  showHelp() {
-    wx.showModal({
-      title: i18n.t('help'),
-      content: 'Please email support@petpaw.com for assistance or join our Discord!',
-      showCancel: false
-    });
-  },
-
   showAbout() {
     wx.showModal({
       title: i18n.t('about'),
-      content: 'PetPaw v2.5\nLocally encrypted, species-adaptive smart tracking.',
+      content: i18n.t('about_content'),
       showCancel: false
     });
   },
