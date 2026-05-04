@@ -206,6 +206,14 @@ assert(
   'poster preview should keep scrollable safe-area padding below the exported image'
 );
 assert(
+  dashboardWxml.includes('class="export-preview-actions"') &&
+    dashboardWxml.includes('bindtap="saveExportImage"') &&
+    dashboardWxml.includes('{{i18n.save_to_album}}') &&
+    dashboardWxss.includes('.export-preview-actions') &&
+    dashboardWxss.includes('.export-preview-save'),
+  'poster preview should keep a visible save-to-album action after the bottom sheet removal'
+);
+assert(
   dashboardWxml.includes('bindlongpress="saveExportImage"') &&
     !dashboardWxml.includes('catchtap="previewExportImage"'),
   'poster preview image should save directly on long press instead of opening full-screen preview first'
