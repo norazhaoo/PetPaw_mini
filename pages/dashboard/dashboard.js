@@ -489,6 +489,7 @@ Page({
 
     return {
       ...item,
+      iconName: item.iconName || item.icon || 'Package',
       daysLeft,
       isLow: daysLeft <= 7,
       shortLabel,
