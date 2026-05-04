@@ -44,9 +44,6 @@ Component({
 
   methods: {
     updateLang() {
-      // Need dynamic import or direct access because app may have changed it.
-      const app = getApp();
-      // Using app method or directly requiring i18n
       const i18n = require('../utils/i18n.js');
       const texts = this.data.list.map(item => i18n.t(item.textKey));
       this.setData({ texts });

@@ -375,21 +375,21 @@ state.weightHistory = [
   { id: 'today-weight', petId: 'pet-1', date: at(26, 20), weight: 4.2 },
   { id: 'old-weight', petId: 'pet-1', date: at(24, 20), weight: 4.1 }
 ];
-const pageWithTodayLogs = createPage();
-pageWithTodayLogs.onLoad();
-const todayLogs = pageWithTodayLogs._buildSelectedDayLogs(
+const pageWithSelectedDayLogs = createPage();
+pageWithSelectedDayLogs.onLoad();
+const selectedDayLogs = pageWithSelectedDayLogs._buildSelectedDayLogs(
   state.logs.filter(log => log.petId === 'pet-1'),
   state.weightHistory.filter(weight => weight.petId === 'pet-1'),
   state.customActions,
   new Date(2026, 3, 26, 12)
 );
 assert.deepStrictEqual(
-  todayLogs.combinedLogs.map(item => item.id),
+  selectedDayLogs.combinedLogs.map(item => item.id),
   ['today-weight', 'today-log'],
-  'today logs should include only records from the current day, newest first'
+  'selected day logs should include only records from the selected day, newest first'
 );
 assert.strictEqual(
-  todayLogs.listTitle,
+  selectedDayLogs.listTitle,
   '记录: 4月26日',
   'selected-day logs should use the selected-date title path'
 );
