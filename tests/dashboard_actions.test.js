@@ -102,6 +102,28 @@ function readDashboardWxss() {
   return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.wxss'), 'utf8');
 }
 
+function expectContainsTokens(source, tokens, message) {
+  assert(tokens.every(token => source.includes(token)), message);
+}
+
+function readDashboardJs() {
+  return fs.readFileSync(path.join(__dirname, '..', 'pages/dashboard/dashboard.js'), 'utf8');
+}
+
+function readAppWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'app.wxss'), 'utf8');
+}
+
+function readTabBarWxss() {
+  return fs.readFileSync(path.join(__dirname, '..', 'custom-tab-bar/index.wxss'), 'utf8');
+}
+
+function readZIndex(css, selector) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = css.match(new RegExp(`${escapedSelector}\\s*\\{[\\s\\S]*?z-index:\\s*(\\d+)`));
+  return match ? Number(match[1]) : NaN;
+}
+
 state = createState();
 const pageWithI18n = createPage();
 pageWithI18n.onLoad();
@@ -125,36 +147,161 @@ assert.strictEqual(
   '库存警报',
   'dashboard should load stock alert copy'
 );
+assert.strictEqual(
+  pageWithI18n.data.i18n.export_drawing_hint,
+  '正在绘制您的专属报告',
+  'dashboard should load export loading copy from i18n'
+);
+assert.strictEqual(
+  pageWithI18n.data.i18n.save_to_album,
+  '保存到相册',
+  'dashboard should load export action copy from i18n'
+);
+assert.strictEqual(
+  pageWithI18n.data.exportCanvasVisible,
+  false,
+  'export canvas should not be mounted before poster generation starts'
+);
 
 const dashboardWxml = readDashboardWxml();
-assert(
-  dashboardWxml.includes('i18n.stock_alert'),
+const dashboardJs = readDashboardJs();
+const dashboardWxss = readDashboardWxss();
+const appWxss = readAppWxss();
+const tabBarWxss = readTabBarWxss();
+const heroOverviewCardY = Number((dashboardJs.match(/async _drawPosterHeroSection[\s\S]*?const cardY = (\d+);/) || [])[1]);
+expectContainsTokens(
+  dashboardWxml,
+  ['i18n.stock_alert', 'inventoryItems', 'stockActionItems'],
   'dashboard should render Stock Alert above the daily record area'
 );
-assert(
-  dashboardWxml.includes('cal-grid') &&
-    dashboardWxml.includes('prevMonth') &&
-    dashboardWxml.includes('nextMonth') &&
-    dashboardWxml.includes('selectDate') &&
-    dashboardWxml.includes('goToday'),
+expectContainsTokens(
+  dashboardWxml,
+  ['cal-grid', 'prevMonth', 'nextMonth', 'selectDate', 'goToday'],
   'dashboard should restore the calendar controls for backdated records'
 );
 assert(
   !dashboardWxml.includes('weightCanvas') && !dashboardWxml.includes('monthlyStats'),
   'dashboard should not render the old weight chart or monthly stats cards'
 );
-assert(
-  dashboardWxml.includes('monthly-poster-card') && dashboardWxml.includes('openStatsRules'),
+expectContainsTokens(
+  dashboardWxml,
+  ['monthly-poster-card', 'openStatsRules', 'i18n.export_drawing_hint', 'i18n.export_preview_hint'],
   'dashboard should render poster CTA and preview rule entry point'
 );
-const dashboardWxss = readDashboardWxss();
+assert(
+  heroOverviewCardY >= 328,
+  'poster overview card should leave clear breathing room below the yellow hero curve'
+);
+assert(
+  appWxss.includes('padding-bottom: calc(260rpx + env(safe-area-inset-bottom));'),
+  'tab pages should reserve enough bottom scroll space for the custom tab bar and safe area'
+);
+assert(
+  readZIndex(tabBarWxss, '.tab-bar-container') < readZIndex(appWxss, '.modal-overlay'),
+  'custom tab bar should sit below page modals so poster preview is not covered'
+);
+assert(
+  dashboardWxml.includes('export-preview-content') &&
+    dashboardWxss.includes('padding: 60rpx 40rpx calc(160rpx + env(safe-area-inset-bottom));'),
+  'poster preview should keep scrollable safe-area padding below the exported image'
+);
+assert(
+  dashboardWxml.includes('class="export-preview-actions"') &&
+    dashboardWxml.includes('bindtap="saveExportImage"') &&
+    dashboardWxml.includes('{{i18n.save_to_album}}') &&
+    dashboardWxss.includes('.export-preview-actions') &&
+    dashboardWxss.includes('.export-preview-save'),
+  'poster preview should keep a visible save-to-album action after the bottom sheet removal'
+);
+assert(
+  dashboardWxml.includes('bindlongpress="saveExportImage"') &&
+    !dashboardWxml.includes('catchtap="previewExportImage"'),
+  'poster preview image should save directly on long press instead of opening full-screen preview first'
+);
+assert(
+  pageWithI18n.data.i18n.export_preview_hint === '长按图片可直接保存到相册',
+  'Chinese poster preview hint should describe direct long-press saving'
+);
+const enI18n = require('../utils/i18n/en');
+assert.strictEqual(
+  enI18n.export_preview_hint,
+  'Long press the image to save it to Photos',
+  'English poster preview hint should describe direct long-press saving'
+);
+assert(
+  !dashboardWxml.includes('export-sheet-heading') &&
+    !dashboardWxml.includes('class="safe-bottom"') &&
+    !dashboardWxml.includes('<text>{{i18n.monthly_care_poster}}</text>'),
+  'poster export preview should not show a blocking bottom sheet with the poster title'
+);
+assert(
+  dashboardWxml.includes('wx:if="{{exportCanvasVisible}}"') &&
+    dashboardWxml.includes('width:1px;height:1px;') &&
+    !dashboardWxml.includes('left:-99999px') &&
+    dashboardJs.includes('exportCanvasVisible: true') &&
+    dashboardJs.includes('exportCanvasVisible: false'),
+  'poster export canvas should mount as a tiny temporary node to avoid render-layer canvas updates'
+);
+assert(
+  dashboardJs.includes('wx.createOffscreenCanvas') &&
+    dashboardJs.includes('getFileSystemManager') &&
+    dashboardJs.includes('toDataURL'),
+  'poster export should prefer offscreen canvas so normal generation does not touch the render-layer canvas'
+);
+assert(
+  !dashboardJs.includes('const H = 2260'),
+  'poster export height should be computed from poster content instead of fixed at 2260'
+);
+const offscreenExportSource = dashboardJs.slice(
+  dashboardJs.indexOf('async _exportReportWithOffscreenCanvas'),
+  dashboardJs.indexOf('_saveOffscreenCanvasToTempFile')
+);
+assert(
+  offscreenExportSource.includes('this._getPosterExportContext()') &&
+    offscreenExportSource.includes('this._getAppleReportHeight(reportContext.posterStats)') &&
+    offscreenExportSource.includes('this._drawAppleReport(canvas, ctx, W, H, reportContext)'),
+  'offscreen poster export should compute dynamic height from a shared poster context'
+);
+const nodeExportSource = dashboardJs.slice(
+  dashboardJs.indexOf('_exportReportWithNodeCanvas'),
+  dashboardJs.indexOf('closeExportModal()')
+);
+assert(
+  nodeExportSource.includes('this._getPosterExportContext()') &&
+    nodeExportSource.includes('this._getAppleReportHeight(reportContext.posterStats)') &&
+    nodeExportSource.includes('this._drawAppleReport(canvas, ctx, W, H, reportContext)'),
+  'node canvas poster export should compute dynamic height from the same poster context'
+);
 assert(
   dashboardWxss.includes('flex-wrap: nowrap') && dashboardWxss.includes('margin-left: -6rpx'),
   'calendar record icons should use a compact single-row overlap instead of vertical stacking'
 );
 assert(
-  dashboardWxml.includes('width:16rpx;height:16rpx'),
-  'calendar record icon images should be small enough for compact calendar cells'
+  dashboardWxml.includes('class="cal-icon-dot"'),
+  'calendar should render compact icon containers for day records'
+);
+assert(
+  !dashboardJs.includes("cursorY = this._drawPosterHeatmapSection(ctx"),
+  'poster should merge check-in distribution into the highlights card instead of drawing a standalone heatmap section'
+);
+assert(
+  dashboardJs.includes('_drawPosterDateStrip') &&
+    dashboardJs.includes('this._drawPosterDateStrip(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210)') &&
+    dashboardJs.includes('const tickDays = [1, 5, 10, 15, 20, 25, 30]') &&
+    dashboardJs.includes("'3+'") &&
+    !dashboardJs.includes('this._drawPosterHeatmapGrid(ctx, W, MARGIN, CARD_W, posterStats, cardY + 210)'),
+  'poster check-in distribution should draw a readable date strip with key day ticks and a 3+ intensity legend'
+);
+assert(
+  !dashboardJs.includes("${posterStats.monthLabel} ${t('monthly_care_poster')}"),
+  'poster hero should show only the month instead of repeating the poster CTA title'
+);
+assert(
+  !dashboardJs.includes("getLanguage() === 'zh' ? '本月亮点'") &&
+    !dashboardJs.includes("t('care_changes') || 'Care Changes'") &&
+    !dashboardJs.includes("t('weight_trend') || 'Weight Trend'") &&
+    !dashboardJs.includes('Monthly Badges'),
+  'poster should not draw external section headings above cards'
 );
 
 state = createState();
@@ -171,7 +318,7 @@ state.inventoryItems = [
     consumptionUnit: 'g',
     unit: 'g',
     hidden: false,
-    iconName: 'FoodBowl'
+    icon: 'FoodBowl'
   },
   {
     id: 'hidden-food',
@@ -209,6 +356,11 @@ assert.deepStrictEqual(
   'stock alert should show visible active-pet inventory with computed days left'
 );
 assert.deepStrictEqual(
+  pageWithStockAlert.data.inventoryItems.map(item => item.iconName),
+  ['FoodBowl'],
+  'stock alert should preserve each inventory item icon for rendering'
+);
+assert.deepStrictEqual(
   pageWithStockAlert.data.stockActionItems.map(item => item.actionKey),
   pageWithStockAlert.data.trackActions.map(item => item.actionKey),
   'stock alert should include every visible daily tracking action'
@@ -239,7 +391,7 @@ assert.deepStrictEqual(
 assert.strictEqual(
   selectedDayLogs.listTitle,
   '记录: 4月26日',
-  'dashboard record list should identify the selected day'
+  'selected-day logs should use the selected-date title path'
 );
 
 state = createState();
@@ -392,6 +544,11 @@ state.medicalRecords = [
 const pageWithPosterStats = createPage();
 const posterStats = pageWithPosterStats._buildPosterStats(state, state.pets[0], posterDate);
 assert.strictEqual(
+  pageWithPosterStats._formatPosterMonthLabel(posterDate),
+  '四月',
+  'poster hero month should use the lightweight Chinese month label'
+);
+assert.strictEqual(
   posterStats.overview.find(item => item.key === 'companion_days').value,
   27,
   'poster companion days should be calculated from birthday while keeping the label'
@@ -405,6 +562,11 @@ assert.strictEqual(
   posterStats.overview.find(item => item.key === 'active_days').value,
   9,
   'poster active days should count natural days with at least one effective record'
+);
+assert.match(
+  posterStats.highlights.regularDay.label,
+  /^周[日一二三四五六]$/,
+  'poster regular day should show a complete Chinese weekday label'
 );
 assert.deepStrictEqual(
   posterStats.careChanges.map(item => item.type),
@@ -432,8 +594,85 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   posterStats.footerQuote,
-  '愿你与它，每天都是好日子。',
-  'poster footer should use fixed copy instead of note data'
+  '谢谢你陪我度过的每一天。',
+  'poster footer should use the updated companionship copy'
+);
+assert.strictEqual(
+  typeof pageWithPosterStats._getAppleReportHeight,
+  'function',
+  'poster should expose a dynamic height calculator for export sizing'
+);
+assert.strictEqual(
+  typeof pageWithPosterStats._getPosterCareChangesCardHeight,
+  'function',
+  'poster should expose the care-changes height helper used by dynamic sizing'
+);
+assert.strictEqual(
+  typeof pageWithPosterStats._getPosterWeightTrendSectionHeight,
+  'function',
+  'poster should expose the weight-trend height helper used by dynamic sizing'
+);
+const fullPosterHeight = pageWithPosterStats._getAppleReportHeight(posterStats);
+assert(
+  fullPosterHeight >= 2100 && fullPosterHeight <= 2160,
+  'full-content poster height should keep bottom whitespace visually symmetric with the top'
+);
+
+const badgeMedalConfigs = pageWithPosterStats._getPosterBadgeMedalConfig();
+assert.strictEqual(badgeMedalConfigs.record.length, 4, 'poster should define four distinct record badge medals');
+assert.strictEqual(badgeMedalConfigs.habit.length, 3, 'poster should define three distinct habit badge medals');
+
+const allBadgeMedals = badgeMedalConfigs.record.concat(badgeMedalConfigs.habit);
+assert.strictEqual(
+  typeof pageWithPosterStats._drawPosterMedalBadge,
+  'function',
+  'poster should expose the medal badge drawing helper used by monthly badge export'
+);
+assert.strictEqual(
+  new Set(allBadgeMedals.map(config => config.medalShape)).size,
+  1,
+  'poster badges should use one clean round gold medal silhouette'
+);
+assert.strictEqual(
+  new Set(allBadgeMedals.map(config => config.mark)).size,
+  7,
+  'each poster badge should use a distinct medal center mark'
+);
+assert(
+  allBadgeMedals.every(config => !config.eventIconName),
+  'poster badge medals should not reuse daily event icons'
+);
+assert(
+  allBadgeMedals.every(config =>
+    config.medalShape === 'round-gold' &&
+    config.coinFill &&
+    config.ringFill &&
+    config.innerFill &&
+    config.labelFill &&
+    Array.isArray(config.ribbonColors) &&
+    config.ribbonColors.length === 2 &&
+    config.mark
+  ),
+  'poster badge medals should define finished coin, ribbon, inner plate, ring, label, and center mark layers'
+);
+const medalDrawingSource = dashboardJs.slice(
+  dashboardJs.indexOf('_drawPosterMedalBadge'),
+  dashboardJs.indexOf('// ─── Section 4: Supply Snapshot')
+);
+assert(
+  !/shadowColor|shadowBlur|shadowOffsetY|globalAlpha|bezierCurveTo/.test(medalDrawingSource),
+  'poster badge medal drawing should avoid Mini Program canvas APIs that can fail in the rendering layer'
+);
+const footerDrawingSource = dashboardJs.slice(
+  dashboardJs.indexOf('_drawPosterFooterSection'),
+  dashboardJs.indexOf('// ─── Section 1: Profile')
+);
+assert(
+  !footerDrawingSource.includes('if (startY + cardH < H - 150)') &&
+    !footerDrawingSource.includes('H - 86') &&
+    footerDrawingSource.includes('const footerBottomMargin = 24') &&
+    footerDrawingSource.includes('this.drawCardSection(ctx, MARGIN, startY, CARD_W, cardH, 32'),
+  'poster footer should always draw after content instead of skipping the quote card based on fixed canvas height'
 );
 
 state = createState();
@@ -465,6 +704,10 @@ assert.strictEqual(
   emptyCareStats.careChangesEmptyText,
   '本月还没有足够记录',
   'care changes should expose a friendly empty state'
+);
+assert(
+  createPage()._getAppleReportHeight(emptyCareStats) < fullPosterHeight,
+  'poster with empty care changes and no weight trend should export shorter than a full-content poster'
 );
 
 state = createState();

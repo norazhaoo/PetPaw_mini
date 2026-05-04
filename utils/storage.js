@@ -17,6 +17,21 @@ const defaultState = {
   customActions: []
 };
 
+const UNIT_CONVERSION = {
+  'g': { 'kg': 0.001, 'g': 1 },
+  'kg': { 'g': 1000, 'kg': 1 },
+  'ml': { 'L': 0.001, 'ml': 1 },
+  'L': { 'ml': 1000, 'L': 1 }
+};
+
+const TIME_CONVERSION = {
+  'day': 1,
+  'week': 7,
+  'month': 30,
+  'quarter': 91,
+  'year': 365
+};
+
 // ======== 异步写盘 + 防抖 ========
 let _saveTimer = null;
 
@@ -134,6 +149,28 @@ function loadState() {
   return JSON.parse(JSON.stringify(defaultState));
 }
 
+function getInventoryDailyConsumption(item) {
+  const amount = item.consumptionAmount || item.dailyConsumption || 0;
+  const intervalVal = item.consumptionInterval || 1;
+  const timeUnit = item.consumptionTimeUnit || 'day';
+  const intervalInDays = intervalVal * (TIME_CONVERSION[timeUnit] || 1);
+  const cUnit = item.consumptionUnit || item.unit || 'g';
+  const tUnit = item.unit || 'g';
+
+  let dailyAmountInTotalUnit = amount / (intervalInDays || 1);
+  if (cUnit !== tUnit && UNIT_CONVERSION[cUnit] && UNIT_CONVERSION[cUnit][tUnit]) {
+    dailyAmountInTotalUnit = (amount * UNIT_CONVERSION[cUnit][tUnit]) / (intervalInDays || 1);
+  }
+
+  return dailyAmountInTotalUnit;
+}
+
+function getInventoryDaysLeft(item) {
+  const dailyAmountInTotalUnit = getInventoryDailyConsumption(item);
+  if (dailyAmountInTotalUnit <= 0) return 999;
+  return Math.max(0, Math.floor((item.current || 0) / dailyAmountInTotalUnit));
+}
+
 /**
  * 执行库存自动扣减
  */
@@ -143,38 +180,8 @@ function performDailyDeduction(state) {
   const daysPassed = differenceInDays(today, lastDeduction);
 
   if (daysPassed > 0) {
-    const CONVERSION = {
-      'g': { 'kg': 0.001, 'g': 1 },
-      'kg': { 'g': 1000, 'kg': 1 },
-      'ml': { 'L': 0.001, 'ml': 1 },
-      'L': { 'ml': 1000, 'L': 1 }
-    };
-    const TIME_CONVERSION = {
-      'day': 1,
-      'week': 7,
-      'month': 30,
-      'quarter': 91,
-      'year': 365
-    };
-
     state.inventoryItems = state.inventoryItems.map(item => {
-      const amount = item.consumptionAmount || item.dailyConsumption || 0;
-      const intervalVal = item.consumptionInterval || 1;
-      const timeUnit = item.consumptionTimeUnit || 'day';
-      const intervalInDays = intervalVal * (TIME_CONVERSION[timeUnit] || 1);
-
-      const cUnit = item.consumptionUnit || item.unit || 'g';
-      const tUnit = item.unit || 'g';
-
-      let dailyAmountInTotalUnit = amount / intervalInDays;
-      
-      // Unit conversion
-      if (cUnit !== tUnit) {
-        if (CONVERSION[cUnit] && CONVERSION[cUnit][tUnit]) {
-          dailyAmountInTotalUnit = (amount * CONVERSION[cUnit][tUnit]) / intervalInDays;
-        }
-      }
-
+      const dailyAmountInTotalUnit = getInventoryDailyConsumption(item);
       return {
         ...item,
         current: Math.max(0, item.current - (dailyAmountInTotalUnit * daysPassed))
@@ -373,6 +380,8 @@ module.exports = {
   loadState,
   saveState,
   flushState,
+  getInventoryDailyConsumption,
+  getInventoryDaysLeft,
   performDailyDeduction,
   setActivePetId,
   addPet,

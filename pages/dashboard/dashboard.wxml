@@ -173,7 +173,10 @@
       <image class="icon-img" lazy-load style="width:44rpx;height:44rpx;" src="{{ic.src('FileText')}}" mode="aspectFit" />
     </view>
     <view class="flex-col flex-1">
-      <text class="poster-card-title">{{i18n.monthly_care_poster}}</text>
+      <view style="display:flex;align-items:center;gap:12rpx;margin-bottom:4rpx;">
+        <text class="poster-card-title">{{i18n.monthly_care_poster}}</text>
+        <view class="stats-rule-btn" style="width:44rpx;height:44rpx;font-size:24rpx;" catchtap="openStatsRules">?</view>
+      </view>
       <text class="poster-card-subtitle">{{i18n.poster_cta_hint}}</text>
     </view>
     <view class="poster-card-action">
@@ -237,42 +240,29 @@
   <view wx:if="{{exportGenerating}}" class="modal-overlay">
     <view style="background:#fff;border-radius:40rpx;padding:60rpx 80rpx;display:flex;flex-direction:column;align-items:center;gap:32rpx;">
       <text style="font-size:36rpx;font-weight:700;color:#2C2C2C;">{{i18n.exporting || '生成中...'}}</text>
-      <text style="font-size:24rpx;color:#8A8A8A;">正在绘制您的专属报告</text>
+      <text style="font-size:24rpx;color:#8A8A8A;">{{i18n.export_drawing_hint}}</text>
     </view>
   </view>
 
   <!-- Export Preview Modal -->
-  <view wx:if="{{showExportModal}}" class="modal-overlay" style="flex-direction:column;background:rgba(0,0,0,0.85);z-index:2000;" catchtap="closeExportModal">
+  <view wx:if="{{showExportModal}}" class="modal-overlay export-preview-overlay" catchtap="closeExportModal">
     <!-- Scrollable Image Area -->
-    <scroll-view scroll-y="true" style="width:100%; flex:1; height: 0;" catchtap="closeExportModal">
-      <view style="padding:60rpx 40rpx 200rpx; display:flex; flex-direction:column; align-items:center;">
+    <scroll-view scroll-y="true" class="export-preview-scroll" catchtap="closeExportModal">
+      <view class="export-preview-content">
         <image
           wx:if="{{exportImageUrl}}"
           src="{{exportImageUrl}}"
-          style="width:100%; border-radius:32rpx; box-shadow:0 40rpx 100rpx rgba(0,0,0,0.6);"
+          class="export-preview-image"
           mode="widthFix"
-          catchtap="previewExportImage"
+          bindlongpress="saveExportImage"
         />
-        <text style="color:#FFF; font-size:24rpx; margin-top:32rpx; opacity:0.6;">{{i18n.export_success || '此图已保存至临时预览，点击可全屏查看'}}</text>
+        <text class="export-preview-tip">{{i18n.export_preview_hint}}</text>
+        <view class="export-preview-actions" catchtap="noop">
+          <button class="btn-secondary export-preview-close" bindtap="closeExportModal">{{i18n.close}}</button>
+          <button class="btn-primary export-preview-save" bindtap="saveExportImage">{{i18n.save_to_album}}</button>
+        </view>
       </view>
     </scroll-view>
-
-    <!-- Bottom Action Bar -->
-    <view class="safe-bottom" style="width:100%; background:#FFFFFF; border-top-left-radius:56rpx; border-top-right-radius:56rpx; padding:40rpx 40rpx 64rpx; box-sizing:border-box; box-shadow:0 -20rpx 60rpx rgba(0,0,0,0.1);" catchtap="noop">
-      <view style="width:80rpx; height:8rpx; background:#E5E5EA; border-radius:8rpx; margin:0 auto 32rpx;" />
-      <view class="export-sheet-heading">
-        <text>{{i18n.monthly_care_poster}}</text>
-        <view class="stats-rule-btn" catchtap="openStatsRules">?</view>
-      </view>
-      
-      <view class="flex-row gap-md">
-        <button class="btn-secondary flex-1" style="border-radius:32rpx; border:4rpx solid #F0EDE6; padding:24rpx 0;" bindtap="closeExportModal">{{i18n.done || '关闭'}}</button>
-        <button class="btn-primary flex-2" style="border-radius:32rpx; padding:32rpx 0; background:var(--primary); color:#4A403A;" bindtap="saveExportImage">
-          <image class="icon-img" style="width:32rpx;height:32rpx;" src="{{ic.src('Check')}}" mode="aspectFit" />
-          <text>保存到相册</text>
-        </button>
-      </view>
-    </view>
   </view>
 
   <!-- Stats Rules Modal (preview only, not exported) -->
@@ -295,8 +285,9 @@
 
   <!-- Hidden canvas for export (off-screen) -->
   <canvas
+    wx:if="{{exportCanvasVisible}}"
     type="2d"
     id="exportCanvas"
-    style="position:fixed;left:-99999px;top:0;width:750px;height:2260px;"
+    style="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;"
   />
 </view>
