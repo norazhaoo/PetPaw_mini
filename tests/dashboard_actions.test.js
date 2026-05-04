@@ -171,7 +171,7 @@ state.inventoryItems = [
     consumptionUnit: 'g',
     unit: 'g',
     hidden: false,
-    iconName: 'FoodBowl'
+    icon: 'FoodBowl'
   },
   {
     id: 'hidden-food',
@@ -207,6 +207,11 @@ assert.deepStrictEqual(
   pageWithStockAlert.data.inventoryItems.map(item => [item.id, item.daysLeft, item.isLow, item.shortLabel]),
   [['food-1', 10, false, '主粮']],
   'stock alert should show visible active-pet inventory with computed days left'
+);
+assert.deepStrictEqual(
+  pageWithStockAlert.data.inventoryItems.map(item => item.iconName),
+  ['FoodBowl'],
+  'stock alert should preserve each inventory item icon for rendering'
 );
 assert.deepStrictEqual(
   pageWithStockAlert.data.stockActionItems.map(item => item.actionKey),

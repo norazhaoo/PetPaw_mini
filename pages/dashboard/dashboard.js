@@ -208,7 +208,14 @@ Page({
       if (item.typeId === 'litter' || item.typeId === 'litter_2') color = '#C49A6C';
       if (item.typeId === 'treats') color = '#F39C12';
 
-      return { ...item, daysLeft: Math.max(0, daysLeft), isLow: daysLeft <= 7, shortLabel, color };
+      return {
+        ...item,
+        iconName: item.iconName || item.icon || 'Package',
+        daysLeft: Math.max(0, daysLeft),
+        isLow: daysLeft <= 7,
+        shortLabel,
+        color
+      };
     });
 
     this.setData({
