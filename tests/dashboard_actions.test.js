@@ -223,22 +223,23 @@ state.weightHistory = [
   { id: 'today-weight', petId: 'pet-1', date: at(26, 20), weight: 4.2 },
   { id: 'old-weight', petId: 'pet-1', date: at(24, 20), weight: 4.1 }
 ];
-const pageWithTodayLogs = createPage();
-const todayLogs = pageWithTodayLogs._buildTodayLogs(
+const pageWithSelectedDayLogs = createPage();
+pageWithSelectedDayLogs.onLoad();
+const selectedDayLogs = pageWithSelectedDayLogs._buildSelectedDayLogs(
   state.logs.filter(log => log.petId === 'pet-1'),
   state.weightHistory.filter(weight => weight.petId === 'pet-1'),
   state.customActions,
   new Date(2026, 3, 26, 12)
 );
 assert.deepStrictEqual(
-  todayLogs.combinedLogs.map(item => item.id),
+  selectedDayLogs.combinedLogs.map(item => item.id),
   ['today-weight', 'today-log'],
-  'today logs should include only records from the current day, newest first'
+  'selected day logs should include only records from the selected day, newest first'
 );
 assert.strictEqual(
-  todayLogs.listTitle,
-  '今日记录',
-  'dashboard record list should always be titled Today Logs'
+  selectedDayLogs.listTitle,
+  '记录: 4月26日',
+  'dashboard record list should identify the selected day'
 );
 
 state = createState();
