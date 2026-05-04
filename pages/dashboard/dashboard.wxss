@@ -203,6 +203,31 @@
   opacity: 0.6;
 }
 
+.export-preview-actions {
+  width: 100%;
+  display: flex;
+  gap: 24rpx;
+  margin-top: 40rpx;
+}
+
+.export-preview-actions button {
+  flex: 1;
+}
+
+.export-preview-close,
+.export-preview-save {
+  border-radius: 32rpx;
+}
+
+.export-preview-close {
+  border: 4rpx solid #F0EDE6;
+}
+
+.export-preview-save {
+  background: var(--primary);
+  color: #4A403A;
+}
+
 /* Calendar */
 .today-btn {
   padding: 4rpx 16rpx;

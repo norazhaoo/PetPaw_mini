@@ -257,6 +257,10 @@
           catchtap="previewExportImage"
         />
         <text class="export-preview-tip">{{i18n.export_preview_hint}}</text>
+        <view class="export-preview-actions" catchtap="noop">
+          <button class="btn-secondary export-preview-close" bindtap="closeExportModal">{{i18n.close}}</button>
+          <button class="btn-primary export-preview-save" bindtap="saveExportImage">{{i18n.save_to_album}}</button>
+        </view>
       </view>
     </scroll-view>
   </view>
