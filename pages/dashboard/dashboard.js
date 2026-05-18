@@ -21,6 +21,8 @@ const LAST_ACTION_KEYWORDS = {
 };
 const COLORS = ['#FF7B54', '#93C653', '#5DADE2', '#FEE140', '#9B59B6', '#E74C3C'];
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const JOURNAL_COLOR = '#F5B041';
+const JOURNAL_MOOD_IDS = ['good', 'clingy', 'mischief', 'sleepy', 'good_appetite', 'unusual'];
 
 Page({
   data: {
@@ -67,7 +69,21 @@ Page({
     // i18n
     i18n: {},
     // 分段渲染标志：重模块（日历、图表、日志）等 ready=true 后才渲染
-    ready: false
+    ready: false,
+    // Journal
+    activeDiaryView: 'calendar',
+    activeJournalFilter: 'all',
+    journalFilterOptions: [],
+    journalMoodOptions: [],
+    journalTimeline: [],
+    selectedJournalEntry: null,
+    showJournalModal: false,
+    showJournalDetailModal: false,
+    journalText: '',
+    selectedJournalMoods: [],
+    journalImage: null,
+    journalCanSave: false,
+    selectedDateIsToday: true
   },
 
   onLoad() {
@@ -106,12 +122,34 @@ Page({
         photo_permission_title: t('photo_permission_title'),
         photo_permission_content: t('photo_permission_content'),
         open_settings: t('open_settings'),
+        take_photo: t('take_photo'),
+        choose_from_album: t('choose_from_album'),
         supply_snapshot_title: t('supply_snapshot_title'),
         brand_tagline: t('brand_tagline'),
         reminder_prefix: t('reminder_prefix'),
-        footer_heart: t('footer_heart')
+        footer_heart: t('footer_heart'),
+        calendar_view: t('calendar_view'),
+        journal_title: t('journal_title'),
+        journal_today_title: t('journal_today_title'),
+        journal_entry_hint: t('journal_entry_hint'),
+        journal_notebook_hint: t('journal_notebook_hint'),
+        journal_placeholder: t('journal_placeholder'),
+        journal_moods: t('journal_moods'),
+        journal_photo_optional: t('journal_photo_optional'),
+        journal_empty: t('journal_empty'),
+        journal_continue: t('journal_continue'),
+        journal_save_empty: t('journal_save_empty'),
+        journal_filter_all: t('journal_filter_all'),
+        journal_mood_good: t('journal_mood_good'),
+        journal_mood_clingy: t('journal_mood_clingy'),
+        journal_mood_mischief: t('journal_mood_mischief'),
+        journal_mood_sleepy: t('journal_mood_sleepy'),
+        journal_mood_good_appetite: t('journal_mood_good_appetite'),
+        journal_mood_unusual: t('journal_mood_unusual')
       },
-      weekdays: t('weekdays') || WEEKDAYS
+      weekdays: t('weekdays') || WEEKDAYS,
+      journalMoodOptions: this._buildJournalMoodOptions(),
+      journalFilterOptions: this._buildJournalFilterOptions()
     });
   },
 
@@ -220,11 +258,13 @@ Page({
       ? dateUtil.startOfMonth(this.data.currentMonth)
       : dateUtil.startOfMonth(selectedDate);
     const calendarData = this._buildCalendar(state, currentMonth, selectedDate, isDog);
+    const petJournals = (state.journalEntries || []).filter(entry => entry.petId === activePet.id);
 
     this.setData(Object.assign({
       ready: true,
       chartData: [],
-      hasWeightData: false
+      hasWeightData: false,
+      journalTimeline: this._buildJournalTimeline(petJournals, this.data.activeJournalFilter)
     }, calendarData));
   },
 
@@ -242,12 +282,17 @@ Page({
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
     const petMeds = state.medicalRecords.filter(m => m.petId === state.activePetId);
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
+    const petJournals = (state.journalEntries || []).filter(entry => entry.petId === state.activePetId);
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
 
-    // ====== 构建日期索引 Map: dateStr → icons[] — O(logs + meds + weights) ======
+    // ====== 构建日期索引 Map: dateStr → icons[] — O(logs + meds + weights + journals) ======
     const iconMap = {};
     const _key = (dateStr) => dateUtil.formatDate(dateUtil.parseISO(dateStr), 'YYYY-MM-DD');
 
+    Array.from(new Set(petJournals.map(entry => _key(entry.date)))).forEach(k => {
+      if (!iconMap[k]) iconMap[k] = [];
+      iconMap[k].push({ name: 'Book', color: JOURNAL_COLOR });
+    });
     petLogs.forEach(l => {
       const k = _key(l.date);
       if (!iconMap[k]) iconMap[k] = [];
@@ -280,7 +325,7 @@ Page({
     });
 
     // ====== Selected day logs ======
-    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate);
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate, petJournals);
 
     return {
       currentMonth,
@@ -290,6 +335,8 @@ Page({
       }),
       selectedDate,
       selectedDateStr: dateUtil.formatDate(selectedDate, 'YYYY-MM-DD'),
+      selectedDateIsToday: dateUtil.isToday(selectedDate),
+      journalEntryTitle: dateUtil.isToday(selectedDate) ? t('journal_today_title') : t('journal_title'),
       blanks,
       daysInMonth,
       combinedLogs: selectedDayData.combinedLogs,
@@ -301,9 +348,10 @@ Page({
   /**
    * 仅构建选中日期的日志数据（细粒度更新用）
    */
-  _buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate) {
+  _buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate, petJournals) {
     const selectedDayLogs = petLogs.filter(l => dateUtil.isSameDay(dateUtil.parseISO(l.date), selectedDate));
     const selectedDayWeights = petWeights.filter(w => dateUtil.isSameDay(dateUtil.parseISO(w.date), selectedDate));
+    const selectedDayJournals = (petJournals || []).filter(entry => dateUtil.isSameDay(dateUtil.parseISO(entry.date), selectedDate));
 
     const combinedLogs = [
       ...selectedDayLogs.map(l => {
@@ -322,6 +370,20 @@ Page({
       }),
       ...selectedDayWeights.map(w => ({
         ...w, typeGroup: 'weight', label: `${t('recorded_weight')}: ${w.weight} kg`, iconName: 'scale', iconColor: COLOR_MAP.log_weight, time: dateUtil.formatDate(dateUtil.parseISO(w.date), 'HH:mm')
+      })),
+      ...selectedDayJournals.map(entry => ({
+        id: entry.id,
+        type: 'journal',
+        date: entry.date,
+        text: entry.text || '',
+        moods: entry.moods || [],
+        image: entry.image || '',
+        typeGroup: 'journal',
+        label: t('journal_title') || 'Pet Journal',
+        detail: this._formatJournalSummary(entry),
+        iconName: 'Book',
+        iconColor: JOURNAL_COLOR,
+        time: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'HH:mm')
       }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -337,6 +399,79 @@ Page({
     return { combinedLogs, listTitle, emptyLogText };
   },
 
+  _buildJournalMoodOptions() {
+    return JOURNAL_MOOD_IDS.map(id => ({
+      id,
+      label: t(`journal_mood_${id}`) || id
+    }));
+  },
+
+  _buildJournalFilterOptions() {
+    return [
+      { id: 'all', label: t('journal_filter_all') || 'All' },
+      ...this._buildJournalMoodOptions()
+    ];
+  },
+
+  _getJournalMoodLabel(id) {
+    return t(`journal_mood_${id}`) || id;
+  },
+
+  _formatJournalSummary(entry) {
+    const text = String((entry && entry.text) || '').trim();
+    if (text) return text.length > 42 ? text.slice(0, 41) + '...' : text;
+    const moods = Array.isArray(entry && entry.moods) ? entry.moods : [];
+    if (moods.length > 0) return moods.map(id => this._getJournalMoodLabel(id)).join(' / ');
+    return entry && entry.image ? t('journal_photo_optional') : '';
+  },
+
+  _buildJournalTimeline(entries, filter) {
+    const isZH = getLanguage() === 'zh';
+    const activeFilter = filter || 'all';
+    return (entries || [])
+      .filter(entry => activeFilter === 'all' || (entry.moods || []).includes(activeFilter))
+      .slice()
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .map(entry => ({
+        ...entry,
+        dateFormatted: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd, yyyy h:mm a', {
+          isZH,
+          monthsShort: this.data.i18n.months
+        }),
+        moodLabels: (entry.moods || []).map(id => this._getJournalMoodLabel(id)),
+        summary: this._formatJournalSummary(entry)
+      }));
+  },
+
+  switchJournalFilter(e) {
+    const filter = e.currentTarget.dataset.filter || 'all';
+    const state = app.getState();
+    const activePetId = state.activePetId;
+    const petJournals = (state.journalEntries || []).filter(entry => entry.petId === activePetId);
+    this.setData({
+      activeJournalFilter: filter,
+      journalTimeline: this._buildJournalTimeline(petJournals, filter)
+    });
+  },
+
+  openJournalDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    const state = app.getState();
+    const activePetId = state.activePetId;
+    const entry = (state.journalEntries || []).find(item => item.id === id && item.petId === activePetId);
+    if (!entry) return;
+    const viewEntry = this._buildJournalTimeline([entry], 'all')[0];
+    this.setData({
+      selectedJournalEntry: viewEntry,
+      showJournalDetailModal: true
+    });
+  },
+
+  closeJournalDetail() {
+    this.setData({ showJournalDetailModal: false, selectedJournalEntry: null });
+  },
+
   _parseDateOnly(dateStr) {
     const parts = String(dateStr || '').split('-').map(n => parseInt(n, 10));
     if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return dateUtil.startOfDay(new Date());
@@ -349,6 +484,116 @@ Page({
     const now = new Date();
     targetDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     return targetDate;
+  },
+
+  switchDiaryView(e) {
+    const view = e.currentTarget.dataset.view;
+    if (view !== 'calendar' && view !== 'notebook') return;
+    this.setData({ activeDiaryView: view });
+  },
+
+  _updateJournalDraft(updates) {
+    const nextData = Object.assign({
+      journalText: this.data.journalText,
+      selectedJournalMoods: this.data.selectedJournalMoods,
+      journalImage: this.data.journalImage
+    }, updates || {});
+    const text = String(nextData.journalText || '').trim();
+    const hasMood = Array.isArray(nextData.selectedJournalMoods) && nextData.selectedJournalMoods.length > 0;
+    const hasImage = !!nextData.journalImage;
+    this.setData(Object.assign({}, updates, {
+      journalCanSave: !!(text || hasMood || hasImage)
+    }));
+  },
+
+  openJournalModal() {
+    this.setData({
+      showJournalModal: true,
+      journalText: '',
+      selectedJournalMoods: [],
+      journalImage: null,
+      journalCanSave: false
+    });
+  },
+
+  closeJournalModal() {
+    this.setData({ showJournalModal: false });
+  },
+
+  onJournalTextInput(e) {
+    this._updateJournalDraft({ journalText: e.detail.value });
+  },
+
+  toggleJournalMood(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    const selected = this.data.selectedJournalMoods || [];
+    const nextSelected = selected.includes(id)
+      ? selected.filter(item => item !== id)
+      : [...selected, id];
+    this._updateJournalDraft({ selectedJournalMoods: nextSelected });
+  },
+
+  chooseJournalImage() {
+    const takePhotoText = this.data.i18n.take_photo || '拍照';
+    const chooseAlbumText = this.data.i18n.choose_from_album || '从相册选择';
+    wx.showActionSheet({
+      itemList: [takePhotoText, chooseAlbumText],
+      success: (res) => {
+        const sourceType = res.tapIndex === 0 ? ['camera'] : ['album'];
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ['image'],
+          sizeType: ['compressed'],
+          sourceType,
+          success: (mediaRes) => {
+            const tempFile = mediaRes.tempFiles && mediaRes.tempFiles[0];
+            if (tempFile && tempFile.tempFilePath) {
+              this._updateJournalDraft({ journalImage: tempFile.tempFilePath });
+            }
+          }
+        });
+      }
+    });
+  },
+
+  removeJournalImage() {
+    this._updateJournalDraft({ journalImage: null });
+  },
+
+  saveJournalEntry() {
+    const text = String(this.data.journalText || '').trim();
+    const moods = this.data.selectedJournalMoods || [];
+    const image = this.data.journalImage || '';
+    if (!text && moods.length === 0 && !image) {
+      wx.showToast({ title: t('journal_save_empty') || 'Add a note, mood, or photo', icon: 'none' });
+      return;
+    }
+
+    const targetDate = this._getRecordTargetDate();
+    let state = app.getState();
+    state = storage.addJournalEntry(state, { text, moods, image }, targetDate.toISOString());
+    app.setState(state);
+    this.setData({
+      showJournalModal: false,
+      journalText: '',
+      selectedJournalMoods: [],
+      journalImage: null,
+      journalCanSave: false,
+      feedback: `${t('logged')}: ${t('journal_title')}`,
+      feedbackColor: JOURNAL_COLOR
+    });
+    setTimeout(() => this.setData({ feedback: '', feedbackColor: '' }), 2000);
+    this.refreshData();
+  },
+
+  deleteJournalEntry(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    let state = app.getState();
+    state = storage.deleteJournalEntry(state, id);
+    app.setState(state);
+    this.refreshData();
   },
 
   // === Calendar Navigation ===
@@ -382,8 +627,9 @@ Page({
     const state = app.getState();
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
+    const petJournals = (state.journalEntries || []).filter(entry => entry.petId === state.activePetId);
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
-    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, date);
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, date, petJournals);
 
     // 更新每天的 isSelected 状态
     const daysInMonth = this.data.daysInMonth.map(d => ({
@@ -394,6 +640,8 @@ Page({
     this.setData({
       selectedDate: date,
       selectedDateStr: dateStr,
+      selectedDateIsToday: dateUtil.isToday(date),
+      journalEntryTitle: dateUtil.isToday(date) ? t('journal_today_title') : t('journal_title'),
       daysInMonth,
       combinedLogs: selectedDayData.combinedLogs,
       listTitle: selectedDayData.listTitle,
@@ -731,6 +979,8 @@ Page({
     let state = app.getState();
     if (typegroup === 'weight') {
       state = storage.deleteWeight(state, id);
+    } else if (typegroup === 'journal') {
+      state = storage.deleteJournalEntry(state, id);
     } else {
       state = storage.deleteLog(state, id);
     }
@@ -1065,6 +1315,14 @@ Page({
     const previousCareRecords = this._buildPosterLogRecords(state, pet, ranges.previousStart, ranges.previousEnd, { excludeHidden: true });
     const monthWeights = (state.weightHistory || [])
       .filter(record => record.petId === pet.id && this._isBetween(record.date, ranges.currentStart, ranges.currentEnd));
+    const monthJournals = (state.journalEntries || [])
+      .filter(record => record.petId === pet.id && this._isBetween(record.date, ranges.currentStart, ranges.currentEnd))
+      .map(record => ({
+        id: record.id,
+        type: 'journal',
+        date: record.date,
+        source: 'journal'
+      }));
 
     const effectiveRecords = monthRecords.concat(monthWeights.map(record => ({
       id: record.id,
@@ -1072,7 +1330,8 @@ Page({
       date: record.date,
       source: 'weight'
     })));
-    const activeDateKeys = Array.from(new Set(effectiveRecords.map(record => this._startOfDayKey(record.date))));
+    const activeRecords = effectiveRecords.concat(monthJournals);
+    const activeDateKeys = Array.from(new Set(activeRecords.map(record => this._startOfDayKey(record.date))));
 
     const overview = [];
     if (pet.birthday) {
@@ -1156,7 +1415,7 @@ Page({
       careChangesEmptyText: t('no_care_change'),
       careChangesEmptyHint: t('no_care_change_hint'),
       weightTrend: this._buildWeightTrend(monthWeights),
-      heatmap: this._buildPosterHeatmap(effectiveRecords, reportAt),
+      heatmap: this._buildPosterHeatmap(activeRecords, reportAt),
       badges: this._buildMonthlyBadgeData(monthRecords.filter(record => record.source === 'log'), monthWeights, ranges.currentStart, pet.species, activeDateKeys.length),
       footerQuote: t('poster_footer_quote')
     };
