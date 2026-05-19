@@ -105,6 +105,25 @@
     <text wx:if="{{feedback}}" class="feedback-text" style="margin-top:16rpx;color:{{feedbackColor || 'var(--success)'}};">{{feedback}}</text>
   </view>
 
+  <!-- Diary view switch -->
+  <view class="diary-view-switch">
+    <view
+      class="diary-view-tab {{activeDiaryView === 'calendar' ? 'diary-view-tab-active' : ''}}"
+      bindtap="switchDiaryView"
+      data-view="calendar"
+    >
+      {{i18n.calendar_view || '日历'}}
+    </view>
+    <view
+      class="diary-view-tab {{activeDiaryView === 'notebook' ? 'diary-view-tab-active' : ''}}"
+      bindtap="switchDiaryView"
+      data-view="notebook"
+    >
+      {{i18n.journal_title}}
+    </view>
+  </view>
+
+  <block wx:if="{{activeDiaryView === 'calendar'}}">
   <!-- Calendar -->
   <view class="card" wx:if="{{ready}}">
     <view class="flex-between" style="margin-bottom:32rpx;">
@@ -158,6 +177,7 @@
           <view class="flex-col">
             <text style="font-weight:700;font-size:26rpx;">{{item.label}}</text>
             <text class="text-muted" style="font-size:20rpx;">{{item.time}}</text>
+            <text wx:if="{{item.detail}}" class="text-muted log-detail">{{item.detail}}</text>
           </view>
         </view>
         <view bindtap="deleteLog" data-id="{{item.id}}" data-typegroup="{{item.typeGroup}}">
@@ -184,6 +204,62 @@
       <image class="icon-img" lazy-load style="width:32rpx;height:32rpx;" src="{{ic.src('ChevronRight')}}" mode="aspectFit" />
     </view>
   </view>
+  </block>
+
+  <block wx:if="{{activeDiaryView === 'notebook'}}">
+    <view class="card journal-timeline-card" wx:if="{{ready}}">
+      <view class="journal-notebook-heading">
+        <view class="flex-col">
+          <view class="journal-title-row">
+            <text class="h2">{{i18n.journal_title}}</text>
+            <view class="journal-notebook-add" bindtap="openJournalModal">
+              <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('Plus')}}" mode="aspectFit" />
+            </view>
+          </view>
+          <text class="journal-notebook-subtitle">{{i18n.journal_notebook_hint}}</text>
+        </view>
+      </view>
+
+      <scroll-view scroll-x="true" class="journal-filter-scroll">
+        <view class="journal-filter-row">
+          <view
+            wx:for="{{journalFilterOptions}}"
+            wx:key="id"
+            class="journal-filter-chip {{activeJournalFilter === item.id ? 'journal-filter-chip-active' : ''}}"
+            bindtap="switchJournalFilter"
+            data-filter="{{item.id}}"
+          >
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view wx:if="{{journalTimeline.length === 0}}" class="journal-empty">
+        <image class="icon-img" lazy-load style="width:80rpx;height:80rpx;" src="{{ic.src('Book')}}" mode="aspectFit" />
+        <text class="text-muted">{{i18n.journal_empty}}</text>
+      </view>
+
+      <view wx:else class="flex-col gap-md">
+        <view wx:for="{{journalTimeline}}" wx:key="id" class="journal-note-card" bindtap="openJournalDetail" data-id="{{item.id}}">
+          <view class="journal-note-header">
+            <text class="journal-note-date">{{item.dateFormatted}}</text>
+            <view catchtap="deleteJournalEntry" data-id="{{item.id}}">
+              <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+            </view>
+          </view>
+          <view class="journal-note-body">
+            <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="journal-note-image" />
+            <text wx:if="{{item.summary}}" class="journal-note-text">{{item.summary}}</text>
+          </view>
+          <view wx:if="{{item.moodLabels.length > 0}}" class="journal-mood-row">
+            <view wx:for="{{item.moodLabels}}" wx:for-item="mood" wx:key="*this" class="journal-mood-pill journal-mood-pill-active">
+              <text>{{mood}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
 
   <!-- Custom Event Modal -->
   <view wx:if="{{showCustomModal}}" class="modal-overlay" catchtap="closeCustomModal">
@@ -232,6 +308,78 @@
       <view class="flex-row gap-md" style="margin-top:48rpx;">
         <button class="btn-secondary flex-1" bindtap="closeWeightModal">{{i18n.cancel}}</button>
         <button class="btn-primary flex-1" bindtap="saveWeight">{{i18n.save}}</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Journal Modal -->
+  <view wx:if="{{showJournalModal}}" class="modal-overlay" catchtap="closeJournalModal">
+    <view class="modal-content card journal-modal-card" catchtap="noop">
+      <view class="journal-modal-heading">
+        <view class="journal-entry-icon">
+          <image class="icon-img" lazy-load style="width:44rpx;height:44rpx;" src="{{ic.src('Book')}}" mode="aspectFit" />
+        </view>
+        <view class="flex-col">
+          <text class="h3">{{journalEntryTitle || i18n.journal_today_title}}</text>
+          <text class="journal-modal-date">{{selectedDateStr}}</text>
+        </view>
+      </view>
+
+      <textarea
+        class="journal-textarea"
+        placeholder="{{i18n.journal_placeholder}}"
+        value="{{journalText}}"
+        maxlength="500"
+        bindinput="onJournalTextInput"
+      />
+
+      <text class="font-bold" style="font-size:28rpx;">{{i18n.journal_moods}}</text>
+      <view class="journal-mood-row">
+        <view
+          wx:for="{{journalMoodOptions}}"
+          wx:key="id"
+          class="journal-mood-pill {{selectedJournalMoods.indexOf(item.id) > -1 ? 'journal-mood-pill-active' : ''}}"
+          bindtap="toggleJournalMood"
+          data-id="{{item.id}}"
+        >
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{journalImage}}" class="journal-photo-preview" bindtap="chooseJournalImage">
+        <image src="{{journalImage}}" mode="aspectFill" class="journal-photo-img" />
+        <view class="journal-photo-remove" catchtap="removeJournalImage">×</view>
+      </view>
+      <view wx:else class="journal-photo-placeholder" bindtap="chooseJournalImage">
+        <image class="icon-img" lazy-load style="width:36rpx;height:36rpx;" src="{{ic.src('Camera')}}" mode="aspectFit" />
+        <text>{{i18n.journal_photo_optional}}</text>
+      </view>
+
+      <view class="flex-row gap-md">
+        <button class="btn-secondary flex-1" bindtap="closeJournalModal">{{i18n.cancel}}</button>
+        <button class="btn-primary flex-1" bindtap="saveJournalEntry" disabled="{{!journalCanSave}}">{{i18n.save}}</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Journal Detail Modal -->
+  <view wx:if="{{showJournalDetailModal}}" class="modal-overlay" catchtap="closeJournalDetail">
+    <view class="modal-content card journal-detail-card" catchtap="noop">
+      <view class="journal-note-header">
+        <view class="flex-col">
+          <text class="h3">{{i18n.journal_title}}</text>
+          <text class="journal-modal-date">{{selectedJournalEntry.dateFormatted}}</text>
+        </view>
+        <view catchtap="closeJournalDetail">
+          <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+        </view>
+      </view>
+      <image wx:if="{{selectedJournalEntry.image}}" src="{{selectedJournalEntry.image}}" mode="aspectFill" class="journal-detail-image" />
+      <text wx:if="{{selectedJournalEntry.text}}" class="journal-detail-text">{{selectedJournalEntry.text}}</text>
+      <view wx:if="{{selectedJournalEntry.moodLabels.length > 0}}" class="journal-mood-row">
+        <view wx:for="{{selectedJournalEntry.moodLabels}}" wx:for-item="mood" wx:key="*this" class="journal-mood-pill journal-mood-pill-active">
+          <text>{{mood}}</text>
+        </view>
       </view>
     </view>
   </view>

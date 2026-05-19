@@ -14,7 +14,8 @@ const defaultState = {
   reminders: [],
   weightHistory: [],
   medicalRecords: [],
-  customActions: []
+  customActions: [],
+  journalEntries: []
 };
 
 const UNIT_CONVERSION = {
@@ -111,6 +112,7 @@ function loadState() {
       if (!parsed.medicalRecords) parsed.medicalRecords = [];
       if (!parsed.logs) parsed.logs = [];
       if (!parsed.reminders) parsed.reminders = [];
+      if (!Array.isArray(parsed.journalEntries)) parsed.journalEntries = [];
 
       // 迁移旧数据结构
       if (parsed.inventory && !parsed.inventoryItems) {
@@ -347,6 +349,34 @@ function deleteWeight(state, id) {
   return state;
 }
 
+function addJournalEntry(state, entryData, targetDate) {
+  if (!state.activePetId) return state;
+  const data = entryData || {};
+  const text = String(data.text || '').trim();
+  const moods = Array.isArray(data.moods) ? data.moods.filter(Boolean) : [];
+  const image = data.image || '';
+  if (!text && moods.length === 0 && !image) return state;
+
+  targetDate = targetDate || new Date().toISOString();
+  const newEntry = {
+    id: generateId(),
+    petId: state.activePetId,
+    date: targetDate,
+    text,
+    moods,
+    image
+  };
+  state.journalEntries = [newEntry, ...(state.journalEntries || [])];
+  saveState(state);
+  return state;
+}
+
+function deleteJournalEntry(state, id) {
+  state.journalEntries = (state.journalEntries || []).filter(entry => entry.id !== id);
+  saveState(state);
+  return state;
+}
+
 function addMedicalRecord(state, tags, imageStr, targetDate) {
   if (!state.activePetId) return state;
   targetDate = targetDate || new Date().toISOString();
@@ -398,6 +428,8 @@ module.exports = {
   deleteLog,
   addWeight,
   deleteWeight,
+  addJournalEntry,
+  deleteJournalEntry,
   addMedicalRecord,
   deleteMedicalRecord,
   clearAllData
