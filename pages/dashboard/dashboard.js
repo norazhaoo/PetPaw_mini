@@ -325,7 +325,7 @@ Page({
     });
 
     // ====== Selected day logs ======
-    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate, petJournals);
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate);
 
     return {
       currentMonth,
@@ -348,10 +348,9 @@ Page({
   /**
    * 仅构建选中日期的日志数据（细粒度更新用）
    */
-  _buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate, petJournals) {
+  _buildSelectedDayLogs(petLogs, petWeights, customActions, selectedDate) {
     const selectedDayLogs = petLogs.filter(l => dateUtil.isSameDay(dateUtil.parseISO(l.date), selectedDate));
     const selectedDayWeights = petWeights.filter(w => dateUtil.isSameDay(dateUtil.parseISO(w.date), selectedDate));
-    const selectedDayJournals = (petJournals || []).filter(entry => dateUtil.isSameDay(dateUtil.parseISO(entry.date), selectedDate));
 
     const combinedLogs = [
       ...selectedDayLogs.map(l => {
@@ -370,20 +369,6 @@ Page({
       }),
       ...selectedDayWeights.map(w => ({
         ...w, typeGroup: 'weight', label: `${t('recorded_weight')}: ${w.weight} kg`, iconName: 'scale', iconColor: COLOR_MAP.log_weight, time: dateUtil.formatDate(dateUtil.parseISO(w.date), 'HH:mm')
-      })),
-      ...selectedDayJournals.map(entry => ({
-        id: entry.id,
-        type: 'journal',
-        date: entry.date,
-        text: entry.text || '',
-        moods: entry.moods || [],
-        image: entry.image || '',
-        typeGroup: 'journal',
-        label: t('journal_title') || 'Pet Journal',
-        detail: this._formatJournalSummary(entry),
-        iconName: 'Book',
-        iconColor: JOURNAL_COLOR,
-        time: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'HH:mm')
       }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -627,9 +612,8 @@ Page({
     const state = app.getState();
     const petLogs = state.logs.filter(l => l.petId === state.activePetId);
     const petWeights = state.weightHistory.filter(w => w.petId === state.activePetId);
-    const petJournals = (state.journalEntries || []).filter(entry => entry.petId === state.activePetId);
     const customActions = state.customActions.filter(ca => ca.petId === state.activePetId);
-    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, date, petJournals);
+    const selectedDayData = this._buildSelectedDayLogs(petLogs, petWeights, customActions, date);
 
     // 更新每天的 isSelected 状态
     const daysInMonth = this.data.daysInMonth.map(d => ({

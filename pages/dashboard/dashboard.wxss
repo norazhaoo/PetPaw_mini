@@ -156,16 +156,6 @@
   justify-content: center;
 }
 
-.journal-entry-card {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
-  padding: 28rpx 32rpx;
-  background: var(--card-bg);
-  border-radius: 32rpx;
-  box-shadow: var(--shadow-soft);
-}
-
 .journal-entry-icon {
   width: 72rpx;
   height: 72rpx;
@@ -177,25 +167,11 @@
   flex-shrink: 0;
 }
 
-.journal-entry-title {
-  font-size: 30rpx;
-  font-weight: 900;
-  color: var(--text-main);
-}
-
-.journal-entry-subtitle,
 .journal-notebook-subtitle,
 .journal-modal-date {
   font-size: 22rpx;
   font-weight: 700;
   color: var(--text-muted);
-}
-
-.journal-entry-plus {
-  font-size: 44rpx;
-  font-weight: 900;
-  color: var(--text-main);
-  line-height: 1;
 }
 
 .log-detail {

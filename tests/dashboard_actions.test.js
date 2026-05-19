@@ -242,6 +242,10 @@ expectContainsTokens(
   'dashboard should render the journal view switch, entry point, modal, notebook timeline, filters, and detail handler'
 );
 assert(
+  !dashboardWxml.includes('class="journal-entry-card"'),
+  'calendar view should not render a standalone journal entry card when notebook has the journal entry point'
+);
+assert(
   dashboardWxml.indexOf('{{i18n.today_check_in}}') > -1 &&
     dashboardWxml.indexOf('class="diary-view-switch"') > -1 &&
     dashboardWxml.indexOf('{{i18n.today_check_in}}') < dashboardWxml.indexOf('class="diary-view-switch"'),
@@ -337,8 +341,8 @@ assert(
 );
 expectContainsTokens(
   dashboardWxss,
-  ['.diary-view-switch', '.journal-entry-card', '.journal-modal-card', '.journal-timeline-card', '.journal-filter-row', '.journal-detail-card'],
-  'dashboard styles should include journal view switch, entry, modal, timeline, filter, and detail styles'
+  ['.diary-view-switch', '.journal-modal-card', '.journal-timeline-card', '.journal-filter-row', '.journal-detail-card'],
+  'dashboard styles should include journal view switch, modal, timeline, filter, and detail styles'
 );
 assert(
   dashboardWxml.includes('class="cal-icon-dot"'),
@@ -475,13 +479,8 @@ const journalDayLogs = pageWithJournalDayLogs._buildSelectedDayLogs(
 );
 assert.deepStrictEqual(
   journalDayLogs.combinedLogs.map(item => [item.id, item.typeGroup]),
-  [['today-journal', 'journal'], ['today-weight', 'weight'], ['today-log', 'log']],
-  'selected day logs should include journal summaries newest first'
-);
-assert.strictEqual(
-  journalDayLogs.combinedLogs[0].label,
-  '小猫日记',
-  'selected day journal rows should use the journal title label'
+  [['today-weight', 'weight'], ['today-log', 'log']],
+  'selected day logs should exclude journal entries because they live in the notebook view'
 );
 
 state = createState();

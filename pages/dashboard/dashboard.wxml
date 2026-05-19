@@ -162,18 +162,6 @@
     </view>
   </view>
 
-  <!-- Journal entry point -->
-  <view class="journal-entry-card" bindtap="openJournalModal">
-    <view class="journal-entry-icon">
-      <image class="icon-img" lazy-load style="width:44rpx;height:44rpx;" src="{{ic.src('Book')}}" mode="aspectFit" />
-    </view>
-    <view class="flex-col flex-1">
-      <text class="journal-entry-title">{{journalEntryTitle || i18n.journal_today_title}}</text>
-      <text class="journal-entry-subtitle">{{i18n.journal_entry_hint}}</text>
-    </view>
-    <text class="journal-entry-plus">+</text>
-  </view>
-
   <!-- Selected Day Logs -->
   <view class="card today-log-card" wx:if="{{ready}}">
     <text class="h2 today-log-title">{{listTitle}}</text>
