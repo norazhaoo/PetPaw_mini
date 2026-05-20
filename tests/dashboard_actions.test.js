@@ -23,7 +23,12 @@ global.wx = {
   },
   chooseMedia(options) {
     if (options && typeof options.success === 'function') {
-      options.success({ tempFiles: [{ tempFilePath: '/tmp/journal-photo.jpg' }] });
+      options.success({ tempFiles: [{ tempFilePath: '/tmp/journal-photo.jpg', width: 900, height: 1200 }] });
+    }
+  },
+  getImageInfo(options) {
+    if (options && typeof options.success === 'function') {
+      options.success({ width: 900, height: 1200 });
     }
   },
   showModal(options) {
@@ -238,8 +243,8 @@ expectContainsTokens(
 );
 expectContainsTokens(
   dashboardWxml,
-  ['activeDiaryView', 'switchDiaryView', 'openJournalModal', 'showJournalModal', 'journalTimeline', 'journalFilterOptions', 'openJournalDetail'],
-  'dashboard should render the journal view switch, entry point, modal, notebook timeline, filters, and detail handler'
+  ['activeDiaryView', 'switchDiaryView', 'openJournalModal', 'showJournalModal', 'journalDateGroups', 'journalFilterOptions', 'openJournalDetail'],
+  'dashboard should render the journal view switch, entry point, modal, grouped notebook timeline, filters, and detail handler'
 );
 assert(
   !dashboardWxml.includes('class="journal-entry-card"'),
@@ -341,8 +346,8 @@ assert(
 );
 expectContainsTokens(
   dashboardWxss,
-  ['.diary-view-switch', '.journal-modal-card', '.journal-timeline-card', '.journal-filter-row', '.journal-detail-card'],
-  'dashboard styles should include journal view switch, modal, timeline, filter, and detail styles'
+  ['.diary-view-switch', '.journal-notebook-header', '.journal-notebook-add', '.journal-date-group-title', '.journal-note-title', '.journal-note-preview', '.journal-image-portrait'],
+  'dashboard styles should include journal view switch, redesigned notebook header, grouped cards, one-line previews, and adaptive image styles'
 );
 assert(
   dashboardWxml.includes('class="cal-icon-dot"'),
@@ -610,24 +615,38 @@ assert.strictEqual(
   'empty selected-date records should use the non-today empty text'
 );
 
+assert.deepStrictEqual(
+  pageWithI18n.data.journalMoodOptions.map(item => item.id),
+  ['good', 'clingy', 'mischief', 'sleepy'],
+  'default journal mood options should only include the four core moods'
+);
+
 state = createState();
 const pageWithSavedJournal = createPage();
 pageWithSavedJournal.onLoad();
 pageWithSavedJournal.setData({
   selectedDate: backfillDate,
   currentMonth: new Date(2026, 3, 1),
-  journalText: '  Sunny nap by the window  ',
+  journalText: '  Sunny nap by the window\nA long warm afternoon by the window  ',
   selectedJournalMoods: ['good', 'sleepy'],
+  selectedJournalCustomTags: ['窗边', '第一次'],
   journalImage: '/tmp/journal-photo.jpg',
+  journalImageWidth: 900,
+  journalImageHeight: 1200,
+  journalImageRatioClass: 'portrait',
   showJournalModal: true
 });
 pageWithSavedJournal.saveJournalEntry();
 assert.strictEqual(state.journalEntries.length, 1, 'saving a journal should add one entry');
 assert.strictEqual(state.journalEntries[0].petId, 'pet-1', 'saved journal should belong to the active pet');
 assert.strictEqual(ymd(state.journalEntries[0].date), '2026-04-25', 'saved journal should use the selected calendar date');
-assert.strictEqual(state.journalEntries[0].text, 'Sunny nap by the window', 'saved journal should trim text');
+assert.strictEqual(state.journalEntries[0].text, 'Sunny nap by the window\nA long warm afternoon by the window', 'saved journal should trim text');
 assert.deepStrictEqual(state.journalEntries[0].moods, ['good', 'sleepy'], 'saved journal should store mood ids');
+assert.deepStrictEqual(state.journalEntries[0].customTags, ['窗边', '第一次'], 'saved journal should store custom tag labels separately from moods');
 assert.strictEqual(state.journalEntries[0].image, '/tmp/journal-photo.jpg', 'saved journal should store the selected image path');
+assert.strictEqual(state.journalEntries[0].imageWidth, 900, 'saved journal should store the selected image width');
+assert.strictEqual(state.journalEntries[0].imageHeight, 1200, 'saved journal should store the selected image height');
+assert.strictEqual(state.journalEntries[0].imageRatioClass, 'portrait', 'saved journal should store the selected image ratio class');
 assert.strictEqual(pageWithSavedJournal.data.showJournalModal, false, 'saving a journal should close the modal');
 assert(
   pageWithSavedJournal.data.daysInMonth.find(item => item.dateStr === '2026-04-25').icons.some(item => item.name === 'Book'),
@@ -636,8 +655,9 @@ assert(
 
 state = createState();
 state.journalEntries = [
-  { id: 'older-active', petId: 'pet-1', date: at(24, 12), text: 'Older note', moods: ['clingy'], image: '' },
-  { id: 'newer-active', petId: 'pet-1', date: at(26, 12), text: 'Newer note '.repeat(12), moods: ['good_appetite'], image: '/tmp/newer.jpg' },
+  { id: 'older-active', petId: 'pet-1', date: at(24, 12), text: 'Older note', moods: ['clingy'], customTags: [], image: '' },
+  { id: 'newer-active', petId: 'pet-1', date: at(26, 12), text: 'Newer note title\n' + 'Newer note body '.repeat(12), moods: ['good_appetite'], customTags: ['窗边'], image: '/tmp/newer.jpg', imageWidth: 1600, imageHeight: 900, imageRatioClass: 'landscape' },
+  { id: 'legacy-active', petId: 'pet-1', date: at(26, 9), text: '', moods: ['unusual'], image: '/tmp/legacy.jpg' },
   { id: 'other-pet', petId: 'pet-2', date: at(27, 12), text: 'Other pet note', moods: ['good'], image: '' }
 ];
 const pageWithNotebook = createPage();
@@ -647,7 +667,7 @@ pageWithNotebook.switchDiaryView(actionEvent({ view: 'notebook' }));
 assert.strictEqual(pageWithNotebook.data.activeDiaryView, 'notebook', 'switching views should activate the notebook');
 assert.deepStrictEqual(
   pageWithNotebook.data.journalTimeline.map(entry => entry.id),
-  ['newer-active', 'older-active'],
+  ['newer-active', 'legacy-active', 'older-active'],
   'journal notebook should show only active-pet entries newest first'
 );
 assert.deepStrictEqual(
@@ -655,14 +675,39 @@ assert.deepStrictEqual(
   ['胃口好'],
   'journal notebook should render mood labels from ids'
 );
-assert(
-  pageWithNotebook.data.journalTimeline[0].summary.length < pageWithNotebook.data.journalTimeline[0].text.length,
-  'journal notebook cards should expose a compact summary instead of the full note'
+assert.strictEqual(
+  pageWithNotebook.data.journalTimeline[0].title,
+  'Newer note title',
+  'journal notebook cards should derive an automatic title from the first text line'
+);
+assert.strictEqual(
+  pageWithNotebook.data.journalTimeline[0].preview,
+  'Newer note body '.repeat(12).trim(),
+  'journal notebook cards should expose a one-line preview from the remaining text'
+);
+assert.strictEqual(
+  pageWithNotebook.data.journalTimeline[0].imageRatioClass,
+  'landscape',
+  'journal notebook cards should expose an image ratio class'
+);
+assert.strictEqual(
+  pageWithNotebook.data.journalTimeline[1].customTags.length,
+  0,
+  'legacy journal entries should default missing customTags to an empty list'
 );
 assert.strictEqual(
   pageWithNotebook.data.journalFilterOptions[0].id,
   'all',
   'journal notebook filters should include an all option first'
+);
+assert(
+  pageWithNotebook.data.journalFilterOptions.some(item => item.id === 'tag:窗边' && item.label === '窗边'),
+  'journal notebook filters should include custom tags from active-pet entries'
+);
+assert.deepStrictEqual(
+  pageWithNotebook.data.journalDateGroups.map(group => [group.label, group.entries.map(entry => entry.id)]),
+  [['4月26日', ['newer-active', 'legacy-active']], ['4月24日', ['older-active']]],
+  'journal notebook should group entries by date in newest-first order'
 );
 pageWithNotebook.switchJournalFilter(actionEvent({ filter: 'clingy' }));
 assert.strictEqual(pageWithNotebook.data.activeJournalFilter, 'clingy', 'journal filter should store the selected category');
@@ -670,6 +715,12 @@ assert.deepStrictEqual(
   pageWithNotebook.data.journalTimeline.map(entry => entry.id),
   ['older-active'],
   'journal filter should show only notes with the selected mood category'
+);
+pageWithNotebook.switchJournalFilter(actionEvent({ filter: 'tag:窗边' }));
+assert.deepStrictEqual(
+  pageWithNotebook.data.journalTimeline.map(entry => entry.id),
+  ['newer-active'],
+  'journal filter should show only notes with the selected custom tag'
 );
 pageWithNotebook.switchJournalFilter(actionEvent({ filter: 'all' }));
 pageWithNotebook.openJournalDetail(actionEvent({ id: 'newer-active' }));
@@ -687,10 +738,18 @@ assert.strictEqual(
 pageWithNotebook.closeJournalDetail();
 assert.strictEqual(pageWithNotebook.data.showJournalDetailModal, false, 'journal detail modal should close');
 
+pageWithNotebook.onJournalCustomTagInput({ detail: { value: '  新标签  ' } });
+pageWithNotebook.addJournalCustomTag();
+assert.deepStrictEqual(pageWithNotebook.data.selectedJournalCustomTags, ['新标签'], 'journal modal should add a trimmed custom tag chip');
+pageWithNotebook.removeJournalCustomTag(actionEvent({ tag: '新标签' }));
+assert.deepStrictEqual(pageWithNotebook.data.selectedJournalCustomTags, [], 'journal modal should remove a custom tag chip');
+pageWithNotebook.openJournalModal();
+assert.strictEqual(pageWithNotebook.data.showJournalModal, true, 'title-row add button should still open the journal modal');
+
 pageWithNotebook.deleteJournalEntry(actionEvent({ id: 'newer-active' }));
 assert.deepStrictEqual(
   state.journalEntries.map(entry => entry.id),
-  ['older-active', 'other-pet'],
+  ['older-active', 'legacy-active', 'other-pet'],
   'notebook delete should remove the journal entry from state'
 );
 

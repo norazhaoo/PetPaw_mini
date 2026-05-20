@@ -113,6 +113,10 @@ function loadState() {
       if (!parsed.logs) parsed.logs = [];
       if (!parsed.reminders) parsed.reminders = [];
       if (!Array.isArray(parsed.journalEntries)) parsed.journalEntries = [];
+      parsed.journalEntries = parsed.journalEntries.map(entry => ({
+        ...entry,
+        customTags: Array.isArray(entry.customTags) ? entry.customTags : []
+      }));
 
       // 迁移旧数据结构
       if (parsed.inventory && !parsed.inventoryItems) {
@@ -354,8 +358,16 @@ function addJournalEntry(state, entryData, targetDate) {
   const data = entryData || {};
   const text = String(data.text || '').trim();
   const moods = Array.isArray(data.moods) ? data.moods.filter(Boolean) : [];
+  const customTagSeen = {};
+  const customTags = Array.isArray(data.customTags)
+    ? data.customTags.map(tag => String(tag || '').trim()).filter(tag => {
+      if (!tag || customTagSeen[tag]) return false;
+      customTagSeen[tag] = true;
+      return true;
+    })
+    : [];
   const image = data.image || '';
-  if (!text && moods.length === 0 && !image) return state;
+  if (!text && moods.length === 0 && customTags.length === 0 && !image) return state;
 
   targetDate = targetDate || new Date().toISOString();
   const newEntry = {
@@ -364,7 +376,11 @@ function addJournalEntry(state, entryData, targetDate) {
     date: targetDate,
     text,
     moods,
-    image
+    customTags,
+    image,
+    imageWidth: Number(data.imageWidth) || 0,
+    imageHeight: Number(data.imageHeight) || 0,
+    imageRatioClass: data.imageRatioClass || ''
   };
   state.journalEntries = [newEntry, ...(state.journalEntries || [])];
   saveState(state);

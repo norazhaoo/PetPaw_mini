@@ -38,6 +38,8 @@ module.exports = {
   journal_placeholder: 'What happened today?',
   journal_moods: 'Mood tags',
   journal_photo_optional: 'Add photo (optional)',
+  journal_custom_tag_placeholder: 'Add custom tag',
+  journal_custom_tag_add: 'Add',
   journal_empty: 'No pet journal entries yet',
   journal_continue: 'Write another entry',
   journal_save_empty: 'Add text, a mood, or a photo',

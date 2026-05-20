@@ -38,6 +38,8 @@ module.exports = {
   journal_placeholder: '今天发生了什么？',
   journal_moods: '心情标签',
   journal_photo_optional: '添加照片（可选）',
+  journal_custom_tag_placeholder: '添加自定义标签',
+  journal_custom_tag_add: '添加',
   journal_empty: '还没有小猫日记',
   journal_continue: '继续写一篇',
   journal_save_empty: '写点文字、选个心情或加张照片吧',

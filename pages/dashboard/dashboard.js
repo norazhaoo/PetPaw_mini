@@ -22,7 +22,7 @@ const LAST_ACTION_KEYWORDS = {
 const COLORS = ['#FF7B54', '#93C653', '#5DADE2', '#FEE140', '#9B59B6', '#E74C3C'];
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const JOURNAL_COLOR = '#F5B041';
-const JOURNAL_MOOD_IDS = ['good', 'clingy', 'mischief', 'sleepy', 'good_appetite', 'unusual'];
+const JOURNAL_MOOD_IDS = ['good', 'clingy', 'mischief', 'sleepy'];
 
 Page({
   data: {
@@ -76,12 +76,18 @@ Page({
     journalFilterOptions: [],
     journalMoodOptions: [],
     journalTimeline: [],
+    journalDateGroups: [],
     selectedJournalEntry: null,
     showJournalModal: false,
     showJournalDetailModal: false,
     journalText: '',
     selectedJournalMoods: [],
+    selectedJournalCustomTags: [],
+    journalCustomTagInput: '',
     journalImage: null,
+    journalImageWidth: 0,
+    journalImageHeight: 0,
+    journalImageRatioClass: 'landscape',
     journalCanSave: false,
     selectedDateIsToday: true
   },
@@ -136,6 +142,8 @@ Page({
         journal_placeholder: t('journal_placeholder'),
         journal_moods: t('journal_moods'),
         journal_photo_optional: t('journal_photo_optional'),
+        journal_custom_tag_placeholder: t('journal_custom_tag_placeholder'),
+        journal_custom_tag_add: t('journal_custom_tag_add'),
         journal_empty: t('journal_empty'),
         journal_continue: t('journal_continue'),
         journal_save_empty: t('journal_save_empty'),
@@ -259,12 +267,15 @@ Page({
       : dateUtil.startOfMonth(selectedDate);
     const calendarData = this._buildCalendar(state, currentMonth, selectedDate, isDog);
     const petJournals = (state.journalEntries || []).filter(entry => entry.petId === activePet.id);
+    const journalTimeline = this._buildJournalTimeline(petJournals, this.data.activeJournalFilter);
 
     this.setData(Object.assign({
       ready: true,
       chartData: [],
       hasWeightData: false,
-      journalTimeline: this._buildJournalTimeline(petJournals, this.data.activeJournalFilter)
+      journalFilterOptions: this._buildJournalFilterOptions(petJournals),
+      journalTimeline,
+      journalDateGroups: this._buildJournalDateGroups(journalTimeline)
     }, calendarData));
   },
 
@@ -391,10 +402,47 @@ Page({
     }));
   },
 
-  _buildJournalFilterOptions() {
+  _normalizeJournalCustomTags(tags) {
+    const seen = {};
+    return (Array.isArray(tags) ? tags : [])
+      .map(tag => String(tag || '').trim())
+      .filter(tag => {
+        if (!tag || seen[tag]) return false;
+        seen[tag] = true;
+        return true;
+      });
+  },
+
+  _buildJournalFilterOptions(entries) {
+    const defaultMoodSet = JOURNAL_MOOD_IDS.reduce((acc, id) => {
+      acc[id] = true;
+      return acc;
+    }, {});
+    const legacyMoodIds = [];
+    const customTags = [];
+    const seenMoods = {};
+    const seenTags = {};
+
+    (entries || []).forEach(entry => {
+      (entry.moods || []).forEach(id => {
+        if (id && !defaultMoodSet[id] && !seenMoods[id]) {
+          seenMoods[id] = true;
+          legacyMoodIds.push(id);
+        }
+      });
+      this._normalizeJournalCustomTags(entry.customTags).forEach(tag => {
+        if (!seenTags[tag]) {
+          seenTags[tag] = true;
+          customTags.push(tag);
+        }
+      });
+    });
+
     return [
       { id: 'all', label: t('journal_filter_all') || 'All' },
-      ...this._buildJournalMoodOptions()
+      ...this._buildJournalMoodOptions(),
+      ...legacyMoodIds.map(id => ({ id, label: this._getJournalMoodLabel(id) })),
+      ...customTags.map(tag => ({ id: `tag:${tag}`, label: tag, isCustom: true }))
     ];
   },
 
@@ -402,30 +450,109 @@ Page({
     return t(`journal_mood_${id}`) || id;
   },
 
+  _getJournalImageRatioClass(width, height) {
+    const w = Number(width);
+    const h = Number(height);
+    if (!w || !h || w <= 0 || h <= 0) return 'landscape';
+    const ratio = w / h;
+    if (ratio <= 0.8) return 'portrait';
+    if (ratio < 1.25) return 'square';
+    return 'landscape';
+  },
+
   _formatJournalSummary(entry) {
     const text = String((entry && entry.text) || '').trim();
     if (text) return text.length > 42 ? text.slice(0, 41) + '...' : text;
     const moods = Array.isArray(entry && entry.moods) ? entry.moods : [];
     if (moods.length > 0) return moods.map(id => this._getJournalMoodLabel(id)).join(' / ');
+    const customTags = this._normalizeJournalCustomTags(entry && entry.customTags);
+    if (customTags.length > 0) return customTags.join(' / ');
     return entry && entry.image ? t('journal_photo_optional') : '';
+  },
+
+  _buildJournalCardText(entry, tagLabels) {
+    const lines = String((entry && entry.text) || '')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+    if (lines.length > 0) {
+      return {
+        title: lines[0],
+        preview: lines.slice(1).join(' ').trim()
+      };
+    }
+    const fallback = (tagLabels && tagLabels[0]) || (entry && entry.image ? t('journal_photo_optional') : t('journal_title'));
+    return { title: fallback || '', preview: '' };
   },
 
   _buildJournalTimeline(entries, filter) {
     const isZH = getLanguage() === 'zh';
     const activeFilter = filter || 'all';
     return (entries || [])
-      .filter(entry => activeFilter === 'all' || (entry.moods || []).includes(activeFilter))
+      .filter(entry => {
+        if (activeFilter === 'all') return true;
+        if (activeFilter.indexOf('tag:') === 0) {
+          const tag = activeFilter.slice(4);
+          return this._normalizeJournalCustomTags(entry.customTags).includes(tag);
+        }
+        return (entry.moods || []).includes(activeFilter);
+      })
       .slice()
       .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .map(entry => ({
-        ...entry,
-        dateFormatted: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd, yyyy h:mm a', {
-          isZH,
-          monthsShort: this.data.i18n.months
-        }),
-        moodLabels: (entry.moods || []).map(id => this._getJournalMoodLabel(id)),
-        summary: this._formatJournalSummary(entry)
-      }));
+      .map(entry => {
+        const customTags = this._normalizeJournalCustomTags(entry.customTags);
+        const moodLabels = (entry.moods || []).map(id => this._getJournalMoodLabel(id));
+        const tagLabels = [...moodLabels, ...customTags];
+        const textParts = this._buildJournalCardText(entry, tagLabels);
+        const imageRatioClass = entry.imageRatioClass || this._getJournalImageRatioClass(entry.imageWidth, entry.imageHeight);
+        return {
+          ...entry,
+          customTags,
+          imageWidth: entry.imageWidth || 0,
+          imageHeight: entry.imageHeight || 0,
+          imageRatioClass,
+          title: textParts.title,
+          preview: textParts.preview,
+          dateKey: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'YYYY-MM-DD'),
+          dateGroupLabel: this._formatJournalGroupLabel(entry.date),
+          dateFormatted: dateUtil.formatDate(dateUtil.parseISO(entry.date), 'MMM dd, yyyy h:mm a', {
+            isZH,
+            monthsShort: this.data.i18n.months
+          }),
+          moodLabels,
+          customTagLabels: customTags,
+          tagLabels,
+          summary: this._formatJournalSummary(entry)
+        };
+      });
+  },
+
+  _formatJournalGroupLabel(dateLike) {
+    const isZH = getLanguage() === 'zh';
+    const date = dateUtil.parseISO(dateLike);
+    const label = dateUtil.formatDate(date, 'MMM do', {
+      isZH,
+      monthsShort: this.data.i18n.months
+    });
+    return dateUtil.isToday(date) ? `${t('today') || 'Today'}, ${label}` : label;
+  },
+
+  _buildJournalDateGroups(entries) {
+    const groups = [];
+    const byDate = {};
+    (entries || []).forEach(entry => {
+      const key = entry.dateKey || dateUtil.formatDate(dateUtil.parseISO(entry.date), 'YYYY-MM-DD');
+      if (!byDate[key]) {
+        byDate[key] = {
+          dateKey: key,
+          label: entry.dateGroupLabel || this._formatJournalGroupLabel(entry.date),
+          entries: []
+        };
+        groups.push(byDate[key]);
+      }
+      byDate[key].entries.push(entry);
+    });
+    return groups;
   },
 
   switchJournalFilter(e) {
@@ -433,9 +560,12 @@ Page({
     const state = app.getState();
     const activePetId = state.activePetId;
     const petJournals = (state.journalEntries || []).filter(entry => entry.petId === activePetId);
+    const journalTimeline = this._buildJournalTimeline(petJournals, filter);
     this.setData({
       activeJournalFilter: filter,
-      journalTimeline: this._buildJournalTimeline(petJournals, filter)
+      journalFilterOptions: this._buildJournalFilterOptions(petJournals),
+      journalTimeline,
+      journalDateGroups: this._buildJournalDateGroups(journalTimeline)
     });
   },
 
@@ -481,13 +611,15 @@ Page({
     const nextData = Object.assign({
       journalText: this.data.journalText,
       selectedJournalMoods: this.data.selectedJournalMoods,
+      selectedJournalCustomTags: this.data.selectedJournalCustomTags,
       journalImage: this.data.journalImage
     }, updates || {});
     const text = String(nextData.journalText || '').trim();
     const hasMood = Array.isArray(nextData.selectedJournalMoods) && nextData.selectedJournalMoods.length > 0;
+    const hasCustomTag = Array.isArray(nextData.selectedJournalCustomTags) && nextData.selectedJournalCustomTags.length > 0;
     const hasImage = !!nextData.journalImage;
     this.setData(Object.assign({}, updates, {
-      journalCanSave: !!(text || hasMood || hasImage)
+      journalCanSave: !!(text || hasMood || hasCustomTag || hasImage)
     }));
   },
 
@@ -496,7 +628,12 @@ Page({
       showJournalModal: true,
       journalText: '',
       selectedJournalMoods: [],
+      selectedJournalCustomTags: [],
+      journalCustomTagInput: '',
       journalImage: null,
+      journalImageWidth: 0,
+      journalImageHeight: 0,
+      journalImageRatioClass: 'landscape',
       journalCanSave: false
     });
   },
@@ -519,6 +656,32 @@ Page({
     this._updateJournalDraft({ selectedJournalMoods: nextSelected });
   },
 
+  onJournalCustomTagInput(e) {
+    this.setData({ journalCustomTagInput: e.detail.value });
+  },
+
+  addJournalCustomTag() {
+    const tag = String(this.data.journalCustomTagInput || '').trim();
+    if (!tag) return;
+    const selected = this.data.selectedJournalCustomTags || [];
+    if (selected.includes(tag)) {
+      this.setData({ journalCustomTagInput: '' });
+      return;
+    }
+    this._updateJournalDraft({
+      selectedJournalCustomTags: [...selected, tag],
+      journalCustomTagInput: ''
+    });
+  },
+
+  removeJournalCustomTag(e) {
+    const tag = e.currentTarget.dataset.tag;
+    if (!tag) return;
+    this._updateJournalDraft({
+      selectedJournalCustomTags: (this.data.selectedJournalCustomTags || []).filter(item => item !== tag)
+    });
+  },
+
   chooseJournalImage() {
     const takePhotoText = this.data.i18n.take_photo || '拍照';
     const chooseAlbumText = this.data.i18n.choose_from_album || '从相册选择';
@@ -534,7 +697,25 @@ Page({
           success: (mediaRes) => {
             const tempFile = mediaRes.tempFiles && mediaRes.tempFiles[0];
             if (tempFile && tempFile.tempFilePath) {
-              this._updateJournalDraft({ journalImage: tempFile.tempFilePath });
+              const applyImage = (width, height) => {
+                this._updateJournalDraft({
+                  journalImage: tempFile.tempFilePath,
+                  journalImageWidth: width || 0,
+                  journalImageHeight: height || 0,
+                  journalImageRatioClass: this._getJournalImageRatioClass(width, height)
+                });
+              };
+              if (tempFile.width && tempFile.height) {
+                applyImage(tempFile.width, tempFile.height);
+              } else if (wx.getImageInfo) {
+                wx.getImageInfo({
+                  src: tempFile.tempFilePath,
+                  success: info => applyImage(info.width, info.height),
+                  fail: () => applyImage(0, 0)
+                });
+              } else {
+                applyImage(0, 0);
+              }
             }
           }
         });
@@ -543,27 +724,46 @@ Page({
   },
 
   removeJournalImage() {
-    this._updateJournalDraft({ journalImage: null });
+    this._updateJournalDraft({
+      journalImage: null,
+      journalImageWidth: 0,
+      journalImageHeight: 0,
+      journalImageRatioClass: 'landscape'
+    });
   },
 
   saveJournalEntry() {
     const text = String(this.data.journalText || '').trim();
     const moods = this.data.selectedJournalMoods || [];
+    const customTags = this._normalizeJournalCustomTags(this.data.selectedJournalCustomTags);
     const image = this.data.journalImage || '';
-    if (!text && moods.length === 0 && !image) {
+    if (!text && moods.length === 0 && customTags.length === 0 && !image) {
       wx.showToast({ title: t('journal_save_empty') || 'Add a note, mood, or photo', icon: 'none' });
       return;
     }
 
     const targetDate = this._getRecordTargetDate();
     let state = app.getState();
-    state = storage.addJournalEntry(state, { text, moods, image }, targetDate.toISOString());
+    state = storage.addJournalEntry(state, {
+      text,
+      moods,
+      customTags,
+      image,
+      imageWidth: this.data.journalImageWidth,
+      imageHeight: this.data.journalImageHeight,
+      imageRatioClass: this.data.journalImageRatioClass
+    }, targetDate.toISOString());
     app.setState(state);
     this.setData({
       showJournalModal: false,
       journalText: '',
       selectedJournalMoods: [],
+      selectedJournalCustomTags: [],
+      journalCustomTagInput: '',
       journalImage: null,
+      journalImageWidth: 0,
+      journalImageHeight: 0,
+      journalImageRatioClass: 'landscape',
       journalCanSave: false,
       feedback: `${t('logged')}: ${t('journal_title')}`,
       feedbackColor: JOURNAL_COLOR
