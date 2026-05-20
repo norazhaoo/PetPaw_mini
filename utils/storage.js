@@ -387,6 +387,40 @@ function addJournalEntry(state, entryData, targetDate) {
   return state;
 }
 
+function updateJournalEntry(state, id, entryData, targetDate) {
+  if (!state.activePetId || !id) return state;
+  const data = entryData || {};
+  const text = String(data.text || '').trim();
+  const moods = Array.isArray(data.moods) ? data.moods.filter(Boolean) : [];
+  const customTagSeen = {};
+  const customTags = Array.isArray(data.customTags)
+    ? data.customTags.map(tag => String(tag || '').trim()).filter(tag => {
+      if (!tag || customTagSeen[tag]) return false;
+      customTagSeen[tag] = true;
+      return true;
+    })
+    : [];
+  const image = data.image || '';
+  if (!text && moods.length === 0 && customTags.length === 0 && !image) return state;
+
+  state.journalEntries = (state.journalEntries || []).map(entry => {
+    if (entry.id !== id || entry.petId !== state.activePetId) return entry;
+    return {
+      ...entry,
+      date: targetDate || entry.date,
+      text,
+      moods,
+      customTags,
+      image,
+      imageWidth: Number(data.imageWidth) || 0,
+      imageHeight: Number(data.imageHeight) || 0,
+      imageRatioClass: data.imageRatioClass || ''
+    };
+  });
+  saveState(state);
+  return state;
+}
+
 function deleteJournalEntry(state, id) {
   state.journalEntries = (state.journalEntries || []).filter(entry => entry.id !== id);
   saveState(state);
@@ -445,6 +479,7 @@ module.exports = {
   addWeight,
   deleteWeight,
   addJournalEntry,
+  updateJournalEntry,
   deleteJournalEntry,
   addMedicalRecord,
   deleteMedicalRecord,

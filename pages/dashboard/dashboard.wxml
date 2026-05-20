@@ -247,8 +247,13 @@
             <view wx:for="{{group.entries}}" wx:for-item="entry" wx:key="id" class="journal-note-card" bindtap="openJournalDetail" data-id="{{entry.id}}">
               <view class="journal-note-header">
                 <text class="journal-note-title">{{entry.title}}</text>
-                <view class="journal-note-delete" catchtap="deleteJournalEntry" data-id="{{entry.id}}">
-                  <image class="icon-img" lazy-load style="width:34rpx;height:34rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+                <view class="journal-note-actions">
+                  <view class="journal-note-action" catchtap="openJournalEdit" data-id="{{entry.id}}">
+                    <image class="icon-img" lazy-load style="width:34rpx;height:34rpx;" src="{{ic.src('Pencil')}}" mode="aspectFit" />
+                  </view>
+                  <view class="journal-note-action journal-note-delete" catchtap="deleteJournalEntry" data-id="{{entry.id}}">
+                    <image class="icon-img" lazy-load style="width:34rpx;height:34rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+                  </view>
                 </view>
               </view>
               <image wx:if="{{entry.image}}" src="{{entry.image}}" mode="aspectFill" class="journal-note-image journal-image-{{entry.imageRatioClass}}" />
@@ -326,9 +331,16 @@
         </view>
         <view class="flex-col">
           <text class="h3">{{journalEntryTitle || i18n.journal_today_title}}</text>
-          <text class="journal-modal-date">{{selectedDateStr}}</text>
+          <text class="journal-modal-date">{{journalModalDateText || selectedDateStr}}</text>
         </view>
       </view>
+
+      <picker mode="date" value="{{journalEntryDate}}" bindchange="onJournalDateChange">
+        <view class="journal-date-picker">
+          <text class="journal-date-picker-label">{{i18n.journal_date}}</text>
+          <text class="journal-date-picker-value">{{journalEntryDate}}</text>
+        </view>
+      </picker>
 
       <textarea
         class="journal-textarea"
@@ -343,10 +355,11 @@
         <view
           wx:for="{{journalMoodOptions}}"
           wx:key="id"
-          class="journal-mood-pill {{selectedJournalMoods.indexOf(item.id) > -1 ? 'journal-mood-pill-active' : ''}}"
+          class="journal-mood-pill {{item.selected ? 'journal-mood-pill-active' : ''}}"
           bindtap="toggleJournalMood"
           data-id="{{item.id}}"
         >
+          <text wx:if="{{item.selected}}" class="journal-mood-selected-check">✓</text>
           <text>{{item.label}}</text>
         </view>
       </view>
@@ -388,8 +401,13 @@
           <text class="h3">{{i18n.journal_title}}</text>
           <text class="journal-modal-date">{{selectedJournalEntry.dateFormatted}}</text>
         </view>
-        <view catchtap="closeJournalDetail">
-          <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+        <view class="journal-detail-actions">
+          <view class="journal-detail-action" catchtap="openJournalEdit" data-id="{{selectedJournalEntry.id}}">
+            <image class="icon-img" lazy-load style="width:38rpx;height:38rpx;" src="{{ic.src('Pencil')}}" mode="aspectFit" />
+          </view>
+          <view class="journal-detail-action" catchtap="closeJournalDetail">
+            <image class="icon-img" lazy-load style="width:40rpx;height:40rpx;" src="{{ic.src('XCircle')}}" mode="aspectFit" />
+          </view>
         </view>
       </view>
       <image wx:if="{{selectedJournalEntry.image}}" src="{{selectedJournalEntry.image}}" mode="widthFix" class="journal-detail-image" />

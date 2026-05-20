@@ -80,6 +80,9 @@ Page({
     selectedJournalEntry: null,
     showJournalModal: false,
     showJournalDetailModal: false,
+    editingJournalId: '',
+    journalModalDateText: '',
+    journalEntryDate: '',
     journalText: '',
     selectedJournalMoods: [],
     selectedJournalCustomTags: [],
@@ -140,6 +143,7 @@ Page({
         journal_entry_hint: t('journal_entry_hint'),
         journal_notebook_hint: t('journal_notebook_hint'),
         journal_placeholder: t('journal_placeholder'),
+        journal_date: t('journal_date'),
         journal_moods: t('journal_moods'),
         journal_photo_optional: t('journal_photo_optional'),
         journal_custom_tag_placeholder: t('journal_custom_tag_placeholder'),
@@ -395,10 +399,19 @@ Page({
     return { combinedLogs, listTitle, emptyLogText };
   },
 
-  _buildJournalMoodOptions() {
-    return JOURNAL_MOOD_IDS.map(id => ({
+  _buildJournalMoodOptions(selectedMoods) {
+    const selectedSet = {};
+    (Array.isArray(selectedMoods) ? selectedMoods : []).forEach(id => {
+      if (id) selectedSet[id] = true;
+    });
+    const optionIds = JOURNAL_MOOD_IDS.slice();
+    Object.keys(selectedSet).forEach(id => {
+      if (!optionIds.includes(id)) optionIds.push(id);
+    });
+    return optionIds.map(id => ({
       id,
-      label: t(`journal_mood_${id}`) || id
+      label: t(`journal_mood_${id}`) || id,
+      selected: !!selectedSet[id]
     }));
   },
 
@@ -601,6 +614,23 @@ Page({
     return targetDate;
   },
 
+  _getTodayDateValue() {
+    return dateUtil.formatDate(new Date(), 'YYYY-MM-DD');
+  },
+
+  _getJournalTargetDate(dateStr, previousDate) {
+    const targetDate = this._parseDateOnly(dateStr || this._getTodayDateValue());
+    const timeSource = previousDate ? new Date(previousDate) : new Date();
+    const safeTimeSource = isNaN(timeSource) ? new Date() : timeSource;
+    targetDate.setHours(
+      safeTimeSource.getHours(),
+      safeTimeSource.getMinutes(),
+      safeTimeSource.getSeconds(),
+      safeTimeSource.getMilliseconds()
+    );
+    return targetDate;
+  },
+
   switchDiaryView(e) {
     const view = e.currentTarget.dataset.view;
     if (view !== 'calendar' && view !== 'notebook') return;
@@ -608,6 +638,7 @@ Page({
   },
 
   _updateJournalDraft(updates) {
+    const hasMoodUpdate = Object.prototype.hasOwnProperty.call(updates || {}, 'selectedJournalMoods');
     const nextData = Object.assign({
       journalText: this.data.journalText,
       selectedJournalMoods: this.data.selectedJournalMoods,
@@ -618,16 +649,24 @@ Page({
     const hasMood = Array.isArray(nextData.selectedJournalMoods) && nextData.selectedJournalMoods.length > 0;
     const hasCustomTag = Array.isArray(nextData.selectedJournalCustomTags) && nextData.selectedJournalCustomTags.length > 0;
     const hasImage = !!nextData.journalImage;
-    this.setData(Object.assign({}, updates, {
+    this.setData(Object.assign({}, updates, hasMoodUpdate ? {
+      journalMoodOptions: this._buildJournalMoodOptions(nextData.selectedJournalMoods)
+    } : {}, {
       journalCanSave: !!(text || hasMood || hasCustomTag || hasImage)
     }));
   },
 
   openJournalModal() {
+    const todayStr = this._getTodayDateValue();
     this.setData({
       showJournalModal: true,
+      editingJournalId: '',
+      journalModalDateText: todayStr,
+      journalEntryDate: todayStr,
+      journalEntryTitle: t('journal_today_title'),
       journalText: '',
       selectedJournalMoods: [],
+      journalMoodOptions: this._buildJournalMoodOptions([]),
       selectedJournalCustomTags: [],
       journalCustomTagInput: '',
       journalImage: null,
@@ -639,11 +678,57 @@ Page({
   },
 
   closeJournalModal() {
-    this.setData({ showJournalModal: false });
+    this.setData({
+      showJournalModal: false,
+      editingJournalId: '',
+      journalModalDateText: '',
+      journalEntryDate: '',
+      journalCustomTagInput: ''
+    });
+  },
+
+  openJournalEdit(e) {
+    const id = e && e.currentTarget ? e.currentTarget.dataset.id : '';
+    if (!id) return;
+    const state = app.getState();
+    const activePetId = state.activePetId;
+    const entry = (state.journalEntries || []).find(item => item.id === id && item.petId === activePetId);
+    if (!entry) return;
+    const entryDate = dateUtil.formatDate(dateUtil.parseISO(entry.date), 'YYYY-MM-DD');
+    const selectedMoods = Array.isArray(entry.moods) ? entry.moods.slice() : [];
+    this.setData({
+      showJournalDetailModal: false,
+      selectedJournalEntry: null,
+      showJournalModal: true,
+      editingJournalId: id,
+      journalModalDateText: entryDate,
+      journalEntryDate: entryDate,
+      journalEntryTitle: dateUtil.isToday(dateUtil.parseISO(entry.date)) ? t('journal_today_title') : t('journal_title'),
+      journalText: entry.text || '',
+      selectedJournalMoods: selectedMoods,
+      journalMoodOptions: this._buildJournalMoodOptions(selectedMoods),
+      selectedJournalCustomTags: this._normalizeJournalCustomTags(entry.customTags),
+      journalCustomTagInput: '',
+      journalImage: entry.image || null,
+      journalImageWidth: Number(entry.imageWidth) || 0,
+      journalImageHeight: Number(entry.imageHeight) || 0,
+      journalImageRatioClass: entry.imageRatioClass || this._getJournalImageRatioClass(entry.imageWidth, entry.imageHeight),
+      journalCanSave: true
+    });
   },
 
   onJournalTextInput(e) {
     this._updateJournalDraft({ journalText: e.detail.value });
+  },
+
+  onJournalDateChange(e) {
+    const value = e && e.detail ? e.detail.value : '';
+    if (!value) return;
+    this.setData({
+      journalEntryDate: value,
+      journalModalDateText: value,
+      journalEntryTitle: dateUtil.isToday(this._parseDateOnly(value)) ? t('journal_today_title') : t('journal_title')
+    });
   },
 
   toggleJournalMood(e) {
@@ -742,9 +827,14 @@ Page({
       return;
     }
 
-    const targetDate = this._getRecordTargetDate();
+    const editingJournalId = this.data.editingJournalId || '';
     let state = app.getState();
-    state = storage.addJournalEntry(state, {
+    const existingEntry = editingJournalId
+      ? (state.journalEntries || []).find(entry => entry.id === editingJournalId && entry.petId === state.activePetId)
+      : null;
+    const targetDate = this._getJournalTargetDate(this.data.journalEntryDate, existingEntry && existingEntry.date);
+    const nextJournalFilter = editingJournalId ? this.data.activeJournalFilter : 'all';
+    const entryData = {
       text,
       moods,
       customTags,
@@ -752,12 +842,27 @@ Page({
       imageWidth: this.data.journalImageWidth,
       imageHeight: this.data.journalImageHeight,
       imageRatioClass: this.data.journalImageRatioClass
-    }, targetDate.toISOString());
+    };
+    if (editingJournalId) {
+      state = storage.updateJournalEntry(state, editingJournalId, entryData, targetDate.toISOString());
+    } else {
+      if (this.data.activeJournalFilter !== 'all') {
+        this.setData({ activeJournalFilter: 'all' });
+      }
+      state = storage.addJournalEntry(state, entryData, targetDate.toISOString());
+    }
     app.setState(state);
     this.setData({
+      activeJournalFilter: nextJournalFilter,
       showJournalModal: false,
+      showJournalDetailModal: false,
+      selectedJournalEntry: null,
+      editingJournalId: '',
+      journalModalDateText: '',
+      journalEntryDate: '',
       journalText: '',
       selectedJournalMoods: [],
+      journalMoodOptions: this._buildJournalMoodOptions([]),
       selectedJournalCustomTags: [],
       journalCustomTagInput: '',
       journalImage: null,

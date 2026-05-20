@@ -202,13 +202,28 @@ assert.strictEqual(
 );
 assert.strictEqual(
   pageWithI18n.data.i18n.journal_title,
-  '小猫日记',
-  'dashboard should load the Chinese Pet Journal title'
+  '宠物日记',
+  'dashboard should load the neutral Chinese Pet Journal title'
+);
+assert.strictEqual(
+  pageWithI18n.data.i18n.journal_today_title,
+  '今天的宠物日记',
+  'dashboard should load the neutral Chinese today journal title'
+);
+assert.strictEqual(
+  pageWithI18n.data.i18n.journal_empty,
+  '还没有宠物日记',
+  'dashboard should load neutral Chinese empty journal copy'
 );
 assert.strictEqual(
   pageWithI18n.data.i18n.journal_mood_good_appetite,
   '胃口好',
   'dashboard should load journal mood copy from i18n'
+);
+assert.strictEqual(
+  pageWithI18n.data.i18n.journal_date,
+  '日记日期',
+  'dashboard should load journal date picker copy from i18n'
 );
 assert.strictEqual(
   pageWithI18n.data.exportCanvasVisible,
@@ -243,8 +258,12 @@ expectContainsTokens(
 );
 expectContainsTokens(
   dashboardWxml,
-  ['activeDiaryView', 'switchDiaryView', 'openJournalModal', 'showJournalModal', 'journalDateGroups', 'journalFilterOptions', 'openJournalDetail'],
-  'dashboard should render the journal view switch, entry point, modal, grouped notebook timeline, filters, and detail handler'
+  ['activeDiaryView', 'switchDiaryView', 'openJournalModal', 'showJournalModal', 'journalDateGroups', 'journalFilterOptions', 'openJournalDetail', 'openJournalEdit', 'journalEntryDate', 'onJournalDateChange', 'item.selected'],
+  'dashboard should render the journal view switch, entry point, modal, grouped notebook timeline, filters, detail handler, edit handler, date picker, and stable mood selected state'
+);
+assert(
+  !dashboardWxml.includes('selectedJournalMoods.indexOf'),
+  'journal mood selected classes should not depend on WXML indexOf calls'
 );
 assert(
   !dashboardWxml.includes('class="journal-entry-card"'),
@@ -346,8 +365,8 @@ assert(
 );
 expectContainsTokens(
   dashboardWxss,
-  ['.diary-view-switch', '.journal-notebook-header', '.journal-notebook-add', '.journal-date-group-title', '.journal-note-title', '.journal-note-preview', '.journal-image-portrait'],
-  'dashboard styles should include journal view switch, redesigned notebook header, grouped cards, one-line previews, and adaptive image styles'
+  ['.diary-view-switch', '.journal-notebook-header', '.journal-notebook-add', '.journal-date-group-title', '.journal-note-title', '.journal-note-preview', '.journal-image-portrait', '.journal-mood-selected-check', '.journal-note-actions', '.journal-date-picker'],
+  'dashboard styles should include journal view switch, redesigned notebook header, grouped cards, one-line previews, adaptive image styles, edit actions, selected mood highlight, and date picker'
 );
 assert(
   dashboardWxml.includes('class="cal-icon-dot"'),
@@ -627,6 +646,7 @@ pageWithSavedJournal.onLoad();
 pageWithSavedJournal.setData({
   selectedDate: backfillDate,
   currentMonth: new Date(2026, 3, 1),
+  journalEntryDate: '2026-04-25',
   journalText: '  Sunny nap by the window\nA long warm afternoon by the window  ',
   selectedJournalMoods: ['good', 'sleepy'],
   selectedJournalCustomTags: ['窗边', '第一次'],
@@ -651,6 +671,56 @@ assert.strictEqual(pageWithSavedJournal.data.showJournalModal, false, 'saving a 
 assert(
   pageWithSavedJournal.data.daysInMonth.find(item => item.dateStr === '2026-04-25').icons.some(item => item.name === 'Book'),
   'calendar day should show a Book icon after saving a journal'
+);
+pageWithSavedJournal.openJournalModal();
+assert.strictEqual(
+  pageWithSavedJournal.data.journalEntryDate,
+  ymd(new Date()),
+  'opening the add journal modal should default the journal date to today'
+);
+pageWithSavedJournal.onJournalTextInput({ detail: { value: 'Second journal entry' } });
+pageWithSavedJournal.saveJournalEntry();
+assert.strictEqual(state.journalEntries.length, 2, 'saving another journal should append a second entry instead of replacing the first');
+assert.strictEqual(ymd(state.journalEntries[0].date), ymd(new Date()), 'journal date should default to today when adding from the modal');
+assert.deepStrictEqual(
+  state.journalEntries.map(entry => entry.text),
+  ['Second journal entry', 'Sunny nap by the window\nA long warm afternoon by the window'],
+  'new journal saves should preserve existing journal entries'
+);
+pageWithSavedJournal.openJournalModal();
+pageWithSavedJournal.onJournalDateChange({ detail: { value: '2026-04-24' } });
+pageWithSavedJournal.onJournalTextInput({ detail: { value: 'Backdated journal entry' } });
+pageWithSavedJournal.saveJournalEntry();
+assert.strictEqual(ymd(state.journalEntries[0].date), '2026-04-24', 'chosen journal date should be used when saving a new entry');
+assert(
+  pageWithSavedJournal.data.daysInMonth.find(item => item.dateStr === '2026-04-24').icons.some(item => item.name === 'Book'),
+  'calendar day should show a Book icon on the chosen journal date'
+);
+
+state = createState();
+state.journalEntries = [
+  { id: 'filtered-first', petId: 'pet-1', date: at(25, 8), text: 'Sleepy first entry', moods: ['sleepy'], customTags: [], image: '' }
+];
+const pageWithFilteredAdd = createPage();
+pageWithFilteredAdd.onLoad();
+pageWithFilteredAdd.refreshData();
+pageWithFilteredAdd.switchDiaryView(actionEvent({ view: 'notebook' }));
+pageWithFilteredAdd.switchJournalFilter(actionEvent({ filter: 'sleepy' }));
+pageWithFilteredAdd.openJournalModal();
+pageWithFilteredAdd.onJournalTextInput({ detail: { value: 'Second visible entry' } });
+pageWithFilteredAdd.toggleJournalMood(actionEvent({ id: 'good' }));
+assert.strictEqual(
+  pageWithFilteredAdd.data.journalMoodOptions.find(item => item.id === 'good').selected,
+  true,
+  'selecting a journal mood should mark that mood option selected for the modal highlight'
+);
+pageWithFilteredAdd.saveJournalEntry();
+assert.strictEqual(state.journalEntries.length, 2, 'saving from a filtered notebook should still add a second journal entry');
+assert.strictEqual(pageWithFilteredAdd.data.activeJournalFilter, 'all', 'saving a new journal should reset the notebook filter so the new card is visible');
+assert.deepStrictEqual(
+  pageWithFilteredAdd.data.journalTimeline.map(entry => entry.text),
+  ['Second visible entry', 'Sleepy first entry'],
+  'new journal saves should show all notebook entries after resetting the filter'
 );
 
 state = createState();
@@ -735,6 +805,44 @@ assert.strictEqual(
   state.journalEntries.find(entry => entry.id === 'newer-active').text,
   'journal detail modal should expose the full note text'
 );
+pageWithNotebook.openJournalEdit(actionEvent({ id: 'newer-active' }));
+assert.strictEqual(pageWithNotebook.data.showJournalDetailModal, false, 'editing from detail should close the detail modal');
+assert.strictEqual(pageWithNotebook.data.showJournalModal, true, 'editing a journal should open the journal modal');
+assert.strictEqual(pageWithNotebook.data.editingJournalId, 'newer-active', 'editing should track the source journal id');
+assert.strictEqual(pageWithNotebook.data.journalEntryDate, '2026-04-26', 'editing should prefill the existing journal date');
+assert.strictEqual(pageWithNotebook.data.journalText, state.journalEntries[1].text, 'editing should prefill the existing journal text');
+assert.deepStrictEqual(pageWithNotebook.data.selectedJournalMoods, ['good_appetite'], 'editing should prefill existing moods, including legacy moods');
+assert.strictEqual(
+  pageWithNotebook.data.journalMoodOptions.some(item => item.id === 'good_appetite' && item.selected),
+  true,
+  'editing should mark legacy selected moods in the modal options'
+);
+assert.deepStrictEqual(pageWithNotebook.data.selectedJournalCustomTags, ['窗边'], 'editing should prefill existing custom tags');
+assert.strictEqual(pageWithNotebook.data.journalImage, '/tmp/newer.jpg', 'editing should prefill the existing image');
+pageWithNotebook.setData({
+  journalEntryDate: '2026-04-25',
+  journalText: '  Updated note\nUpdated preview  ',
+  selectedJournalMoods: ['sleepy'],
+  selectedJournalCustomTags: ['窗边', '复诊'],
+  journalImage: '/tmp/updated.jpg',
+  journalImageWidth: 900,
+  journalImageHeight: 1200,
+  journalImageRatioClass: 'portrait'
+});
+pageWithNotebook.saveJournalEntry();
+assert.strictEqual(state.journalEntries.length, 4, 'editing a journal should not create a second entry');
+assert.strictEqual(state.journalEntries.find(entry => entry.id === 'newer-active').text, 'Updated note\nUpdated preview', 'editing should update journal text');
+assert.deepStrictEqual(state.journalEntries.find(entry => entry.id === 'newer-active').moods, ['sleepy'], 'editing should update journal moods');
+assert.deepStrictEqual(state.journalEntries.find(entry => entry.id === 'newer-active').customTags, ['窗边', '复诊'], 'editing should update custom tags');
+assert.strictEqual(ymd(state.journalEntries.find(entry => entry.id === 'newer-active').date), '2026-04-25', 'editing should update the journal date');
+assert.strictEqual(state.journalEntries.find(entry => entry.id === 'newer-active').imageRatioClass, 'portrait', 'editing should update image metadata');
+assert.strictEqual(pageWithNotebook.data.editingJournalId, '', 'saving an edit should clear edit mode');
+assert.strictEqual(pageWithNotebook.data.showJournalModal, false, 'saving an edit should close the journal modal');
+assert.strictEqual(
+  pageWithNotebook.data.journalTimeline.find(entry => entry.id === 'newer-active').title,
+  'Updated note',
+  'saving an edit should refresh the notebook card title'
+);
 pageWithNotebook.closeJournalDetail();
 assert.strictEqual(pageWithNotebook.data.showJournalDetailModal, false, 'journal detail modal should close');
 
@@ -745,6 +853,8 @@ pageWithNotebook.removeJournalCustomTag(actionEvent({ tag: '新标签' }));
 assert.deepStrictEqual(pageWithNotebook.data.selectedJournalCustomTags, [], 'journal modal should remove a custom tag chip');
 pageWithNotebook.openJournalModal();
 assert.strictEqual(pageWithNotebook.data.showJournalModal, true, 'title-row add button should still open the journal modal');
+assert.strictEqual(pageWithNotebook.data.editingJournalId, '', 'opening the add journal modal should start outside edit mode');
+assert.strictEqual(pageWithNotebook.data.journalEntryDate, ymd(new Date()), 'title-row add should default journal date to today');
 
 pageWithNotebook.deleteJournalEntry(actionEvent({ id: 'newer-active' }));
 assert.deepStrictEqual(

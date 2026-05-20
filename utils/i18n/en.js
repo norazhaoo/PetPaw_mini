@@ -36,6 +36,7 @@ module.exports = {
   journal_entry_hint: 'Record a moment, mood, or photo',
   journal_notebook_hint: 'Review moments in reverse chronological order',
   journal_placeholder: 'What happened today?',
+  journal_date: 'Journal date',
   journal_moods: 'Mood tags',
   journal_photo_optional: 'Add photo (optional)',
   journal_custom_tag_placeholder: 'Add custom tag',
